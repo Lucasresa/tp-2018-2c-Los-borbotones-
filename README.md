@@ -1,8 +1,8 @@
 # TP-2018-2c-Los-borbotones-
 
-##TP cuatrimestral de Sistemas Operativos 2018
+## TP cuatrimestral de Sistemas Operativos 2018
 
-###Miembros del grupo: 
+### Miembros del grupo: 
 
 Lucas Resa - 1594450 - lukkitas.1597@gmail.com - K3572 
 
