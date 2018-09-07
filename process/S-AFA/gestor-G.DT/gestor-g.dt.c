@@ -16,6 +16,7 @@ void consola(){
 		if(*linea_parseada!=NULL){
 			nro_proceso= identificarProceso(linea_parseada);
 			ejecutarProceso(nro_proceso,linea_parseada[1]);
+			string_iterate_lines(linea_parseada,(void*)free);
 			free(linea_parseada);
 		}
 
