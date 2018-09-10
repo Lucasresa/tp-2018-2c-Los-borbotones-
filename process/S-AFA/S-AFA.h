@@ -6,6 +6,13 @@
 #ifndef S_AFA_H_
 #define S_AFA_H_
 
+typedef enum{
+	FIFO,
+	RR,
+	VRR,
+	PROPIO
+}t_algoritmo;
+
 typedef struct{
 
 	int id;
@@ -19,21 +26,24 @@ typedef struct{
 typedef struct{
 
 	int port;
-	char* algoritmo;
+	t_algoritmo algoritmo;
 	int quantum;
 	int multiprog;
 	int retardo;
 
-}configuracion;
+}t_config_SAFA;
 
 t_queue* cola_new;
 t_queue* cola_ready;
 t_queue* cola_block;
 t_queue* cola_exec;
 t_queue* cola_exit;
-t_config* file;
-configuracion config;
+t_config* file_SAFA;
+t_config_SAFA config_SAFA;
 int cont_id=0;
 
+
+void agregarDTBANew(char*);
+t_algoritmo detectarAlgoritmo(char*);
 
 #endif /* S_AFA_H_ */

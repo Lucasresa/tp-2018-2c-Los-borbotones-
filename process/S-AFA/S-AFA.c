@@ -13,17 +13,15 @@ int main(){
 
 	//Levanto archivo de configuracion del S-AFA
 
-	file=config_create("CONFIG_S-AFA.cfg");
+	file_SAFA=config_create("CONFIG_S-AFA.cfg");
 
-	config.algoritmo=malloc(sizeof(char)*6);
+	config_SAFA.port=config_get_int_value(file_SAFA,"PUERTO");
+	config_SAFA.algoritmo=detectarAlgoritmo(config_get_string_value(file_SAFA,"ALGORITMO"));
+	config_SAFA.quantum=config_get_int_value(file_SAFA,"QUANTUM");
+	config_SAFA.multiprog=config_get_int_value(file_SAFA,"MULTIPROGRAMACION");
+	config_SAFA.retardo=config_get_int_value(file_SAFA,"RETARDO_PLANIF");
 
-	config.port=config_get_int_value(file,"PUERTO");
-	config.algoritmo=config_get_string_value(file,"ALGORITMO");
-	config.quantum=config_get_int_value(file,"QUANTUM");
-	config.multiprog=config_get_int_value(file,"MULTIPROGRAMACION");
-	config.retardo=config_get_int_value(file,"RETARDO_PLANIF");
-
-	config_destroy(file);
+	config_destroy(file_SAFA);
 
 	//-------------------------------------------------------------------------------------------------------
 
@@ -52,8 +50,24 @@ void agregarDTBANew(char*path){
 	dtb.id=cont_id;
 	cont_id++;
 
-	queue_push(cola_new,(void*)dtb);
+	queue_push(cola_new,(void*)&dtb);
 
+}
+
+t_algoritmo detectarAlgoritmo(char*algoritmo){
+
+	t_algoritmo algo;
+
+	if(string_equals_ignore_case(algoritmo,"RR")){
+		algo=RR;
+	}else if(string_equals_ignore_case(algoritmo,"VRR")){
+		algo=VRR;
+	}else if(string_equals_ignore_case(algoritmo,"PROPIO")){
+		algo=PROPIO;
+	}else{
+		algo=FIFO;
+	}
+	return algo;
 }
 
 

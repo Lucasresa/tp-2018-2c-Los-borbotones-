@@ -89,6 +89,7 @@ t_operacion parseLine(char* line){
 	return op;
 }
 
+/*
 //Main para testear el funcionamiento del parser, se debe quitar al momento de usarlo en los procesos que requieran parser
 int main(){
 
@@ -145,5 +146,5 @@ int main(){
 
 }
 
-
+*/
 

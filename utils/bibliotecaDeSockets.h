@@ -69,7 +69,7 @@ enum paquete {
 
 int crearSocket(int *mySocket);
 
-int conectar(int *mySocket, int puerto, char *ip);
+int conectar(int* mySocket, int puerto, char *ip);
 
 int setearParaEscuchar(int *mySocket, int puerto);
 int escuchar(int socket, fd_set *listaDeSockets,

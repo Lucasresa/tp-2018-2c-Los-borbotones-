@@ -66,7 +66,7 @@ int setearParaEscuchar(int *mySocket, int puerto) {
 	return 0;
 }
 
-int conectar(int *mySocket, int puerto, char *ip) {
+int conectar(int* mySocket, int puerto, char *ip) {
 	struct addrinfo hints, *res;
 
 	memset(&hints, 0, sizeof hints);

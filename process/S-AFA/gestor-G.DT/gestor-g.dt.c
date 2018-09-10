@@ -1,10 +1,10 @@
 #include "gestor-g.dt.h"
-
+/*
 int main(){
 	consola();
 	return 0;
 }
-
+*/
 void consola(){
 	char * linea;
 	char **linea_parseada;
