@@ -12,9 +12,23 @@ int main(){
 	config_FM9.tam_pagina=config_get_int_value(file_FM9,"TAM_PAGINA");
 
 	config_destroy(file_FM9);
+
+	log_info(log_FM9, "Testeando logger");
+	int listener_socket;
+	crearSocket(&listener_socket);
+
+	setearParaEscuchar(&listener_socket, config_FM9->puerto_fm9);
+
+	log_info(log_FM9, "Escuchando conexiones...");
+	fd_set fd_set;
+	FD_ZERO(&fd_set);
+	FD_SET(listener_socket, &fd_set);
+	while(true) {
+		escuchar(listener_socket, &fd_set, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
+		// Probablemente conviene sacar el sleep()
+		sleep(1);
+	}
 }
-
-
 
 t_modo detectarModo(char* modo){
 
@@ -28,4 +42,13 @@ t_modo detectarModo(char* modo){
 		modo_enum=SEG;
 	}
 	return modo_enum;
+}
+
+void funcionHandshake(int socket, void* argumentos) {
+	log_info(log_FM9, "Handshake establecido");
+}
+
+void funcionRecibirPeticion(int socket, void* argumentos) {
+	// Acá estaría la lógica para manejar un pedido.
+	log_info(log_FM9, "Recibiendo informacion...");
 }
