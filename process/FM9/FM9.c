@@ -1,7 +1,7 @@
 #include "FM9.h"
 
 int main(){
-	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
+	logger = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
 	file_FM9=config_create("CONFIG_FM9.cfg");
 
@@ -13,13 +13,12 @@ int main(){
 
 	config_destroy(file_FM9);
 
-	log_info(log_FM9, "Testeando logger");
 	int listener_socket;
 	crearSocket(&listener_socket);
 
-	setearParaEscuchar(&listener_socket, config_FM9->puerto_fm9);
+	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
 
-	log_info(log_FM9, "Escuchando conexiones...");
+	log_info(logger, "Escuchando conexiones...");
 	fd_set fd_set;
 	FD_ZERO(&fd_set);
 	FD_SET(listener_socket, &fd_set);
@@ -45,10 +44,11 @@ t_modo detectarModo(char* modo){
 }
 
 void funcionHandshake(int socket, void* argumentos) {
-	log_info(log_FM9, "Handshake establecido");
+	log_info(logger, "Conexión establecida");
+	return;
 }
 
 void funcionRecibirPeticion(int socket, void* argumentos) {
 	// Acá estaría la lógica para manejar un pedido.
-	log_info(log_FM9, "Recibiendo informacion...");
+	return;
 }

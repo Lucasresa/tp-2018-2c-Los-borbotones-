@@ -63,6 +63,8 @@ int setearParaEscuchar(int *mySocket, int puerto) {
 		perror("Fallo el listen");
 		return -1;
 	}
+	//Si en todos los procesos llamamos al logger con el mismo nombre podemos llamarlo desde la biblioteca
+	//log_info(logger, " ... Escuchando conexiones ... ");
 	return 0;
 }
 
@@ -72,16 +74,12 @@ int conectar(int* mySocket, int puerto, char *ip) {
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-
 	char *stringPort = string_itoa(puerto);
 	getaddrinfo(ip, stringPort, &hints, &res);
-
 	free(stringPort);
-
 	if(connect(*mySocket, res->ai_addr, res->ai_addrlen)!=0){
 		return -1;
 	}
-
 	return 0;
 }
 

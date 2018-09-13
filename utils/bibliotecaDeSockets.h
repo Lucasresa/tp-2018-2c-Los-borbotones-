@@ -17,6 +17,7 @@
 #include <commons/collections/list.h>
 #include <commons/string.h>
 #include <fcntl.h>
+#include <commons/log.h>
 
 struct mProc {
 	int PID;
@@ -66,6 +67,8 @@ enum paquete {
 	PAQ_LECTURA_CONTENIDO,
 	PAQ_RESPUESTA_OPERACION,
 };
+
+t_log * logger;
 
 int crearSocket(int *mySocket);
 
