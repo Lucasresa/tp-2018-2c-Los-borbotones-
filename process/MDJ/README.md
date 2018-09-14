@@ -6,6 +6,7 @@ sobre los archivos a través del Kernel. Para poder llevar adelante la gestión 
 un sistema de archivos basado en el FileSystem FIFA.
 
 Funcionamiento
+
 El Proceso MDJ será un proceso de tipo servidor, es decir, que estará a la espera de las conexiones
 de peticiones del DAM, validando por medio de un Handshake del protocolo la operación a realizar.
 Además, el File System deberá atender las peticiones de manera concurrente.
