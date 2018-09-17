@@ -1,17 +1,19 @@
-#include "gestor-g.dt.h"
+#include "gestor_GDT.h"
 /*
 int main(){
 	consola();
 	return 0;
 }
 */
-void consola(){
+void* consola(void){
 	char * linea;
 	char **linea_parseada;
 	int nro_proceso;
-	int status;
+	int status=1;
 	do{
 		linea = readline("$");
+		if(strlen(linea)!=0)
+			add_history(linea);
 		linea_parseada = parsearLinea(linea);
 		if(*linea_parseada!=NULL){
 			nro_proceso= identificarProceso(linea_parseada);
@@ -59,6 +61,7 @@ void ejecutarProceso(int nro_op, char * args){
 			break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
+				log_destroy(log_SAFA);
 				exit(4);
 			break;
 			case 4:

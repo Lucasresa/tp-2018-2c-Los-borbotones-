@@ -34,9 +34,12 @@ int main(){
 		exit(1);
 	}
 
+	log_info(log_CPU,"Conexion exitosa con SAFA");
+
 	//Aca hace el handshake con SAFA para saber la rafaga de planificacion
 	if(recv(SAFA_fd,(void*)rafaga,sizeof(int),0)<=0){
-		log_error(log_CPU,"Error al recibir rafaga de planificacion");
+		log_destroy(log_CPU);
+		perror("Error al recibir la rafaga de planificacion");
 		exit(2);
 	}
 

@@ -68,13 +68,14 @@ enum paquete {
 	PAQ_RESPUESTA_OPERACION,
 };
 
-t_log * logger;
-
 int crearSocket(int *mySocket);
 
 int conectar(int* mySocket, int puerto, char *ip);
 
 int setearParaEscuchar(int *mySocket, int puerto);
+
+int aceptarConexion(int);
+
 int escuchar(int socket, fd_set *listaDeSockets,
 	void *(*funcionParaSocketNuevo)(int, void*), void *parametrosParaSocketNuevo,
 	void *(*funcionParaSocketYaConectado)(int, void*),

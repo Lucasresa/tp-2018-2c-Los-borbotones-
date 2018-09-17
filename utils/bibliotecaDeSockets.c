@@ -83,6 +83,17 @@ int conectar(int* mySocket, int puerto, char *ip) {
 	return 0;
 }
 
+int aceptarConexion(int fd){
+
+	struct sockaddr_in cliente;
+
+	unsigned int len = sizeof(struct sockaddr);
+
+	return accept(fd,(void*)&cliente,&len);
+
+}
+
+
 int escuchar(int socketListener, fd_set *fd,  void *(funcionSocketNuevo)(int, void*), void *argumentosSocketNuevo,
 				void *(funcionSocketExistente)(int, void*), void *argumentosSocketExistente){
 

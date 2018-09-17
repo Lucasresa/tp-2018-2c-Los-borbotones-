@@ -1,7 +1,7 @@
 CC=gcc
 
-CFLAGS=S-AFA.c Parser/parser.c gestor-G.DT/gestor-g.dt.c ../../utils/bibliotecaDeSockets.c
+CFLAGS=S-AFA.c Parser/parser.c gestor_GDT/gestor_GDT.c ../../utils/bibliotecaDeSockets.c
 
 safa: $(CFLAGS)
-		$(CC) $(CFLAGS) -o S-AFA -lcommons -lpthread -lreadline
+		$(CC) $(CFLAGS) -o safa -lcommons -lpthread -lreadline
 
