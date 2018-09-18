@@ -13,6 +13,8 @@ int main(){
 	config_CPU.puerto_safa=config_get_int_value(file_CPU,"PUERTO_SAFA");
 	config_CPU.ip_diego=string_duplicate(config_get_string_value(file_CPU,"IP_DIEGO"));
 	config_CPU.puerto_diego=config_get_int_value(file_CPU,"PUERTO_DIEGO");
+	config_CPU.ip_fm9=string_duplicate(config_get_string_value(file_CPU,"IP_FM9"));
+	config_CPU.puerto_fm9=config_get_int_value(file_CPU,"PUERTO_FM9");
 	config_CPU.retardo=config_get_int_value(file_CPU,"RETARDO");
 
 	config_destroy(file_CPU);
@@ -21,12 +23,13 @@ int main(){
 				config_CPU.ip_safa,config_CPU.puerto_safa,config_CPU.ip_diego,config_CPU.puerto_diego,config_CPU.retardo);
 */
 
-	int SAFA_fd,DAM_fd,rafaga;
+	int SAFA_fd,DAM_fd,FM9_fd,rafaga;
 
 	t_DTB exec_DTB;
 
 	crearSocket(&SAFA_fd);
 	crearSocket(&DAM_fd);
+	crearSocket(&FM9_fd);
 
 	//El CPU se conecta con SAFA
 	if(conectar(&SAFA_fd,config_CPU.puerto_safa,config_CPU.ip_safa)!=0){
@@ -48,6 +51,12 @@ int main(){
 		log_error(log_CPU,"Error al conectarse con DAM");
 		exit(1);
 	}
+
+	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
+		log_error(log_CPU,"Error al conectarse con FM9");
+		exit(1);
+	}
+
 
 	//Espero para recibir un DTB a ejecutar
 

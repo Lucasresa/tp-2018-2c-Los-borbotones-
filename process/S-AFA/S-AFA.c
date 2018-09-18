@@ -81,7 +81,6 @@ int main(){
 //Creo el dtb y lo agrego a la cola de New
 void agregarDTBANew(char*path){
 
-
 	t_DTB dtb;
 
 	dtb.escriptorio=string_duplicate(path);
