@@ -68,6 +68,25 @@ enum paquete {
 	PAQ_RESPUESTA_OPERACION,
 };
 
+
+typedef enum{
+	FIFO,
+	RR,
+	VRR,
+	PROPIO
+}t_algoritmo;
+
+typedef struct{
+
+	int id;
+	char* escriptorio;
+	int pc;
+	int f_inicializacion;
+	char** archivos;
+
+}t_DTB;
+
+
 int crearSocket(int *mySocket);
 
 int conectar(int* mySocket, int puerto, char *ip);

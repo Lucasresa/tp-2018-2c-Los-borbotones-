@@ -5,6 +5,8 @@ int main(){
 
 	log_SAFA=log_create("log_SAFA","SAFA",true,LOG_LEVEL_INFO);
 
+	lista_CPU=list_create();
+
 
 	//Creo las colas del S-AFA
 
@@ -42,7 +44,7 @@ int main(){
 
 	//Aca habria que hacer la parte de la conexion con los demas procesos usando sockets. (Usando la shared library de sockets
 
-	int SAFA_fd,DAM_fd;
+	int SAFA_fd,DAM_fd,CPU_fd;
 	crearSocket(&SAFA_fd);
 
 
@@ -62,11 +64,33 @@ int main(){
 
 	pthread_t hiloDAM;
 
-	pthread_create(&hiloDAM,NULL,atenderDAM,(void*)&DAM_fd);
+	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
 
 	pthread_detach(hiloDAM);
 
-	while(1);
+
+	//El hilo main se queda esperando que se conecten nuevas CPU
+
+	while(1){
+
+		pthread_t hiloCPU;
+
+		if((CPU_fd=aceptarConexion(SAFA_fd))!=-1){
+
+			t_estado_CPU cpu_new={.CPU_fd=CPU_fd,.estado=false};
+
+			pthread_create(&hiloCPU,NULL,(void*)atenderCPU,(void*)&hiloCPU);
+			pthread_detach(hiloCPU);
+			log_info(log_SAFA,"Conexion exitosa con la CPU %d",CPU_fd);
+
+			list_add(lista_CPU,(void*)&cpu_new);
+
+		}
+		else{
+			log_error(log_SAFA,"Error al conectar con un CPU");
+		}
+
+	}
 
 
 	//--------------------------------------------------------------------------------------------------------
@@ -78,20 +102,6 @@ int main(){
 
 }
 
-//Creo el dtb y lo agrego a la cola de New
-void agregarDTBANew(char*path){
-
-	t_DTB dtb;
-
-	dtb.escriptorio=string_duplicate(path);
-	dtb.f_inicializacion=0;
-	dtb.pc=0;
-	dtb.id=cont_id;
-	cont_id++;
-
-	queue_push(cola_new,(void*)&dtb);
-
-}
 //Funcion para detectar el algoritmo de planificacion
 t_algoritmo detectarAlgoritmo(char*algoritmo){
 
@@ -110,8 +120,15 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 }
 
 //Funcion que se encargara de recibir mensajes del DAM
-void* atenderDAM(void*fd){
+void atenderDAM(int*fd){
 
 
 
 }
+
+void atenderCPU(int*fd){
+
+
+
+}
+
