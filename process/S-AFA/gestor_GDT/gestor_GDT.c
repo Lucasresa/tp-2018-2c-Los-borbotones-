@@ -138,44 +138,38 @@ void ejecutarPCP(){
 	switch(config_SAFA.algoritmo){
 	case FIFO:
 
-		if(queue_is_empty(cola_exec)){
+		dtb_exec=*(t_DTB*)queue_pop(cola_ready);
 
-			dtb_exec=*(t_DTB*)queue_pop(cola_ready);
+		//queue_push(cola_exec,(void*)&dtb_exec);
 
-			queue_push(cola_exec,(void*)&dtb_exec);
+		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb_exec.id);
 
-			log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb_exec.id);
-
-			ejecutarProceso();
-
-		}
+		ejecutarProceso(dtb_exec);
 
 	}
 
 }
 //Envio a la CPU el DTB para que ejecute
-void ejecutarProceso(){
+void ejecutarProceso(t_DTB proceso){
 
-	t_estado_CPU* CPU_vacio;
+	int* CPU_vacio=(int*)queue_pop(cola_CPU);
 
-	t_list* CPU_vacios=list_filter(lista_CPU,estaLibre);
-
-	CPU_vacio=list_get(CPU_vacios,0);
+	printf("Elementos en la lista: %d\n",queue_size(cola_CPU));
 
 	if(CPU_vacio==NULL){
-		log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso volvera a Ready");
-		queue_push(cola_ready,queue_pop(cola_exec));
+		log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso %d permanecera en Ready",proceso.id);
 	}
 	else{
-		//Aca deberia enviarse el DTB al CPU que se encuentra disponible.
-		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio->CPU_fd);
+		//Aca deberia enviarse el DTB al CPU que se encuentra disponible y se agrega el proceso a la cola de ejecucion
+
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",*CPU_vacio);
+
+		queue_push(cola_exec,(void*)&proceso);
+
+
+
+
 
 	}
 
 }
-
-bool estaLibre(void* estado){
-	t_estado_CPU* estado_CPU=(t_estado_CPU*)estado;
-	return !estado_CPU->estado;
-}
-

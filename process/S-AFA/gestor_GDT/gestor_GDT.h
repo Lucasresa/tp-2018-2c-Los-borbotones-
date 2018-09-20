@@ -21,11 +21,6 @@ typedef struct{
 
 }t_config_SAFA;
 
-typedef struct{
-	int CPU_fd;
-	bool estado;
-}t_estado_CPU;
-
 void* consola(void);
 char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
@@ -34,8 +29,7 @@ void ejecutarComando(int nro_op , char * args);
 void agregarDTBDummyANew(char*);
 void ejecutarPLP();
 void ejecutarPCP();
-void ejecutarProceso();
-bool estaLibre(void* estado);
+void ejecutarProceso(t_DTB);
 
 t_queue* cola_new;
 t_queue* cola_ready;
@@ -47,7 +41,7 @@ t_config_SAFA config_SAFA;
 
 t_log* log_SAFA;
 
-t_list* lista_CPU;
+t_queue* cola_CPU;
 
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

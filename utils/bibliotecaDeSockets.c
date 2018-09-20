@@ -309,3 +309,28 @@ char *recibirYDeserializarString(int socket){
 	free(tamString);
 	return string;
 }
+
+//-----------------------------------------------------------------
+
+void serializarDTB(void** buffer,t_DTB dtb){
+
+	int tam=0;
+	int tamanio_script=string_length(dtb.escriptorio);
+
+	memcpy(*buffer+tam,&dtb.id,sizeof(int));
+	tam+=sizeof(int);
+
+	memcpy(*buffer+tam,&dtb.pc,sizeof(int));
+	tam+=sizeof(int);
+
+	memcpy(*buffer+tam,&dtb.f_inicializacion,sizeof(int));
+	tam+=sizeof(int);
+
+	memcpy(*buffer+tam,dtb.escriptorio,tamanio_script);
+	tam+=tamanio_script;
+
+
+
+}
+
+

@@ -79,9 +79,9 @@ typedef enum{
 typedef struct{
 
 	int id;
-	char* escriptorio;
 	int pc;
 	int f_inicializacion;
+	char* escriptorio;
 	char** archivos;
 
 }t_DTB;

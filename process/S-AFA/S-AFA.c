@@ -2,10 +2,12 @@
 
 
 int main(){
+	//flag para saber si la consola esta operativa
+	int flag_consola=0;
 
-	log_SAFA=log_create("log_SAFA","SAFA",true,LOG_LEVEL_INFO);
+	log_SAFA=log_create("log_SAFA.log","SAFA",true,LOG_LEVEL_INFO);
 
-	lista_CPU=list_create();
+	cola_CPU=queue_create();
 
 
 	//Creo las colas del S-AFA
@@ -28,17 +30,6 @@ int main(){
 
 	config_destroy(file_SAFA);
 
-	//-------------------------------------------------------------------------------------------------------
-
-	//Tiro un hilo para ejecutar la consola
-
-	pthread_t hiloConsola;
-
-	pthread_create(&hiloConsola,NULL,(void*)consola,NULL);
-
-	pthread_detach(hiloConsola);
-
-	log_info(log_SAFA,"Consola en linea...");
 
 	//-------------------------------------------------------------------------------------------------------
 
@@ -77,17 +68,33 @@ int main(){
 
 		if((CPU_fd=aceptarConexion(SAFA_fd))!=-1){
 
-			t_estado_CPU cpu_new={.CPU_fd=CPU_fd,.estado=false};
 
 			pthread_create(&hiloCPU,NULL,(void*)atenderCPU,(void*)&hiloCPU);
 			pthread_detach(hiloCPU);
 			log_info(log_SAFA,"Conexion exitosa con la CPU %d",CPU_fd);
 
-			list_add(lista_CPU,(void*)&cpu_new);
+			queue_push(cola_CPU,&CPU_fd);
 
 		}
 		else{
 			log_error(log_SAFA,"Error al conectar con un CPU");
+		}
+
+	//-------------------------------------------------------------------------------------------------------
+
+	//Tiro un hilo para ejecutar la consola
+
+		if(flag_consola==0){
+			flag_consola=1;
+
+			pthread_t hiloConsola;
+
+			pthread_create(&hiloConsola,NULL,(void*)consola,NULL);
+
+			pthread_detach(hiloConsola);
+
+			log_info(log_SAFA,"Consola en linea...");
+
 		}
 
 	}
