@@ -82,9 +82,12 @@ typedef struct{
 	int pc;
 	int f_inicializacion;
 	char* escriptorio;
+	int cant_archivos;
 	char** archivos;
 
 }t_DTB;
+
+t_log* log_s;
 
 
 int crearSocket(int *mySocket);
