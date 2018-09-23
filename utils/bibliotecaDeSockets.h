@@ -85,7 +85,7 @@ typedef struct{
 	int cant_archivos;
 	char** archivos;
 
-}t_DTB;
+}__attribute__((packed)) t_DTB;
 
 t_log* log_s;
 
@@ -112,5 +112,8 @@ void serializarYEnviarString(int socket, char *string);
 void serializarYEnviarEntero(int socket, int *numero);
 
 int enviarTodo(int socketReceptor, void *buffer, int *cantidadTotal);
+
+void serializarYEnviarDTB(int,void*,t_DTB);
+t_DTB RecibirYDeserializarDTB(int);
 
 #endif /* BIBLIOTECADESOCKETS_H_ */

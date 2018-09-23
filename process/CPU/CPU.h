@@ -20,4 +20,6 @@ t_config_CPU config_CPU;
 t_config* file_CPU;
 t_log* log_CPU;
 
+int rafaga;
+
 #endif /* CPU_H_ */

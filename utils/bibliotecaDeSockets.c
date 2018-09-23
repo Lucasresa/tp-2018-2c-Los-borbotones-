@@ -316,76 +316,92 @@ char *recibirYDeserializarString(int socket){
  *
  *	|Tamañobuffer|Id|Pc|Flag|TamañoScript|Script|CantidadArchivosAbiertos|TamanioArchivo1|Archivo1|...|TamanioArchivoN|ArchivoN|
  *
+ *Lo que retorna es el tamaño total del buffer a enviar
 */
-void serializarDTB(void** buffer,t_DTB dtb){
+void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 
-	int i,null_pointer=0;
+	int i, tamanio_info;
 	int offset=0;
-	int tamanio_script=string_length(dtb.escriptorio)+1;
+	int tamanio_script=strlen(dtb.escriptorio)+1;
 
 	//Calculo el tamaño total que tendra el buffer y reservo memoria para el mismo
-	int tamanio_buffer=(sizeof(int)*4)+(sizeof(char)*tamanio_script);
+	int tamanio_buffer=(sizeof(int)*6)+(sizeof(char)*tamanio_script);
 
-	for(i=0;i<dtb.cant_archivos;i++){
+	//Reservo memoria para cada archivo abierto si es que lo hay
+	if(dtb.cant_archivos!=0){
 
-		tamanio_buffer+=((sizeof(char)*string_length(dtb.archivos[i]))+1);
+		for(i=0;i<dtb.cant_archivos;i++){
+
+			tamanio_buffer+=((sizeof(char)*strlen(dtb.archivos[i]))+1);
+
+		}
+
+		tamanio_buffer+=sizeof(int)*dtb.cant_archivos;
 
 	}
 
-	tamanio_buffer+=sizeof(int)*dtb.cant_archivos;
+	tamanio_info=tamanio_buffer-sizeof(tamanio_buffer);
 
-	*buffer=malloc(tamanio_buffer+sizeof(int));
+	buffer=malloc(tamanio_buffer);
+
+	memset(buffer,0,tamanio_buffer);
+
+	printf("Tamanio buffer= %d\tTamanio info= %d\n",tamanio_buffer,tamanio_info);
 
 	//--------------------------------------------------------------------
 
-	//Tamaño total del buffer
+	//Tamaño de la informacion del buffer
 
-	memcpy(*buffer+offset,&tamanio_buffer,sizeof(int));
-	offset+=sizeof(int);
+	memcpy(buffer,&tamanio_info,sizeof(tamanio_info));
+	offset+=sizeof(tamanio_info);
+
 	//Id del DTB
 
-	memcpy(*buffer+offset,&dtb.id,sizeof(int));
-	offset+=sizeof(int);
+	memcpy(buffer+offset,&dtb.id,sizeof(dtb.id));
+	offset+=sizeof(dtb.id);
 	//Program counter del DTB
 
-	memcpy(*buffer+offset,&dtb.pc,sizeof(int));
-	offset+=sizeof(int);
+	memcpy(buffer+offset,&dtb.pc,sizeof(dtb.pc));
+	offset+=sizeof(dtb.pc);
 	//Flag de inicializacion
 
-	memcpy(*buffer+offset,&dtb.f_inicializacion,sizeof(int));
-	offset+=sizeof(int);
+	memcpy(buffer+offset,&dtb.f_inicializacion,sizeof(dtb.f_inicializacion));
+	offset+=sizeof(dtb.f_inicializacion);
 
 	//Tamaño del script
 
-	memcpy(*buffer+offset,&tamanio_script,sizeof(int));
-	offset+=sizeof(int);
+	memcpy(buffer+offset,&tamanio_script,sizeof(tamanio_script));
+
+	offset+=sizeof(tamanio_script);
 
 	//Path del script
 
-	memcpy(*buffer+offset,dtb.escriptorio,tamanio_script);
+	memcpy(buffer+offset,dtb.escriptorio,tamanio_script);
 	offset+=tamanio_script;
 
-	//Cantidad de archivos en el array de string
-	if(dtb.cant_archivos==0){ //No hay archivos
-		memcpy(*buffer+offset,&null_pointer,sizeof(int));
-	}
-	else{ //Hay archivos
+	memcpy(buffer+offset,&dtb.cant_archivos,sizeof(dtb.cant_archivos));
 
-		memcpy(*buffer+offset,&dtb.cant_archivos,sizeof(int));
-		offset+=sizeof(int);
+	offset+=sizeof(dtb.cant_archivos);
+
+	//Cantidad de archivos en el array de string
+	if(dtb.cant_archivos!=0){ //Hay archivos
 
 		//Guardo el tamanio seguido del string de cada archivo
 		for(i=0;i<dtb.cant_archivos;i++){
 			int tamanio_archivo=string_length(dtb.archivos[i])+1;
 
-			memcpy(*buffer+offset,&tamanio_archivo,sizeof(int));
+			memcpy(buffer+offset,&tamanio_archivo,sizeof(int));
 			offset+=sizeof(int);
 
-			memcpy(*buffer+offset,dtb.archivos[i],tamanio_archivo);
+			memcpy(buffer+offset,dtb.archivos[i],tamanio_archivo);
 			offset+=tamanio_archivo;
 		}
 
 	}
+
+	send(fd,buffer,tamanio_buffer,0);
+
+	free(buffer);
 
 }
 /*
@@ -393,46 +409,77 @@ void serializarDTB(void** buffer,t_DTB dtb){
 	1- Recibir el tamaño del buffer (que es un int) y con eso reservar memoria en un void* para recibir el resto
 	2- Recibir el resto del buffer (con otro recv)
 	3- Invocar a la funcion deserializar con sus respectivos parametros
-	4- El contenido deserializado se guardara en el DTB que se para como parametro
+	4- El contenido deserializado se guardara en el DTB que se pasa como parametro
 */
-void deserializarDTB(void*buffer,t_DTB* dtb){
+t_DTB RecibirYDeserializarDTB(int fd){
 
-	int offset=0,tamanio_script,cant_archivos,i;
+	void*buffer;
+	t_DTB dtb;
+	int offset=0;
+	int tamanio_script,cant_archivos,i;
+	int tamanio_buffer;
+
+	//Recibo el header
+	recv(fd,&tamanio_buffer,sizeof(tamanio_buffer),0);
+
+	printf("tamanio buffer: %d\n",tamanio_buffer);
+
+	buffer=malloc(tamanio_buffer);
+
+	recv(fd,buffer,tamanio_buffer,0);
 
 	//Id del DTB
 
-	memcpy(&(dtb->id),buffer+offset,sizeof(int));
+	memcpy(&(dtb.id),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
+
+	printf("check! %d\n",dtb.id);
 
 	//Program counter del DTB
 
-	memcpy(&(dtb->pc),buffer+offset,sizeof(int));
+	memcpy(&(dtb.pc),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
+
+	printf("check!\n");
 
 	//Flag de inicializacion
 
-	memcpy(&(dtb->f_inicializacion),buffer+offset,sizeof(int));
+	memcpy(&(dtb.f_inicializacion),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
+
+	printf("check!\n");
+
 
 	//Tamaño del string del script
 	memcpy(&tamanio_script,buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
+	printf("check!\n");
+
+
 	//Ruta del script
 
-	dtb->escriptorio=malloc(sizeof(char)*tamanio_script);
-	memcpy(dtb->escriptorio,buffer+offset,tamanio_script);
+	dtb.escriptorio=malloc(sizeof(char)*tamanio_script);
+	memcpy(dtb.escriptorio,buffer+offset,tamanio_script);
 	offset+=tamanio_script;
+
+	printf("check!\n");
+
+
 	//Cantidad de archivos
 
 	memcpy(&cant_archivos,buffer+offset,sizeof(int));
+
+	printf("check! %d\n",cant_archivos);
+
 
 	//Si hay archivos en el DTB...
 	if(cant_archivos!=0){
 
 		int tamanio_archivo;
 
-		dtb->archivos=malloc(cant_archivos);
+		dtb.archivos=malloc(cant_archivos);
+		dtb.cant_archivos=cant_archivos;
 
 		offset+=sizeof(int);
 
@@ -441,13 +488,18 @@ void deserializarDTB(void*buffer,t_DTB* dtb){
 			memcpy(&tamanio_archivo,buffer+offset,sizeof(int));
 			offset+=sizeof(int);
 
-			dtb->archivos[i]=malloc(sizeof(char)*tamanio_archivo);
+			dtb.archivos[i]=malloc(sizeof(char)*tamanio_archivo);
 
-			memcpy(dtb->archivos[i],buffer+offset,tamanio_archivo);
+			memcpy(dtb.archivos[i],buffer+offset,tamanio_archivo);
 			offset+=tamanio_archivo;
 
 		}
+	}else{
+
+		printf("agrego cant. de archivos\n");
+
+		dtb.cant_archivos=cant_archivos;
 
 	}
-
+	return dtb;
 }

@@ -23,7 +23,7 @@ int main(){
 				config_CPU.ip_safa,config_CPU.puerto_safa,config_CPU.ip_diego,config_CPU.puerto_diego,config_CPU.retardo);
 */
 
-	int SAFA_fd,DAM_fd,FM9_fd,rafaga;
+	int SAFA_fd,DAM_fd,FM9_fd;
 
 	t_DTB exec_DTB;
 
@@ -40,14 +40,16 @@ int main(){
 	log_info(log_CPU,"Conexion exitosa con SAFA");
 
 	//Aca hace el handshake con SAFA para saber la rafaga de planificacion
-	if(recv(SAFA_fd,(void*)rafaga,sizeof(int),0)<=0){
+	if(recv(SAFA_fd,&rafaga,sizeof(int),0)<=0){
 		log_destroy(log_CPU);
 		perror("Error al recibir la rafaga de planificacion");
 		exit(2);
 	}
 
+	log_info(log_CPU,"Rafaga de CPU recibida: %d",rafaga);
+
 	//El CPU se conecta con "el diego"
-	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+	/*if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
 		log_error(log_CPU,"Error al conectarse con DAM");
 		exit(1);
 	}
@@ -55,12 +57,21 @@ int main(){
 	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
 		log_error(log_CPU,"Error al conectarse con FM9");
 		exit(1);
-	}
+	}*/
 
 
 	//Espero para recibir un DTB a ejecutar
+	int* tamanio_buffer=malloc(sizeof(int)); t_DTB dtb_exec;
 
+	void*buffer;
 
+	log_info(log_CPU,"Esperando DTB del S-AFA");
+
+	t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
+
+	log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
+
+	while(1);
 
 
 	return 0;

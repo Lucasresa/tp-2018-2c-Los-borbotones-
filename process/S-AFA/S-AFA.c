@@ -43,7 +43,7 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-	DAM_fd=aceptarConexion(SAFA_fd);
+/*	DAM_fd=aceptarConexion(SAFA_fd);
 
 	if(DAM_fd==-1){
 		perror("Error de conexion con DAM");
@@ -58,7 +58,7 @@ int main(){
 	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
 
 	pthread_detach(hiloDAM);
-
+*/
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -69,7 +69,7 @@ int main(){
 		if((CPU_fd=aceptarConexion(SAFA_fd))!=-1){
 
 
-			pthread_create(&hiloCPU,NULL,(void*)atenderCPU,(void*)&hiloCPU);
+			pthread_create(&hiloCPU,NULL,(void*)atenderCPU,(void*)&CPU_fd);
 			pthread_detach(hiloCPU);
 			log_info(log_SAFA,"Conexion exitosa con la CPU %d",CPU_fd);
 
@@ -130,12 +130,18 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 void atenderDAM(int*fd){
 
 
-
 }
 
 void atenderCPU(int*fd){
 
+	int fd_CPU = *fd;
+	void*buffer;
 
+	log_info(log_SAFA,"Enviando info del quantum al CPU %d...",fd_CPU);
+
+	send(fd_CPU,&config_SAFA.quantum,sizeof(int),0);
+
+	recv(fd_CPU,buffer,1,0);
 
 }
 

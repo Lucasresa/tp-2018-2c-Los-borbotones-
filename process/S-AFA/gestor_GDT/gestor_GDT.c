@@ -94,9 +94,10 @@ void agregarDTBDummyANew(char*path){
 	dtb.f_inicializacion=1;
 	dtb.pc=0;
 	dtb.id=cont_id;
+	dtb.cant_archivos=0;
 	cont_id++;
 
-	queue_push(cola_new,(void*)&dtb);
+	queue_push(cola_new,&dtb);
 
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb.id);
 
@@ -123,7 +124,7 @@ void ejecutarPLP(){
 
 		init_dummy.f_inicializacion=0;
 
-		queue_push(cola_ready,(void*)&init_dummy);
+		queue_push(cola_ready,&init_dummy);
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
 
@@ -161,14 +162,15 @@ void ejecutarProceso(t_DTB proceso){
 	}
 	else{
 		//Aca deberia enviarse el DTB al CPU que se encuentra disponible y se agrega el proceso a la cola de ejecucion
+		void*buffer;
 
 		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",*CPU_vacio);
 
-		queue_push(cola_exec,(void*)&proceso);
+		queue_push(cola_exec,&proceso);
 
+		serializarYEnviarDTB(*CPU_vacio,buffer,proceso);
 
-
-
+		log_info(log_SAFA,"DTB enviado con exito!");
 
 	}
 
