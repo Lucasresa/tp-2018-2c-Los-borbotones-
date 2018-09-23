@@ -2,6 +2,9 @@
 #define FM9_H_
 
 #include "../../utils/bibliotecaDeSockets.h"
+#include <readline/readline.h>
+#include <commons/string.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <commons/log.h>
 #include <commons/config.h>
@@ -25,6 +28,8 @@ typedef struct{
 t_config_FM9 config_FM9;
 t_config* file_FM9;
 t_log* logger;
+
+void *consolaThread(void*);
 
 void funcionHandshake(int, void*);
 void funcionRecibirPeticion(int, void*);

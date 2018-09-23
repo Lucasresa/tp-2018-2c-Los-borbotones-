@@ -19,6 +19,11 @@ int main(){
 	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
 
 	log_info(logger, "Escuchando conexiones...");
+
+    pthread_t thread_id;
+
+    pthread_create(&thread_id, NULL, consolaThread, NULL);
+
 	fd_set fd_set;
 	FD_ZERO(&fd_set);
 	FD_SET(listener_socket, &fd_set);
@@ -26,6 +31,29 @@ int main(){
 		escuchar(listener_socket, &fd_set, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
 		// Probablemente conviene sacar el sleep()
 		sleep(1);
+	}
+}
+
+void *consolaThread(void *vargp)
+{
+	while(true) {
+		char *line = readline("$ ");
+
+		if (*line==NULL) continue;
+
+		char *command = strtok(line, " ");
+
+		if (strcmp(command, "dump")==0) {
+			char *value = strtok(0, " ");
+			if (value==NULL) {
+				puts("Please insert an id to dump");
+				continue;
+			}
+			printf("Structures of process with id: %s \n", value);
+
+		} else {
+			puts("Command not recognized.");
+		}
 	}
 }
 
