@@ -1,13 +1,12 @@
 #include "S-AFA.h"
 
-
 int main(){
 	//flag para saber si la consola esta operativa
 	int flag_consola=0;
 
 	log_SAFA=log_create("log_SAFA.log","SAFA",true,LOG_LEVEL_INFO);
 
-	cola_CPU=queue_create();
+	CPU_libres=queue_create();
 
 
 	//Creo las colas del S-AFA
@@ -35,7 +34,7 @@ int main(){
 
 	//Aca habria que hacer la parte de la conexion con los demas procesos usando sockets. (Usando la shared library de sockets
 
-	int SAFA_fd,DAM_fd,CPU_fd;
+	int SAFA_fd,DAM_fd;
 	crearSocket(&SAFA_fd);
 
 
@@ -65,6 +64,7 @@ int main(){
 	while(1){
 
 		pthread_t hiloCPU;
+		int CPU_fd;
 
 		if((CPU_fd=aceptarConexion(SAFA_fd))!=-1){
 
@@ -73,7 +73,8 @@ int main(){
 			pthread_detach(hiloCPU);
 			log_info(log_SAFA,"Conexion exitosa con la CPU %d",CPU_fd);
 
-			queue_push(cola_CPU,&CPU_fd);
+			queue_push(CPU_libres,(void*)CPU_fd);
+
 
 		}
 		else{
@@ -126,6 +127,25 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 	return algo;
 }
 
+void eliminarSocketCPU(int fd){
+
+	int tamanio_array=queue_size(CPU_libres);
+	int array_CPU[tamanio_array];
+	int i;
+	//Paso la cola a un array
+	for(i=0;i<tamanio_array;i++){
+		array_CPU[i]=(int)queue_pop(CPU_libres);
+	}
+	for(i=0;i<tamanio_array;i++){
+
+		if(array_CPU[i]!=fd){
+			queue_push(CPU_libres,(void*)array_CPU[i]);
+		}
+
+	}
+
+}
+
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
 
@@ -141,7 +161,17 @@ void atenderCPU(int*fd){
 
 	send(fd_CPU,&config_SAFA.quantum,sizeof(int),0);
 
-	recv(fd_CPU,buffer,1,0);
+	if(recv(fd_CPU,buffer,1,0)<=0){
+
+		log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
+
+		eliminarSocketCPU(fd_CPU);
+
+		config_SAFA.multiprog+=1;
+
+		log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
+
+	}
 
 }
 

@@ -153,22 +153,22 @@ void ejecutarPCP(){
 //Envio a la CPU el DTB para que ejecute
 void ejecutarProceso(t_DTB proceso){
 
-	int* CPU_vacio=(int*)queue_pop(cola_CPU);
+	printf("Elementos en la lista: %d\n",queue_size(CPU_libres));
 
-	printf("Elementos en la lista: %d\n",queue_size(cola_CPU));
-
-	if(CPU_vacio==NULL){
+	if(queue_size(CPU_libres)==0){
 		log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso %d permanecera en Ready",proceso.id);
 	}
 	else{
 		//Aca deberia enviarse el DTB al CPU que se encuentra disponible y se agrega el proceso a la cola de ejecucion
+		int CPU_vacio=(int)queue_pop(CPU_libres);
+
 		void*buffer;
 
-		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",*CPU_vacio);
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
 
 		queue_push(cola_exec,&proceso);
 
-		serializarYEnviarDTB(*CPU_vacio,buffer,proceso);
+		serializarYEnviarDTB(CPU_vacio,buffer,proceso);
 
 		log_info(log_SAFA,"DTB enviado con exito!");
 

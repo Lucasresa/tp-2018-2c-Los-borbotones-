@@ -9,6 +9,7 @@
 t_config* file_SAFA;
 
 t_algoritmo detectarAlgoritmo(char*);
+void eliminarSocketCPU(int);
 void atenderDAM(int*);
 void atenderCPU(int*);
 

@@ -65,9 +65,23 @@ int main(){
 	t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
 
 	log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
-
+/*
+	if(dtb.f_inicializacion==0)
+		inicializarDTB(dtb);
+	else
+		comenzarEjecucion(dtb);
+*/
 	while(1);
 
-
 	return 0;
+}
+
+void inicializarDTB(t_DTB dtb){
+
+	//Enviar peticion de "abrir" al MDJ por medio de "el diego"
+
+
+
+
+
 }

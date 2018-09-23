@@ -41,7 +41,7 @@ t_config_SAFA config_SAFA;
 
 t_log* log_SAFA;
 
-t_queue* cola_CPU;
+t_queue* CPU_libres;
 
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */
