@@ -25,8 +25,6 @@ int main(){
 
 	int SAFA_fd,DAM_fd,FM9_fd;
 
-	t_DTB exec_DTB;
-
 	crearSocket(&SAFA_fd);
 	crearSocket(&DAM_fd);
 	crearSocket(&FM9_fd);
@@ -61,9 +59,6 @@ int main(){
 
 
 	//Espero para recibir un DTB a ejecutar
-	int* tamanio_buffer=malloc(sizeof(int)); t_DTB dtb_exec;
-
-	void*buffer;
 
 	log_info(log_CPU,"Esperando DTB del S-AFA");
 

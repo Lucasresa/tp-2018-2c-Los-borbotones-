@@ -311,12 +311,11 @@ char *recibirYDeserializarString(int socket){
 }
 
 //-----------------------------------------------------------------------
-/*Funcion para serializar el DTB y poder enviarlo a traves de un socket
+/*Funcion para serializar el DTB y enviarlo a traves de un socket
  *Se copia todo lo que hay dentro del DTB a un buffer, la estructura seria:
  *
  *	|Tamañobuffer|Id|Pc|Flag|TamañoScript|Script|CantidadArchivosAbiertos|TamanioArchivo1|Archivo1|...|TamanioArchivoN|ArchivoN|
  *
- *Lo que retorna es el tamaño total del buffer a enviar
 */
 void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 
@@ -345,8 +344,6 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	buffer=malloc(tamanio_buffer);
 
 	memset(buffer,0,tamanio_buffer);
-
-	printf("Tamanio buffer= %d\tTamanio info= %d\n",tamanio_buffer,tamanio_info);
 
 	//--------------------------------------------------------------------
 
@@ -379,11 +376,11 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	memcpy(buffer+offset,dtb.escriptorio,tamanio_script);
 	offset+=tamanio_script;
 
+	//Cantidad de archivos abiertos por el DTB
 	memcpy(buffer+offset,&dtb.cant_archivos,sizeof(dtb.cant_archivos));
-
 	offset+=sizeof(dtb.cant_archivos);
 
-	//Cantidad de archivos en el array de string
+	//Contenido de cada archivo abierto y su tamaño
 	if(dtb.cant_archivos!=0){ //Hay archivos
 
 		//Guardo el tamanio seguido del string de cada archivo
@@ -405,11 +402,7 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 
 }
 /*
-	Funcion para deserializar el buffer.
-	1- Recibir el tamaño del buffer (que es un int) y con eso reservar memoria en un void* para recibir el resto
-	2- Recibir el resto del buffer (con otro recv)
-	3- Invocar a la funcion deserializar con sus respectivos parametros
-	4- El contenido deserializado se guardara en el DTB que se pasa como parametro
+ * Funcion encargada de recibir y deserializar un DTB
 */
 t_DTB RecibirYDeserializarDTB(int fd){
 
@@ -426,6 +419,7 @@ t_DTB RecibirYDeserializarDTB(int fd){
 
 	buffer=malloc(tamanio_buffer);
 
+	//Recibo el resto de la informacion
 	recv(fd,buffer,tamanio_buffer,0);
 
 	//Id del DTB
@@ -433,29 +427,19 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	memcpy(&(dtb.id),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
-	printf("check! %d\n",dtb.id);
-
 	//Program counter del DTB
 
 	memcpy(&(dtb.pc),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
-
-	printf("check!\n");
 
 	//Flag de inicializacion
 
 	memcpy(&(dtb.f_inicializacion),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
-	printf("check!\n");
-
-
 	//Tamaño del string del script
 	memcpy(&tamanio_script,buffer+offset,sizeof(int));
 	offset+=sizeof(int);
-
-	printf("check!\n");
-
 
 	//Ruta del script
 
@@ -463,15 +447,9 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	memcpy(dtb.escriptorio,buffer+offset,tamanio_script);
 	offset+=tamanio_script;
 
-	printf("check!\n");
-
-
 	//Cantidad de archivos
 
 	memcpy(&cant_archivos,buffer+offset,sizeof(int));
-
-	printf("check! %d\n",cant_archivos);
-
 
 	//Si hay archivos en el DTB...
 	if(cant_archivos!=0){
@@ -496,10 +474,10 @@ t_DTB RecibirYDeserializarDTB(int fd){
 		}
 	}else{
 
-		printf("agrego cant. de archivos\n");
-
 		dtb.cant_archivos=cant_archivos;
 
 	}
+
 	return dtb;
+
 }
