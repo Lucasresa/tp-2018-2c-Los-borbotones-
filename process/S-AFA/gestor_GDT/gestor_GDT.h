@@ -5,6 +5,7 @@
 #include <commons/log.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <stdbool.h>
 #include "../../../utils/bibliotecaDeSockets.h"
 
@@ -26,22 +27,24 @@ char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
 void ejecutarComando(int nro_op , char * args);
 
-void agregarDTBDummyANew(char*);
+void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
 void ejecutarPCP();
-void ejecutarProceso(t_DTB);
+void ejecutarProceso(t_DTB*,int);
 
 t_queue* cola_new;
 t_queue* cola_ready;
 t_queue* cola_block;
-t_queue* cola_exec;
+
+t_dictionary* cola_exec;
+
 t_queue* cola_exit;
 
 t_config_SAFA config_SAFA;
 
 t_log* log_SAFA;
 
-t_queue* CPU_libres;
+t_list* CPU_libres;
 
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

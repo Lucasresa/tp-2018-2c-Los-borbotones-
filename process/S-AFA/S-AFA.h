@@ -6,6 +6,8 @@
 #ifndef S_AFA_H_
 #define S_AFA_H_
 
+
+pthread_mutex_t bloqueo_CPU=PTHREAD_MUTEX_INITIALIZER;
 t_config* file_SAFA;
 
 t_algoritmo detectarAlgoritmo(char*);

@@ -61,10 +61,16 @@ void ejecutarComando(int nro_op, char * args){
 	switch(nro_op){
 			case 1:
 				printf("La operacion es ejecutar y el parametro es: %s \n",args);
-				agregarDTBDummyANew(args);
+				t_DTB* dtb_new=malloc(sizeof(t_DTB));
+				agregarDTBDummyANew(args,dtb_new);
 			break;
 			case 2:
 				printf("La operacion es status y el parametro es: %s \n",args);
+
+				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nExit: %d\nCPU libres: %d\n",
+						queue_size(cola_new),queue_size(cola_ready),dictionary_size(cola_exec),queue_size(cola_exit),
+						list_size(CPU_libres));
+
 			break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
@@ -86,20 +92,18 @@ void ejecutarComando(int nro_op, char * args){
 //Funciones planificador.
 
 //Creo el dtb y lo agrego a la cola de New
-void agregarDTBDummyANew(char*path){
+void agregarDTBDummyANew(char*path,t_DTB*dtb){
 
-	t_DTB dtb;
-
-	dtb.escriptorio=string_duplicate(path);
-	dtb.f_inicializacion=1;
-	dtb.pc=0;
-	dtb.id=cont_id;
-	dtb.cant_archivos=0;
+	dtb->escriptorio=string_duplicate(path);
+	dtb->f_inicializacion=1;
+	dtb->pc=0;
+	dtb->id=cont_id;
+	dtb->cant_archivos=0;
 	cont_id++;
 
-	queue_push(cola_new,&dtb);
+	queue_push(cola_new,dtb);
 
-	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb.id);
+	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
 	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
 
@@ -112,19 +116,19 @@ void agregarDTBDummyANew(char*path){
 void ejecutarPLP(){
 
 	//Si el grado de multiprogramacion lo permite, entonces le aviso al PCP para que desbloquee el dummy
-	if(config_SAFA.multiprog!=0){
+	if(config_SAFA.multiprog!=0&&queue_size(cola_new)!=0){
 
-		t_DTB init_dummy;
+		t_DTB* init_dummy;
 
 		config_SAFA.multiprog-=1;
 
-		init_dummy=*(t_DTB*)queue_pop(cola_new);
+		init_dummy=queue_pop(cola_new);
 
-		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy.id);
+		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
-		init_dummy.f_inicializacion=0;
+		init_dummy->f_inicializacion=0;
 
-		queue_push(cola_ready,&init_dummy);
+		queue_push(cola_ready,init_dummy);
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
 
@@ -135,43 +139,37 @@ void ejecutarPLP(){
 
 //Planificador a corto plazo
 void ejecutarPCP(){
-	t_DTB dtb_exec;
+	t_DTB* dtb;
 	switch(config_SAFA.algoritmo){
 	case FIFO:
 
-		dtb_exec=*(t_DTB*)queue_pop(cola_ready);
+		if(list_size(CPU_libres)==0){
+			log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso %d permanecera en Ready",dtb->id);
+		}else{
+			dtb=queue_pop(cola_ready);
 
-		//queue_push(cola_exec,(void*)&dtb_exec);
+			int CPU_vacio=(int)list_remove(CPU_libres,0);
 
-		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb_exec.id);
+			log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
 
-		ejecutarProceso(dtb_exec);
+			log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
 
+			//Retardo en la planificacion....
+			usleep(config_SAFA.retardo*1000);
+
+			ejecutarProceso(dtb,CPU_vacio);
+		}
 	}
-
 }
 //Envio a la CPU el DTB para que ejecute
-void ejecutarProceso(t_DTB proceso){
-
-	printf("Elementos en la lista: %d\n",queue_size(CPU_libres));
-
-	if(queue_size(CPU_libres)==0){
-		log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso %d permanecera en Ready",proceso.id);
-	}
-	else{
-		//Aca deberia enviarse el DTB al CPU que se encuentra disponible y se agrega el proceso a la cola de ejecucion
-		int CPU_vacio=(int)queue_pop(CPU_libres);
+void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 
 		void*buffer;
 
-		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
+		dictionary_put(cola_exec,string_itoa(CPU_vacio),proceso);
 
-		queue_push(cola_exec,&proceso);
-
-		serializarYEnviarDTB(CPU_vacio,buffer,proceso);
+		serializarYEnviarDTB(CPU_vacio,buffer,*proceso);
 
 		log_info(log_SAFA,"DTB enviado con exito!");
-
-	}
 
 }

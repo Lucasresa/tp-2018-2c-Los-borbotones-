@@ -6,7 +6,7 @@ int main(){
 
 	log_SAFA=log_create("log_SAFA.log","SAFA",true,LOG_LEVEL_INFO);
 
-	CPU_libres=queue_create();
+	CPU_libres=list_create();
 
 
 	//Creo las colas del S-AFA
@@ -14,7 +14,7 @@ int main(){
 	cola_new = queue_create();
 	cola_ready = queue_create();
 	cola_block = queue_create();
-	cola_exec = queue_create();
+	cola_exec = dictionary_create();
 	cola_exit = queue_create();
 
 	//Levanto archivo de configuracion del S-AFA
@@ -73,7 +73,7 @@ int main(){
 			pthread_detach(hiloCPU);
 			log_info(log_SAFA,"Conexion exitosa con la CPU %d",CPU_fd);
 
-			queue_push(CPU_libres,(void*)CPU_fd);
+			list_add(CPU_libres,(void*)CPU_fd);
 
 
 		}
@@ -129,17 +129,17 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 
 void eliminarSocketCPU(int fd){
 
-	int tamanio_array=queue_size(CPU_libres);
+	int tamanio_array=list_size(CPU_libres);
 	int array_CPU[tamanio_array];
 	int i;
 	//Paso la cola a un array
 	for(i=0;i<tamanio_array;i++){
-		array_CPU[i]=(int)queue_pop(CPU_libres);
+		array_CPU[i]=(int)list_remove(CPU_libres,0);
 	}
 	for(i=0;i<tamanio_array;i++){
 
 		if(array_CPU[i]!=fd){
-			queue_push(CPU_libres,(void*)array_CPU[i]);
+			list_add(CPU_libres,(void*)array_CPU[i]);
 		}
 
 	}
@@ -155,22 +155,43 @@ void atenderDAM(int*fd){
 void atenderCPU(int*fd){
 
 	int fd_CPU = *fd;
-	void*buffer;
+	void*buffer=malloc(1);
 
 	log_info(log_SAFA,"Enviando info del quantum al CPU %d...",fd_CPU);
 
 	send(fd_CPU,&config_SAFA.quantum,sizeof(int),0);
 
+	if(queue_size(cola_ready)!=0){
+
+		log_info(log_SAFA,"Hay %d procesos esperando en Ready, ejecutando PCP",queue_size(cola_ready));
+
+		ejecutarPCP();
+
+	}
+
 	if(recv(fd_CPU,buffer,1,0)<=0){
 
 		log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
 
-		eliminarSocketCPU(fd_CPU);
+		pthread_mutex_lock(&bloqueo_CPU);
 
-		config_SAFA.multiprog+=1;
+		//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutar el PLP para que replanifique
+		if(dictionary_has_key(cola_exec,string_itoa(fd_CPU))){
+			t_DTB* dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+			log_info(log_SAFA,"El CPU %d estaba ejecutando el proceso %d finalizando....",fd_CPU,dtb->id);
+			queue_push(cola_exit,dtb);
+			config_SAFA.multiprog+=1;
+			ejecutarPLP();
+		}
+		else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres
+			log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lita....",fd_CPU);
+			eliminarSocketCPU(fd_CPU);
+		}
+		pthread_mutex_unlock(&bloqueo_CPU);
 
 		log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
 
+		free(buffer);
 	}
 
 }
