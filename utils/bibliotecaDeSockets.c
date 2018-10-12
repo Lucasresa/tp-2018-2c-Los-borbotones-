@@ -139,28 +139,22 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 	serializarYEnviarEntero(socket, &tipoDePaquete);
 
 	switch(tipoDePaquete){
-	case PAQ_INT:
-		serializarYEnviarEntero(socket, (int*)package);
+	case VALIDAR_ARCHIVO:
+		serializarYEnviarString(socket,((peticion_validar*)package)->path);
 		break;
-	case PAQ_STRING:
-		serializarYEnviarString(socket, (char*)package);
+	case CREAR_ARCHIVO:
+		serializarYEnviarString(socket, ((peticion_crear*)package)->path);
+		serializarYEnviarEntero(socket,&((peticion_crear*)package)->cant_bytes);
 		break;
-	case PAQ_PCB:
-		serializarYEnviarEntero(socket, &((struct mProc*)package)->PC);
-		serializarYEnviarEntero(socket, &((struct mProc*)package)->PID);
-		serializarYEnviarEntero(socket, &((struct mProc*)package)->estadoDelProceso);
-		serializarYEnviarString(socket, ((struct mProc*)package)->rutaRelativaDeArchivo);
+	case OBTENER_DATOS:
+		serializarYEnviarString(socket,((peticion_obtener*)package)->path);
+		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->offset);
+		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->size);
 		break;
-	case PAQ_MPROCESO:
-		serializarYEnviarEntero(socket,&((struct mProcesoSwap*)package)->id);
-		serializarYEnviarEntero(socket,&((struct mProcesoSwap*)package)->cantidadTotalPaginas);
-		break;
-	case PAQ_PETICION_PAGINA_SWAP:
-		serializarYEnviarEntero(socket,&((struct peticionLecturaSwap*)package)->idProceso);
-		serializarYEnviarEntero(socket,&((struct peticionLecturaSwap*)package)->numeroPagina);
-		break;
-	case PAQ_LECTURA_CONTENIDO:
-		serializarYEnviarString(socket,((struct paqContenido*)package)->contenido);
+	case GUARDAR_DATOS:
+		serializarYEnviarString(socket,((peticion_guardar*)package)->path);
+		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->offset);
+		serializarYEnviarVoid(socket,((peticion_guardar*)package)->size,((peticion_guardar*)package)->buffer);
 		break;
 	}
 }
@@ -204,52 +198,56 @@ void serializarYEnviarEntero(int socket, int* entero){
 	enviarTodo(socket, serializado, &offset);
 }
 
-void* recibirYDeserializar(int socket){
+void serializarYEnviarVoid(int socket, int size, void*buffer){
 
-	int *tipo = (int*)recibirYDeserializarEntero(socket);
+	int total=(sizeof(char)*size)+sizeof(int);
 
-	if(tipo ==NULL){
-		return NULL;
-	}
-	switch(*tipo){
-	case PAQ_INT:
-		return (void*)recibirYDeserializarEntero(socket);
+	void* serializado=malloc(total);
 
-	case PAQ_STRING:
-		return recibirYDeserializarString(socket);
+	int offset=0, tamanio=size;
 
-	case PAQ_PCB:
+	memcpy(serializado+offset,&tamanio,sizeof(int));
+	offset+=sizeof(tamanio);
+
+	memcpy(serializado+offset,buffer,tamanio);
+	offset+=tamanio;
+
+	enviarTodo(socket,serializado,&offset);
+
+}
+
+void* recibirYDeserializar(int socket,int tipo){
+
+	switch(tipo){
+	case VALIDAR_ARCHIVO:
 	{
-		struct mProc* pcb = malloc(sizeof(struct mProc));
-		pcb->PC = *recibirYDeserializarEntero(socket);
-		pcb->PID = *recibirYDeserializarEntero(socket);
-		pcb->estadoDelProceso = *recibirYDeserializarEntero(socket);
-		pcb->rutaRelativaDeArchivo = recibirYDeserializarString(socket);
-
-		return pcb;
+		peticion_validar* validacion = malloc(sizeof(peticion_validar));
+		validacion->path=recibirYDeserializarString(socket);
+		return validacion;
 	}
-	case PAQ_MPROCESO:
+	case CREAR_ARCHIVO:
 	{
-		struct mProcesoSwap* proceso = malloc(sizeof(struct mProcesoSwap));
-		proceso->id = *recibirYDeserializarEntero(socket);
-		proceso->cantidadTotalPaginas = *recibirYDeserializarEntero(socket);
-
-		return proceso;
+		peticion_crear* creacion = malloc(sizeof(peticion_crear));
+		creacion->path = recibirYDeserializarString(socket);
+		creacion->cant_bytes = *recibirYDeserializarEntero(socket);
+		return creacion;
 	}
-	case PAQ_LECTURA_CONTENIDO:
+	case OBTENER_DATOS:
 	{
-		struct paqContenido* contenido = malloc(sizeof(struct paqContenido));
-		contenido->contenido = recibirYDeserializarString(socket);
-
-		return contenido;
+		peticion_obtener* obtener = malloc(sizeof(peticion_obtener));
+		obtener->path = recibirYDeserializarString(socket);
+		obtener->offset = *recibirYDeserializarEntero(socket);
+		obtener->size = *recibirYDeserializarEntero(socket);
+		return obtener;
 	}
-	case PAQ_PETICION_PAGINA_SWAP:
+	case GUARDAR_DATOS:
 	{
-		struct peticionLecturaSwap* peticion = malloc(sizeof(struct peticionLecturaSwap));
-		peticion->idProceso = *(int*)recibirYDeserializar(socket);
-		peticion->numeroPagina = *(int*)recibirYDeserializar(socket);
-
-		return peticion;
+		peticion_guardar* guardado = malloc(sizeof(peticion_guardar));
+		guardado->path = recibirYDeserializarString(socket);
+		guardado->offset = *recibirYDeserializarEntero(socket);
+		guardado->size = *recibirYDeserializarEntero(socket);
+		guardado->buffer = recibirYDeserializarVoid(socket,guardado->size);
+		return guardado;
 	}
 	default:
 		return NULL;
@@ -310,7 +308,20 @@ char *recibirYDeserializarString(int socket){
 	return string;
 }
 
-//-----------------------------------------------------------------------
+void* recibirYDeserializarVoid(int socket, int size){
+
+	void* buffer=malloc(size);
+
+	if(recv(socket,buffer,size,0)<=0){
+		perror("Conexión falló");
+		free(buffer);
+		return NULL;
+	}
+
+	return buffer;
+}
+
+//-------------------------------------------------------------------------------------------
 /*Funcion para serializar el DTB y enviarlo a traves de un socket
  *Se copia todo lo que hay dentro del DTB a un buffer, la estructura seria:
  *

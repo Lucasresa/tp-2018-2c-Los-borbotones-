@@ -57,6 +57,35 @@ struct respuesta{
 	enum resultado res;
 };
 
+//Estructura para manejar el protocolo
+typedef enum{
+	VALIDAR_ARCHIVO,//PARA EL MDJ
+	CREAR_ARCHIVO,	//PARA EL MDJ
+	OBTENER_DATOS,	//PARA EL MDJ
+	GUARDAR_DATOS	//PARA EL MDJ
+}t_protocolo;
+
+typedef struct{
+	char*path;
+}peticion_validar;
+
+typedef struct{
+	char*path;
+	int cant_bytes;
+}peticion_crear;
+
+typedef struct{
+	char*path;
+	int offset;
+	int size;
+}peticion_obtener;
+
+typedef struct{
+	char*path;
+	int offset;
+	int size;
+	void*buffer;
+}peticion_guardar;
 
 enum paquete {
 	PAQ_INT,
@@ -103,13 +132,15 @@ int escuchar(int socket, fd_set *listaDeSockets,
 	void *(*funcionParaSocketYaConectado)(int, void*),
 	void *parametrosParaSocketYaConectado);
 
-void* recibirYDeserializar(int socket);
+void* recibirYDeserializar(int socket,int tipo);
 char* recibirYDeserializarString(int socket);
 int* recibirYDeserializarEntero(int socket);
+void* recibirYDeserializarVoid(int,int);
 
 void serializarYEnviar(int socket, int tipoDePaquete, void* package);
 void serializarYEnviarString(int socket, char *string);
 void serializarYEnviarEntero(int socket, int *numero);
+void serializarYEnviarVoid(int,int,void*);
 
 int enviarTodo(int socketReceptor, void *buffer, int *cantidadTotal);
 

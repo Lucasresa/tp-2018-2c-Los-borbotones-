@@ -1,10 +1,3 @@
-/*
- * DAM.h
- *
- *  Created on: 2 sep. 2018
- *      Author: utnso
- */
-
 #ifndef DAM_H_
 #define DAM_H_
 
@@ -28,5 +21,7 @@ typedef struct{
 
 t_config* file_DAM;
 t_config_DAM config_DAM;
+t_log* log_DAM;
+
 
 #endif /* DAM_H_ */

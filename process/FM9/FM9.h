@@ -27,7 +27,7 @@ typedef struct{
 
 t_config_FM9 config_FM9;
 t_config* file_FM9;
-t_log* logger;
+t_log* log_FM9;
 
 void *consolaThread(void*);
 

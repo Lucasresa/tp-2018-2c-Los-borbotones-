@@ -1,7 +1,7 @@
 #include "FM9.h"
 
 int main(){
-	logger = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
+	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
 	file_FM9=config_create("CONFIG_FM9.cfg");
 
@@ -18,7 +18,7 @@ int main(){
 
 	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
 
-	log_info(logger, "Escuchando conexiones...");
+	log_info(log_FM9, "Escuchando conexiones...");
 
     pthread_t thread_id;
 
@@ -72,7 +72,7 @@ t_modo detectarModo(char* modo){
 }
 
 void funcionHandshake(int socket, void* argumentos) {
-	log_info(logger, "Conexión establecida");
+	log_info(log_MDJ, "Conexión establecida");
 	return;
 }
 

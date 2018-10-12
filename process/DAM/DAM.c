@@ -2,7 +2,7 @@
 
 int main(){
 
-	logger = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
+	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
 
 	file_DAM = config_create("CONFIG_DAM.cfg");
 
@@ -21,17 +21,32 @@ int main(){
 	crearSocket(&MDJ_fd);
 	crearSocket(&FM9_fd);
 	//El DAM se conecta con FM9_fd
-	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
-		log_error(logger,"Error al conectarse con SAFA");
+//	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
+//		log_error(log_DAM,"Error al conectarse con SAFA");
+//		exit(1);
+//	} else {
+//		log_info(log_DAM, "Conexión con FM9 establecido");
+//	}
+	//El DAM se conecta con MDJ
+	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
+		log_error(log_DAM,"Error al conectarse con MDJ");
 		exit(1);
-	} else {
-		log_info(logger, "Conexión con FM9 establecido");
+	}
+	else{
+		log_info(log_DAM,"Conexion con MDJ establecida");
 	}
 
 	//Espero para recibir un DTB a ejecutar
 
+	peticion_validar validacion = {.path="C://users/luquitas"};
 
+	log_info(log_DAM,"Enviando peticion al MDJ....");
 
+	sleep(2);
+
+	serializarYEnviar(MDJ_fd,VALIDAR_ARCHIVO,&validacion);
+
+	log_info(log_DAM,"Se envio una peticion de validacion al MDJ");
 
 	return 0;
 }

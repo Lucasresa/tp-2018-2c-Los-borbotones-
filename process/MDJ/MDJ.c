@@ -9,7 +9,7 @@
 
 int main(){
 	//Creo un Log para MDJ (FileSystem)
-    logger = log_create("MDF.log","MDJ",true,LOG_LEVEL_INFO);
+    log_MDJ = log_create("MDF.log","MDJ",true,LOG_LEVEL_INFO);
 
 	//Levanto archivo de configuracion del MDJ (FileSystem)
 	file_MDJ=config_create("CONFIG_MDJ.cfg");
@@ -20,41 +20,85 @@ int main(){
 
 	config_destroy(file_MDJ);
 
-    int MDJ_fd
-    crearSocket(&MDJ_fd);
+	//-----------------------------------------------------------------------------------------------
+	//Ejecuto la consola del MDJ en un hilo aparte
+
+
+	pthread_t hilo_consola;
+
+	pthread_create(&hilo_consola,NULL,(void*)consola,NULL);
+
+	pthread_detach(hilo_consola);
+
+	log_info(log_MDJ,"Consola en linea");
+
+	//-----------------------------------------------------------------------------------------------
+    //Espero que el DAM se conecte y logueo cuando esto ocurra
+	int MDJ_fd;
+
+	int tipo_operacion,bytesRecibidos;
+
+	crearSocket(&MDJ_fd);
 
 	setearParaEscuchar(&MDJ_fd, config_MDJ.puerto_mdj);
 
-	log_info(logger, "Escuchando conexiones...");
-	fd_set fd_set;
-	FD_ZERO(&fd_set);
-	FD_SET(MDJ_fd, &fd_set);
-	while(true) {
-		escuchar(MDJ_fd, &fd_set, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
-		// Probablemente conviene sacar el sleep()
-		sleep(1);
+	log_info(log_MDJ, "Esperando conexion del DAM");
+
+	int DAM_fd=aceptarConexion(MDJ_fd);
+
+	if(DAM_fd==-1){
+		log_error(log_MDJ,"Error al establecer conexion con el DAM");
+		log_destroy(log_MDJ);
+		exit(0);
 	}
-}
 
-t_modo detectarModo(char* modo){
-	t_modo modo_enum;
+	log_info(log_MDJ,"Conexion establecida con DAM");
 
-	if(string_equals_ignore_case(modo,"TPI")){
-		modo_enum=TPI;
-	}else if(string_equals_ignore_case(modo,"SPA")){
-		modo_enum=SPA;
-	}else {
-		modo_enum=SEG;
+	//Espero a que el DAM mande alguna solicitud y espero que me mande el tipo de operacion a realizar
+
+	while(1){
+
+		pthread_t hilo_operacion;
+
+		bytesRecibidos=recv(DAM_fd,&tipo_operacion,sizeof(int),0);
+
+		if(bytesRecibidos<=0){
+
+			log_error(log_MDJ,"Error al recibir la operacion del DAM");
+			log_destroy(log_MDJ);
+			exit(1);
+		}
+
+		log_info(log_MDJ,"Peticion recibida del DAM, procesando....");
+
+		determinarOperacion(tipo_operacion,DAM_fd);
+
 	}
-	return modo_enum;
+
+
 }
 
-void funcionHandshake(int socket, void* argumentos) {
-	log_info(logger, "Conexión establecida");
-	return;
-}
+//Esta funcion deberia determinar que operacion quiere ejecutar el DAM y luego tirar un hilo para atenderla
+void determinarOperacion(int operacion,int fd){
 
-void funcionRecibirPeticion(int socket, void* argumentos) {
-	// Acá estaría la lógica para manejar un pedido.
-	return;
+	switch(operacion){
+
+	case VALIDAR_ARCHIVO:
+	{
+		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
+		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
+		break;
+	}
+	case CREAR_ARCHIVO:
+
+		break;
+	case OBTENER_DATOS:
+
+		break;
+	case GUARDAR_DATOS:
+
+		break;
+
+	}
+
 }
