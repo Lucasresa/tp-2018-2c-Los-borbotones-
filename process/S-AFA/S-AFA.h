@@ -1,16 +1,13 @@
-#include <pthread.h>
-#include <commons/collections/queue.h>
-#include <commons/config.h>
-#include "gestor_GDT/gestor_GDT.h"
-
 #ifndef S_AFA_H_
 #define S_AFA_H_
 
+#include <pthread.h>
+#include <commons/collections/queue.h>
+#include "gestor_GDT/gestor_GDT.h"
+#include "load_config.h"
 
 pthread_mutex_t bloqueo_CPU=PTHREAD_MUTEX_INITIALIZER;
-t_config* file_SAFA;
 
-t_algoritmo detectarAlgoritmo(char*);
 void eliminarSocketCPU(int);
 void atenderDAM(int*);
 void atenderCPU(int*);
