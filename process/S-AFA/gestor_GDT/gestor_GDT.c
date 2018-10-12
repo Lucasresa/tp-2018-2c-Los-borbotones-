@@ -1,13 +1,6 @@
 #include "gestor_GDT.h"
-/*
-int main(){
-	consola();
-	return 0;
-}
-*/
 
 int cont_id=0;
-
 
 void* consola(void){
 	char * linea;
@@ -70,7 +63,6 @@ void ejecutarComando(int nro_op, char * args){
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nExit: %d\nCPU libres: %d\n",
 						queue_size(cola_new),queue_size(cola_ready),dictionary_size(cola_exec),queue_size(cola_exit),
 						list_size(CPU_libres));
-
 			break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
@@ -158,7 +150,12 @@ void ejecutarPCP(){
 			usleep(config_SAFA.retardo*1000);
 
 			ejecutarProceso(dtb,CPU_vacio);
-		}
+			}
+		break;
+	case RR:
+		break;
+	case VRR:
+		break;
 	}
 }
 //Envio a la CPU el DTB para que ejecute
