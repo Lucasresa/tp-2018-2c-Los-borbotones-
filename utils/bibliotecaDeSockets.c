@@ -154,7 +154,8 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 	case GUARDAR_DATOS:
 		serializarYEnviarString(socket,((peticion_guardar*)package)->path);
 		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->offset);
-		serializarYEnviarVoid(socket,((peticion_guardar*)package)->size,((peticion_guardar*)package)->buffer);
+		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->size);
+		serializarYEnviarString(socket,((peticion_guardar*)package)->buffer);
 		break;
 	}
 }
@@ -198,24 +199,6 @@ void serializarYEnviarEntero(int socket, int* entero){
 	enviarTodo(socket, serializado, &offset);
 }
 
-void serializarYEnviarVoid(int socket, int size, void*buffer){
-
-	int total=(sizeof(char)*size)+sizeof(int);
-
-	void* serializado=malloc(total);
-
-	int offset=0, tamanio=size;
-
-	memcpy(serializado+offset,&tamanio,sizeof(int));
-	offset+=sizeof(tamanio);
-
-	memcpy(serializado+offset,buffer,tamanio);
-	offset+=tamanio;
-
-	enviarTodo(socket,serializado,&offset);
-
-}
-
 void* recibirYDeserializar(int socket,int tipo){
 
 	switch(tipo){
@@ -246,7 +229,7 @@ void* recibirYDeserializar(int socket,int tipo){
 		guardado->path = recibirYDeserializarString(socket);
 		guardado->offset = *recibirYDeserializarEntero(socket);
 		guardado->size = *recibirYDeserializarEntero(socket);
-		guardado->buffer = recibirYDeserializarVoid(socket,guardado->size);
+		guardado->buffer = recibirYDeserializarString(socket);
 		return guardado;
 	}
 	default:
@@ -306,19 +289,6 @@ char *recibirYDeserializarString(int socket){
 	}
 	free(tamString);
 	return string;
-}
-
-void* recibirYDeserializarVoid(int socket, int size){
-
-	void* buffer=malloc(size);
-
-	if(recv(socket,buffer,size,0)<=0){
-		perror("Conexión falló");
-		free(buffer);
-		return NULL;
-	}
-
-	return buffer;
 }
 
 //-------------------------------------------------------------------------------------------

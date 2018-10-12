@@ -96,9 +96,12 @@ void determinarOperacion(int operacion,int fd){
 
 		break;
 	case GUARDAR_DATOS:
-
+	{
+		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
+		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\tbuffer: %s\n",guardado->path,guardado->offset,
+																				guardado->size,guardado->buffer);
 		break;
-
+	}
 	}
 
 }

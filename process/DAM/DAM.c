@@ -38,15 +38,17 @@ int main(){
 
 	//Espero para recibir un DTB a ejecutar
 
-	peticion_validar validacion = {.path="C://users/luquitas"};
+	peticion_guardar guardado = {.path="C://users/luquitas",.offset=1,.size=20,.buffer="holaholahola"};
 
 	log_info(log_DAM,"Enviando peticion al MDJ....");
 
 	sleep(2);
 
-	serializarYEnviar(MDJ_fd,VALIDAR_ARCHIVO,&validacion);
+	serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 
-	log_info(log_DAM,"Se envio una peticion de validacion al MDJ");
+	log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
+
+
 
 	return 0;
 }

@@ -84,7 +84,7 @@ typedef struct{
 	char*path;
 	int offset;
 	int size;
-	void*buffer;
+	char*buffer;
 }peticion_guardar;
 
 enum paquete {
@@ -135,12 +135,10 @@ int escuchar(int socket, fd_set *listaDeSockets,
 void* recibirYDeserializar(int socket,int tipo);
 char* recibirYDeserializarString(int socket);
 int* recibirYDeserializarEntero(int socket);
-void* recibirYDeserializarVoid(int,int);
 
 void serializarYEnviar(int socket, int tipoDePaquete, void* package);
 void serializarYEnviarString(int socket, char *string);
 void serializarYEnviarEntero(int socket, int *numero);
-void serializarYEnviarVoid(int,int,void*);
 
 int enviarTodo(int socketReceptor, void *buffer, int *cantidadTotal);
 
