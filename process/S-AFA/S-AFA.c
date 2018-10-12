@@ -8,19 +8,19 @@ int main(){
 
 	CPU_libres=list_create();
 
-
 	//Creo las colas del S-AFA
 
-	cola_new = queue_create();
-	cola_ready = queue_create();
-	cola_block = queue_create();
-	cola_exec = dictionary_create();
-	cola_exit = queue_create();
+	crear_colas();
 
 	//Levanto archivo de configuracion del S-AFA
 
 	load_config();
 
+	//Hilo para actualizar achivo de configuracion del S-AFA
+
+	pthread_t hilo_notify;
+
+	pthread_create(&hilo_notify,NULL,(void*)actualizar_file_config,NULL);
 
 	//-------------------------------------------------------------------------------------------------------
 
@@ -28,7 +28,6 @@ int main(){
 
 	int SAFA_fd,DAM_fd;
 	crearSocket(&SAFA_fd);
-
 
 	setearParaEscuchar(&SAFA_fd,config_SAFA.port);
 
@@ -89,17 +88,7 @@ int main(){
 			log_info(log_SAFA,"Consola en linea...");
 
 		}
-
 	}
-
-
-	//--------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
 }
 
 
