@@ -12,7 +12,7 @@ typedef struct{
  }t_config_MDJ;
 
 
-void consola(void);
+void consola_S-AFA(void);
 char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
 void ejecutarComando(int nro_op , char * args);

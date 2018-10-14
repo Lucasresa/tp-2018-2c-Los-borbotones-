@@ -1,3 +1,6 @@
+#ifndef PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_
+#define PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_
+
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <commons/string.h>
@@ -9,9 +12,6 @@
 #include <stdbool.h>
 #include "../../../utils/bibliotecaDeSockets.h"
 
-#ifndef PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_
-#define PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_
-
 typedef struct{
 
 	int port;
@@ -22,7 +22,7 @@ typedef struct{
 
 }t_config_SAFA;
 
-void* consola(void);
+void* consola_SAFA(void);
 char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
 void ejecutarComando(int nro_op , char * args);
@@ -31,6 +31,10 @@ void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
 void ejecutarPCP();
 void ejecutarProceso(t_DTB*,int);
+
+void algoritmo_FIFO(t_DTB* dtb);
+void algoritmo_RR(t_DTB* dtb);
+void algoritmo_VRR(t_DTB* dtb);
 
 t_queue* cola_new;
 t_queue* cola_ready;

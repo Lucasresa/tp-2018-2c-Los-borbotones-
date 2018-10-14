@@ -39,7 +39,7 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 	}
 	return algo;
 }
-// Se mantiene alerta de cambios en el archivo de configuracion y si se producen lo actualiza
+// Se mantiene alerta de cambios en el archivo de configuracion y si se producen.. lo actualiza
 
 void actualizar_file_config()
 {
@@ -54,6 +54,7 @@ void actualizar_file_config()
 	// Creamos un monitor sobre el path del archivo de configuracion indicando que eventos queremos escuchar
 	int watch_descriptor = inotify_add_watch(file_descriptor,directorio , IN_MODIFY);
 
+	// Leemos la informacion referente a los eventos producidos en el file
 	int length = read(file_descriptor, buffer, BUF_LEN);
 
 	if (length < 0) {
@@ -71,8 +72,12 @@ void actualizar_file_config()
 			// Dentro de "mask" tenemos el evento que ocurrio y sobre donde ocurrio
 
 			if (event->mask & IN_MODIFY) {
-				if (event->mask) {
-					log_info(log_SAFA,"Se modifico el file_config.");
+				if (event->mask & IN_ISDIR)
+				{
+
+				}
+				else
+				{
 					load_config();
 				}
 			}

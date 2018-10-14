@@ -2,7 +2,7 @@
 
 int cont_id=0;
 
-void* consola(void){
+void* consola_SAFA(void){
 	char * linea;
 	char **linea_parseada;
 	int nro_proceso;
@@ -131,13 +131,41 @@ void ejecutarPLP(){
 
 //Planificador a corto plazo
 void ejecutarPCP(){
+
 	t_DTB* dtb;
 	switch(config_SAFA.algoritmo){
-	case FIFO:
+		case FIFO:
+			algoritmo_FIFO(dtb);
+		break;
+		case RR:
+			algoritmo_RR(dtb);
+		break;
+		case VRR:
+			algoritmo_VRR(dtb);
+		break;
+	}
+
+}
+//Envio a la CPU el DTB para que ejecute
+void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
+
+		void*buffer;
+
+		dictionary_put(cola_exec,string_itoa(CPU_vacio),proceso);
+
+		serializarYEnviarDTB(CPU_vacio,buffer,*proceso);
+
+		log_info(log_SAFA,"DTB enviado con exito!");
+
+}
+
+void algoritmo_FIFO(t_DTB* dtb){
 
 		if(list_size(CPU_libres)==0){
-			log_warning(log_SAFA,"No hay ningun CPU vacio, el proceso %d permanecera en Ready",dtb->id);
-		}else{
+			log_warning(log_SAFA,"Todas las CPU estan ejecutando, el proceso %d permanecera en Ready",dtb->id);
+		}
+		else{
+
 			dtb=queue_pop(cola_ready);
 
 			int CPU_vacio=(int)list_remove(CPU_libres,0);
@@ -151,22 +179,11 @@ void ejecutarPCP(){
 
 			ejecutarProceso(dtb,CPU_vacio);
 			}
-		break;
-	case RR:
-		break;
-	case VRR:
-		break;
-	}
 }
-//Envio a la CPU el DTB para que ejecute
-void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 
-		void*buffer;
+void algoritmo_RR(t_DTB* dtb){
 
-		dictionary_put(cola_exec,string_itoa(CPU_vacio),proceso);
-
-		serializarYEnviarDTB(CPU_vacio,buffer,*proceso);
-
-		log_info(log_SAFA,"DTB enviado con exito!");
+}
+void algoritmo_VRR(t_DTB* dtb){
 
 }

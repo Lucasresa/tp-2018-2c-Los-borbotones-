@@ -26,7 +26,7 @@ int main(){
 
 	pthread_t hilo_consola;
 
-	pthread_create(&hilo_consola,NULL,(void*)consola,NULL);
+	pthread_create(&hilo_consola,NULL,(void*)consola_S-AFA,NULL);
 
 	pthread_detach(hilo_consola);
 

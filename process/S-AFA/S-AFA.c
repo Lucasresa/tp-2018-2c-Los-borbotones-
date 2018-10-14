@@ -81,11 +81,11 @@ int main(){
 
 			pthread_t hiloConsola;
 
-			pthread_create(&hiloConsola,NULL,(void*)consola,NULL);
+			log_info(log_SAFA,"Consola en linea...");
+
+			pthread_create(&hiloConsola,NULL,(void*)consola_SAFA,NULL);
 
 			pthread_detach(hiloConsola);
-
-			log_info(log_SAFA,"Consola en linea...");
 
 		}
 	}
@@ -109,17 +109,12 @@ void eliminarSocketCPU(int fd){
 		else
 		{
 			close(array_CPU[i]);
-
 		}
-
 	}
-
-
 }
 
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
-
 
 }
 
@@ -155,7 +150,7 @@ void atenderCPU(int*fd){
 			ejecutarPLP();
 		}
 		else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres
-			log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lita....",fd_CPU);
+			log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lista....",fd_CPU);
 			eliminarSocketCPU(fd_CPU);
 		}
 		pthread_mutex_unlock(&bloqueo_CPU);
