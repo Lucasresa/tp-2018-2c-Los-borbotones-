@@ -6,8 +6,6 @@
 
 Lucas Resa - 1594450 - lukkitas.1597@gmail.com - K3572 
 
-Angel Luis Eduardo Gomez - 1163528 - angelluisgo@gmail.com - K3523 
-
 Tomas Rivero - 1600916 - ttomasrivero@gmail.com - K3571 
 
 Miguel Angel Romagnoli - 1559308 - migueromagnoli@gmail.com - K3572 
