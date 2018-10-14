@@ -40,7 +40,7 @@ int main(){
 
 	peticion_guardar guardado = {.path="C://users/luquitas",.offset=1,.size=20,.buffer="holaholahola"};
 
-	log_info(log_DAM,"Enviando peticion al MDJ....");
+	log_info(log_DAM,"Enviando peticion al MDJ...");
 
 	sleep(2);
 

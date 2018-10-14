@@ -1,6 +1,6 @@
 #include "consola_MDJ.h"
 
-void consola_S-AFA(void){
+void consola_MDJ(void){
 	char * linea;
 	char **linea_parseada;
 	char* montaje;
