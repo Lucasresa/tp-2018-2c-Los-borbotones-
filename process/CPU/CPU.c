@@ -71,6 +71,12 @@ int main(){
 	else
 		comenzarEjecucion(dtb);
 */
+	int protocolo=BLOQUEAR_PROCESO;
+
+	usleep(config_CPU.retardo*3000);
+
+//	send(SAFA_fd,&protocolo,sizeof(int),0);
+
 	while(1);
 
 	return 0;

@@ -2,6 +2,7 @@
 
 int cont_id=0;
 
+//Consola del SAFA
 void* consola_SAFA(void){
 	char * linea;
 	char **linea_parseada;
@@ -60,9 +61,9 @@ void ejecutarComando(int nro_op, char * args){
 			case 2:
 				printf("La operacion es status y el parametro es: %s \n",args);
 
-				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nExit: %d\nCPU libres: %d\n",
-						queue_size(cola_new),queue_size(cola_ready),dictionary_size(cola_exec),queue_size(cola_exit),
-						list_size(CPU_libres));
+				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
+						queue_size(cola_new),queue_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
+						queue_size(cola_exit),list_size(CPU_libres));
 			break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
@@ -80,14 +81,14 @@ void ejecutarComando(int nro_op, char * args){
 	}
 }
 
-//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
 //Creo el dtb y lo agrego a la cola de New
 void agregarDTBDummyANew(char*path,t_DTB*dtb){
 
 	dtb->escriptorio=string_duplicate(path);
-	dtb->f_inicializacion=1;
+	dtb->f_inicializacion=0;
 	dtb->pc=0;
 	dtb->id=cont_id;
 	dtb->cant_archivos=0;
@@ -108,17 +109,20 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 void ejecutarPLP(){
 
 	//Si el grado de multiprogramacion lo permite, entonces le aviso al PCP para que desbloquee el dummy
-	if(config_SAFA.multiprog!=0&&queue_size(cola_new)!=0){
-
+	if(config_SAFA.multiprog==0){
+		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
+	}else if(queue_size(cola_new)==0){
+		log_warning(log_SAFA,"La cola de new esta vacia");
+	}else{
 		t_DTB* init_dummy;
-
-		config_SAFA.multiprog-=1;
 
 		init_dummy=queue_pop(cola_new);
 
-		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
+		config_SAFA.multiprog--;
 
-		init_dummy->f_inicializacion=0;
+		log_info(log_SAFA,"Multiprogramacion actual= %d",config_SAFA.multiprog);
+
+		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
 		queue_push(cola_ready,init_dummy);
 
@@ -126,23 +130,35 @@ void ejecutarPLP(){
 
 		ejecutarPCP();
 	}
-
 }
 
 //Planificador a corto plazo
 void ejecutarPCP(){
 
 	t_DTB* dtb;
-	switch(config_SAFA.algoritmo){
-		case FIFO:
-			algoritmo_FIFO(dtb);
-		break;
-		case RR:
-			algoritmo_RR(dtb);
-		break;
-		case VRR:
-			algoritmo_VRR(dtb);
-		break;
+
+	//Si no hay CPUs libres entonces no hace nada
+	if(list_size(CPU_libres)==0){
+		log_warning(log_SAFA,"Todas las CPU estan ejecutando");
+	}
+	else{
+		//Si no hay procesos para ejecutar en Ready tampoco hace nada
+		if(queue_size(cola_ready)==0){
+			log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
+		}
+		else{
+			switch(config_SAFA.algoritmo){
+			case FIFO:
+				algoritmo_FIFO(dtb);
+				break;
+			case RR:
+				algoritmo_RR(dtb);
+				break;
+			case VRR:
+				algoritmo_VRR(dtb);
+				break;
+			}
+		}
 	}
 
 }
@@ -161,24 +177,18 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 
 void algoritmo_FIFO(t_DTB* dtb){
 
-		if(list_size(CPU_libres)==0){
-			log_warning(log_SAFA,"Todas las CPU estan ejecutando, el proceso %d permanecera en Ready",dtb->id);
-		}
-		else{
+		dtb=queue_pop(cola_ready);
 
-			dtb=queue_pop(cola_ready);
+		int CPU_vacio=(int)list_remove(CPU_libres,0);
 
-			int CPU_vacio=(int)list_remove(CPU_libres,0);
+		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
 
-			log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
 
-			log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
+		//Retardo en la planificacion....
+		usleep(config_SAFA.retardo*1000);
 
-			//Retardo en la planificacion....
-			usleep(config_SAFA.retardo*1000);
-
-			ejecutarProceso(dtb,CPU_vacio);
-			}
+		ejecutarProceso(dtb,CPU_vacio);
 }
 
 void algoritmo_RR(t_DTB* dtb){

@@ -18,9 +18,11 @@ int main(){
 
 	//Hilo para actualizar achivo de configuracion del S-AFA
 
-	pthread_t hilo_notify;
-
-	pthread_create(&hilo_notify,NULL,(void*)actualizar_file_config,NULL);
+//	pthread_t hilo_notify;
+//
+//	pthread_create(&hilo_notify,NULL,(void*)actualizar_file_config,NULL);
+//
+//	pthread_detach(hilo_notify);
 
 	//-------------------------------------------------------------------------------------------------------
 
@@ -121,44 +123,79 @@ void atenderDAM(int*fd){
 void atenderCPU(int*fd){
 
 	int fd_CPU = *fd;
-	void*buffer=malloc(1);
+
+	int protocolo;
 
 	log_info(log_SAFA,"Enviando info del quantum al CPU %d...",fd_CPU);
 
 	send(fd_CPU,&config_SAFA.quantum,sizeof(int),0);
 
-	if(queue_size(cola_ready)!=0){
+	log_info(log_SAFA,"ejecutando PCP...");
 
-		log_info(log_SAFA,"Hay %d procesos esperando en Ready, ejecutando PCP",queue_size(cola_ready));
+	ejecutarPCP();
 
-		ejecutarPCP();
+	while(1){
+		if(recv(fd_CPU,&protocolo,sizeof(int),0)<=0){
 
-	}
+			log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
 
-	if(recv(fd_CPU,buffer,1,0)<=0){
+			pthread_mutex_lock(&bloqueo_CPU);
 
-		log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
+		//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
+			if(dictionary_has_key(cola_exec,string_itoa(fd_CPU))){
+				t_DTB* dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+				log_info(log_SAFA,"El CPU %d estaba ejecutando el proceso %d finalizando....",fd_CPU,dtb->id);
+				queue_push(cola_exit,dtb);
+				config_SAFA.multiprog+=1;
+				ejecutarPLP();
+			}
+			else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres
+				log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lista....",fd_CPU);
+				eliminarSocketCPU(fd_CPU);
+			}
+			pthread_mutex_unlock(&bloqueo_CPU);
 
-		pthread_mutex_lock(&bloqueo_CPU);
+			log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
 
-		//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutar el PLP para que replanifique
-		if(dictionary_has_key(cola_exec,string_itoa(fd_CPU))){
-			t_DTB* dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
-			log_info(log_SAFA,"El CPU %d estaba ejecutando el proceso %d finalizando....",fd_CPU,dtb->id);
+		}
+	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
+		t_DTB* dtb;
+		log_info(log_SAFA,"protocolo: %d",protocolo);
+		switch(protocolo){
+	//Si un proceso se bloquea, tengo que sacarlo de exec y mandarlo a block
+		case BLOQUEAR_PROCESO:
+
+			dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+
+			log_info(log_SAFA,"Bloqueando el DTB %d",dtb->id);
+
+			dictionary_put(cola_block,string_itoa(dtb->id),dtb);
+			//El CPU vuelve a quedar libre
+			list_add(CPU_libres,(void*)fd_CPU);
+
+			ejecutarPCP();
+			break;
+
+	//Si el proceso finalizo su ejecucion entonces lo envio a la cola de exit y ejecuto el PLP
+		case FINALIZAR_PROCESO:
+
+			dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+
+			log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
+
 			queue_push(cola_exit,dtb);
 			config_SAFA.multiprog+=1;
+
+			log_info(log_SAFA,"Ejecutando de nuevo el PLP");
+			//El CPU vuelve a quedar libre
+			list_add(CPU_libres,(void*)fd_CPU);
+
 			ejecutarPLP();
-		}
-		else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres
-			log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lista....",fd_CPU);
-			eliminarSocketCPU(fd_CPU);
-		}
-		pthread_mutex_unlock(&bloqueo_CPU);
+			break;
 
-		log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
-
-		free(buffer);
+		default:
+			break;
+		}
 	}
-
 }
 

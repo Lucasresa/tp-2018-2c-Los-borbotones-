@@ -38,8 +38,8 @@ void algoritmo_VRR(t_DTB* dtb);
 
 t_queue* cola_new;
 t_queue* cola_ready;
-t_queue* cola_block;
 
+t_dictionary* cola_block;
 t_dictionary* cola_exec;
 
 t_queue* cola_exit;
