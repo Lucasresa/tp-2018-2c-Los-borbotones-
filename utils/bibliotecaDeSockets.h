@@ -73,7 +73,7 @@ typedef struct{
 
 typedef struct{
 	char*path;
-	int cant_bytes;
+	int cant_lineas;
 }peticion_crear;
 
 typedef struct{

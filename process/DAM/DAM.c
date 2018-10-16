@@ -21,12 +21,12 @@ int main(){
 	crearSocket(&MDJ_fd);
 	crearSocket(&FM9_fd);
 	//El DAM se conecta con FM9_fd
-//	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
-//		log_error(log_DAM,"Error al conectarse con SAFA");
-//		exit(1);
-//	} else {
-//		log_info(log_DAM, "Conexión con FM9 establecido");
-//	}
+	/*if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
+		log_error(log_DAM,"Error al conectarse con FM9");
+		exit(1);
+	} else {
+		log_info(log_DAM, "Conexión con FM9 establecido");
+	}*/
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
@@ -38,7 +38,7 @@ int main(){
 
 	//Espero para recibir un DTB a ejecutar
 
-	peticion_guardar guardado = {.path="C://users/luquitas",.offset=1,.size=20,.buffer="holaholahola"};
+	peticion_guardar guardado = {.path="users/luquitas.txt",.offset=1,.size=20,.buffer="holaholahola"};
 
 	log_info(log_DAM,"Enviando peticion al MDJ...");
 

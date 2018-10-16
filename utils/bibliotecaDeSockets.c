@@ -144,7 +144,7 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		break;
 	case CREAR_ARCHIVO:
 		serializarYEnviarString(socket, ((peticion_crear*)package)->path);
-		serializarYEnviarEntero(socket,&((peticion_crear*)package)->cant_bytes);
+		serializarYEnviarEntero(socket,&((peticion_crear*)package)->cant_lineas);
 		break;
 	case OBTENER_DATOS:
 		serializarYEnviarString(socket,((peticion_obtener*)package)->path);
@@ -212,7 +212,7 @@ void* recibirYDeserializar(int socket,int tipo){
 	{
 		peticion_crear* creacion = malloc(sizeof(peticion_crear));
 		creacion->path = recibirYDeserializarString(socket);
-		creacion->cant_bytes = *recibirYDeserializarEntero(socket);
+		creacion->cant_lineas = *recibirYDeserializarEntero(socket);
 		return creacion;
 	}
 	case OBTENER_DATOS:
