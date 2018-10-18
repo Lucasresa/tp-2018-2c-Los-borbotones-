@@ -18,11 +18,11 @@ int main(){
 
 	//Hilo para actualizar achivo de configuracion del S-AFA
 
-	pthread_t hilo_notify;
-
-	pthread_create(&hilo_notify,NULL,(void*)actualizar_file_config,NULL);
-
-	pthread_detach(hilo_notify);
+//	pthread_t hilo_inotify;
+//
+//	pthread_create(&hilo_inotify,NULL,(void*)actualizar_file_config,NULL);
+//
+//	pthread_detach(hilo_inotify);
 
 	//-------------------------------------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ void atenderCPU(int*fd){
 
 			pthread_mutex_lock(&bloqueo_CPU);
 
-		//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
+			//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
 			if(dictionary_has_key(cola_exec,string_itoa(fd_CPU))){
 				t_DTB* dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
 				log_info(log_SAFA,"El CPU %d estaba ejecutando el proceso %d finalizando....",fd_CPU,dtb->id);

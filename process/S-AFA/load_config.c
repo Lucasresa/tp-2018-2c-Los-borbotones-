@@ -75,7 +75,7 @@ void actualizar_file_config()
 			if (event->mask & IN_MODIFY) {
 				if (event->mask & IN_ISDIR)
 				{
-
+					//NO HACER NADA
 				}
 				else
 				{
@@ -87,10 +87,9 @@ void actualizar_file_config()
 		}
 		offset += sizeof (struct inotify_event) + event->len;
 	}
-
+	pthread_mutex_destroy(&lock);
 	inotify_rm_watch(file_descriptor, watch_descriptor);
 	close(file_descriptor);
-	pthread_mutex_destroy(&lock);
 }
 
 }
