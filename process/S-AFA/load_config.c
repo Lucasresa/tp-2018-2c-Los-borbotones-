@@ -90,6 +90,7 @@ void actualizar_file_config()
 
 	inotify_rm_watch(file_descriptor, watch_descriptor);
 	close(file_descriptor);
+	pthread_mutex_destroy(&lock);
 }
 
 }
