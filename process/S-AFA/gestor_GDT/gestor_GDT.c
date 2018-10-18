@@ -197,3 +197,6 @@ void algoritmo_RR(t_DTB* dtb){
 void algoritmo_VRR(t_DTB* dtb){
 
 }
+void algoritmo_PROPIO(t_DTB* dtb){
+
+}

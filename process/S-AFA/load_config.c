@@ -43,6 +43,7 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 
 void actualizar_file_config()
 {
+	pthread_mutex_init(&lock,NULL);
 	char buffer[BUF_LEN];
 	char* directorio = "/home/utnso/Escritorio/tp-2018-2c-Los-borbotones-/process/S-AFA";
 	while(1){
@@ -78,7 +79,9 @@ void actualizar_file_config()
 				}
 				else
 				{
+					pthread_mutex_lock(&lock);
 					load_config();
+					pthread_mutex_unlock(&lock);
 				}
 			}
 		}

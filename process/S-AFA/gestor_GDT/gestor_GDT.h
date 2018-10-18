@@ -35,6 +35,7 @@ void ejecutarProceso(t_DTB*,int);
 void algoritmo_FIFO(t_DTB* dtb);
 void algoritmo_RR(t_DTB* dtb);
 void algoritmo_VRR(t_DTB* dtb);
+void algoritmo_PROPIO(t_DTB* dtb);
 
 t_queue* cola_new;
 t_queue* cola_ready;
