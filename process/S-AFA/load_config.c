@@ -43,9 +43,9 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 
 void actualizar_file_config()
 {
-	pthread_mutex_init(&lock,NULL);
+	pthread_mutex_init(&File_config,NULL);
 	char buffer[BUF_LEN];
-	char* directorio = "/home/utnso/Escritorio/tp-2018-2c-Los-borbotones-/process/S-AFA";
+	char* directorio = "/home/utnso/Escritorio/tp-2018-2c-Los-borbotones-/process/S-AFA/CONFIG_S-AFA.cfg";
 	while(1){
 	//Creando fd para el inotify
 	int file_descriptor = inotify_init();
@@ -54,6 +54,11 @@ void actualizar_file_config()
 	}
 	// Creamos un monitor sobre el path del archivo de configuracion indicando que eventos queremos escuchar
 	int watch_descriptor = inotify_add_watch(file_descriptor,directorio , IN_MODIFY);
+
+	if (watch_descriptor < 0)
+	{
+		log_error(log_SAFA,"Error al crear el monitor..");
+	}
 
 	// Leemos la informacion referente a los eventos producidos en el file
 	int length = read(file_descriptor, buffer, BUF_LEN);
@@ -68,29 +73,22 @@ void actualizar_file_config()
 
 		struct inotify_event *event = (struct inotify_event *) &buffer[offset];
 
-		// El campo "len" nos indica la longitud del tamaño del nombre
-		if (event->len) {
-			// Dentro de "mask" tenemos el evento que ocurrio y sobre donde ocurrio
-
-			if (event->mask & IN_MODIFY) {
-				if (event->mask & IN_ISDIR)
-				{
-					//NO HACER NADA
-				}
-				else
-				{
-					pthread_mutex_lock(&lock);
-					load_config();
-					pthread_mutex_unlock(&lock);
-				}
-			}
+		// Dentro de "mask" tenemos el evento que ocurrio y sobre donde ocurrio
+		if (event->mask & IN_MODIFY) {
+				//Actualizo el archivo de configuracion
+				pthread_mutex_lock(&File_config);
+				load_config();
+				pthread_mutex_unlock(&File_config);
+				log_warning(log_SAFA,"Se modifico el archivo de configuracion");
 		}
 		offset += sizeof (struct inotify_event) + event->len;
-	}
-	pthread_mutex_destroy(&lock);
+		}
+	pthread_mutex_destroy(&File_config);
+	//Quito el reloj del directorio
 	inotify_rm_watch(file_descriptor, watch_descriptor);
+	//Cierro el fd
 	close(file_descriptor);
-}
+	}
 
 }
 

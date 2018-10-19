@@ -10,7 +10,7 @@
 #define BUF_LEN     ( 1024 * EVENT_SIZE )
 
 t_config* file_SAFA;
-pthread_mutex_t lock;
+pthread_mutex_t File_config;
 
 void crear_colas(void);
 void load_config(void);

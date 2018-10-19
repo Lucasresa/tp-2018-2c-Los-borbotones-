@@ -100,8 +100,6 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 
 	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
 
-	log_warning(log_SAFA,"EL GRADO DE MULTIPROGRAMACION ES >>>> %d <<<< ", config_SAFA.multiprog);
-
 	ejecutarPLP();
 
 }
@@ -109,9 +107,8 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 
 //Planificador a largo plazo
 void ejecutarPLP(){
-	log_warning(log_SAFA,"EL GRADO DE MULTIPROGRAMACION 2do ES >>>> %d <<<< ", config_SAFA.multiprog);
-
 	//Si el grado de multiprogramacion lo permite, entonces le aviso al PCP para que desbloquee el dummy
+
 	if(config_SAFA.multiprog==0){
 		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
 	}else if(queue_size(cola_new)==0){

@@ -18,11 +18,11 @@ int main(){
 
 	//Hilo para actualizar achivo de configuracion del S-AFA
 
-//	pthread_t hilo_inotify;
-//
-//	pthread_create(&hilo_inotify,NULL,(void*)actualizar_file_config,NULL);
-//
-//	pthread_detach(hilo_inotify);
+	pthread_t hilo_inotify;
+
+	pthread_create(&hilo_inotify,NULL,(void*)actualizar_file_config,NULL);
+
+	pthread_detach(hilo_inotify);
 
 	//-------------------------------------------------------------------------------------------------------
 
