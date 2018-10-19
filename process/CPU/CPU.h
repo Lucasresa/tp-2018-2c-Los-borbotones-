@@ -22,4 +22,6 @@ t_log* log_CPU;
 
 int rafaga;
 
+void inicializarDTB(int ,int ,t_DTB* );
+
 #endif /* CPU_H_ */

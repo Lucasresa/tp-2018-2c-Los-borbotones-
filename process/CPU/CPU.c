@@ -62,32 +62,34 @@ int main(){
 
 	log_info(log_CPU,"Esperando DTB del S-AFA");
 
-	t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
+	while(1){
 
-	log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
-/*
-	if(dtb.f_inicializacion==0)
-		inicializarDTB(dtb);
-	else
-		comenzarEjecucion(dtb);
-*/
-	int protocolo=BLOQUEAR_PROCESO;
+		t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
 
-	usleep(config_CPU.retardo*3000);
+		log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
 
-//	send(SAFA_fd,&protocolo,sizeof(int),0);
-
-	while(1);
+		if(dtb.f_inicializacion==0)
+			log_info(log_CPU,"El DTB tiene su flag en 0, comenzando inicializacion...");
+			inicializarDTB(DAM_fd,SAFA_fd,&dtb);
+//		//else
+			//comenzarEjecucion(dtb);
+		usleep(config_CPU.retardo*3000);
+	}
 
 	return 0;
 }
 
-void inicializarDTB(t_DTB dtb){
+void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 
+	int protocolo=BLOQUEAR_PROCESO;
 	//Enviar peticion de "abrir" al MDJ por medio de "el diego"
+	//desbloqueo_dummy dummy = {.path = string_duplicate(dtb->escriptorio), .id_dtb = dtb->id};
 
+	//serializarYEnviar(DAM_fd,DESBLOQUEAR_DUMMY,&dummy);
 
+	//Una vez enviando el dummy a DAM tengo que avisarle a SAFA que bloquee el proceso mientras se carga en memoria el script
 
+	send(SAFA_fd,&protocolo,sizeof(int),0);
 
 
 }

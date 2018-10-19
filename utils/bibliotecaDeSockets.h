@@ -59,12 +59,15 @@ struct respuesta{
 
 //Estructura para manejar el protocolo
 typedef enum{
-	VALIDAR_ARCHIVO,//PARA EL MDJ
-	CREAR_ARCHIVO,	//PARA EL MDJ
-	OBTENER_DATOS,	//PARA EL MDJ
-	GUARDAR_DATOS,	//PARA EL MDJ
-	FINALIZAR_PROCESO,
-	BLOQUEAR_PROCESO
+	VALIDAR_ARCHIVO,	//PARA EL MDJ
+	CREAR_ARCHIVO,		//PARA EL MDJ
+	OBTENER_DATOS,		//PARA EL MDJ
+	GUARDAR_DATOS,	  	//PARA EL MDJ
+	EJECUTAR_PROCESO,	//PARA EL SAFA
+	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
+	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
+	FIN_QUANTUM,
+	DESBLOQUEAR_DUMMY	//PARA CPU Y DAM
 }t_protocolo;
 
 typedef struct{
@@ -88,6 +91,11 @@ typedef struct{
 	int size;
 	char*buffer;
 }peticion_guardar;
+
+typedef struct{
+	char*path;
+	int id_dtb;
+}desbloqueo_dummy;
 
 enum paquete {
 	PAQ_INT,

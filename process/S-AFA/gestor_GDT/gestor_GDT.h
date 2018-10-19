@@ -29,7 +29,7 @@ void ejecutarComando(int nro_op , char * args);
 
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
-void ejecutarPCP();
+void ejecutarPCP(int, t_DTB*);
 void ejecutarProceso(t_DTB*,int);
 
 void algoritmo_FIFO(t_DTB* dtb);

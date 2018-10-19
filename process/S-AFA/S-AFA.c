@@ -132,7 +132,7 @@ void atenderCPU(int*fd){
 
 	log_info(log_SAFA,"ejecutando PCP...");
 
-	ejecutarPCP();
+	ejecutarPCP(EJECUTAR_PROCESO,NULL);
 
 	while(1){
 		if(recv(fd_CPU,&protocolo,sizeof(int),0)<=0){
@@ -157,45 +157,22 @@ void atenderCPU(int*fd){
 
 			log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
 
+			pthread_exit(NULL);
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
-		switch(protocolo){
-	//Si un proceso se bloquea, tengo que sacarlo de exec y mandarlo a block
-		case BLOQUEAR_PROCESO:
 
-			dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+		dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+		//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
+		ejecutarPCP(protocolo,dtb);
 
-			log_info(log_SAFA,"Bloqueando el DTB %d",dtb->id);
+		//El CPU queda libre para ejecutar otro proceso
+		list_add(CPU_libres,(void*)fd_CPU);
 
-			dictionary_put(cola_block,string_itoa(dtb->id),dtb);
-			//El CPU vuelve a quedar libre
-			list_add(CPU_libres,(void*)fd_CPU);
+		//Vuelvo a ejecutar el planificador pero esta vez para que, de ser posible, asigne otro proceso al CPU
+		ejecutarPCP(EJECUTAR_PROCESO,NULL);
 
-			ejecutarPCP();
-			break;
-
-	//Si el proceso finalizo su ejecucion entonces lo envio a la cola de exit y ejecuto el PLP
-		case FINALIZAR_PROCESO:
-
-			dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
-
-			log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
-
-			queue_push(cola_exit,dtb);
-			config_SAFA.multiprog+=1;
-
-			log_info(log_SAFA,"Ejecutando de nuevo el PLP");
-			//El CPU vuelve a quedar libre
-			list_add(CPU_libres,(void*)fd_CPU);
-
-			ejecutarPLP();
-			break;
-
-		default:
-			break;
-		}
 	}
 }
 

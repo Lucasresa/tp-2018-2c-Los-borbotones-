@@ -128,38 +128,55 @@ void ejecutarPLP(){
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
 
-		ejecutarPCP();
+		ejecutarPCP(EJECUTAR_PROCESO,NULL);
 	}
 }
 
 //Planificador a corto plazo
-void ejecutarPCP(){
+void ejecutarPCP(int operacion, t_DTB* dtb){
 
-	t_DTB* dtb;
+	t_DTB* dtb_aux = dtb;
 
-	//Si no hay CPUs libres entonces no hace nada
-	if(list_size(CPU_libres)==0){
-		log_warning(log_SAFA,"Todas las CPU estan ejecutando");
-	}
-	else{
-		//Si no hay procesos para ejecutar en Ready tampoco hace nada
-		if(queue_size(cola_ready)==0){
-			log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
+	switch(operacion){
+	case EJECUTAR_PROCESO:
+		//Si no hay CPUs libres entonces no hace nada
+		if(list_size(CPU_libres)==0){
+				log_warning(log_SAFA,"Todas las CPU estan ejecutando");
 		}
 		else{
-			switch(config_SAFA.algoritmo){
-			case FIFO:
-				algoritmo_FIFO(dtb);
-				break;
-			case RR:
-				algoritmo_RR(dtb);
-				break;
-			case VRR:
-				algoritmo_VRR(dtb);
-				break;
+			//Si no hay procesos para ejecutar en Ready tampoco hace nada
+			if(queue_size(cola_ready)==0){
+				log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
+			}
+			else{
+				switch(config_SAFA.algoritmo){
+				case FIFO:
+					algoritmo_FIFO(dtb);
+					break;
+				case RR:
+					algoritmo_RR(dtb);
+					break;
+				case VRR:
+					algoritmo_VRR(dtb);
+					break;
+				}
 			}
 		}
+		break;
+	case BLOQUEAR_PROCESO:
+		log_info(log_SAFA,"Bloqueando el DTB %d",dtb->id);
+		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
+		break;
+	case FINALIZAR_PROCESO:
+		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
+		queue_push(cola_exit,dtb);
+		config_SAFA.multiprog+=1;
+		break;
+	case FIN_QUANTUM:
+		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
+		queue_push(cola_ready,dtb);
 	}
+
 
 }
 //Envio a la CPU el DTB para que ejecute
