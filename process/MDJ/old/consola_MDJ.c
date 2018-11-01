@@ -31,7 +31,7 @@ char** parsearLinea(char* linea){
 }
 int identificarProceso(char** linea_parseada){
 
-	int i = 0,nro_op = 0,cantidad_operaciones = 5;
+	int i = 0,nro_op = 0,cantidad_operaciones = 6;
 
 	char* operacion[cantidad_operaciones];
 
@@ -40,6 +40,7 @@ int identificarProceso(char** linea_parseada){
 	operacion[2]="md5";
 	operacion[3]="cat";
 	operacion[4]="help";
+	operacion[6]="close";
 
 	for(i=0;i<cantidad_operaciones;i++){
 		if(strcmp(linea_parseada[0],operacion[i])==0){
@@ -70,6 +71,9 @@ void ejecutarComando(int nro_op, char * args){
 			case 5:
 				printf("Operaciones disponibles:\n\tls [Para ver lo que hay en el directorio]\n\tcd <Directorio>\n\tmd5 <Archivo>\n\tcat <Archivo>\n");
 			break;
+			case 6:
+				printf("cerrado consola");
+				break;
 			default:
 				printf("No se reconoce la operacion, escriba 'help' para ver las operaciones disponibles\n");
 	}
