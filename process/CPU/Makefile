@@ -5,4 +5,4 @@ CFLAGS=CPU.c ../../utils/bibliotecaDeSockets.c
 CAUX=Parser/parser.c 
 
 cpu: $(CFLAGS) $(CAUX)
-	$(CC) $(CFLAGS) -o CPU -lcommons #Compilo el proceso CPU
+	$(CC) $(CFLAGS) -o CPU -lcommons -lpthread #Compilo el proceso CPU

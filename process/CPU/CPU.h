@@ -20,8 +20,11 @@ t_config_CPU config_CPU;
 t_config* file_CPU;
 t_log* log_CPU;
 
-int rafaga;
+int rafaga_recibida, rafaga_actual;
+
 
 void inicializarDTB(int ,int ,t_DTB* );
+void comenzarEjecucion(int, int ,t_DTB);
+
 
 #endif /* CPU_H_ */

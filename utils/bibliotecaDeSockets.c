@@ -305,7 +305,7 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	int tamanio_script=strlen(dtb.escriptorio)+1;
 
 	//Calculo el tamaño total que tendra el buffer y reservo memoria para el mismo
-	int tamanio_buffer=(sizeof(int)*6)+(sizeof(char)*tamanio_script);
+	int tamanio_buffer=(sizeof(int)*7)+(sizeof(char)*tamanio_script);
 
 	//Reservo memoria para cada archivo abierto si es que lo hay
 	if(dtb.cant_archivos!=0){
@@ -334,15 +334,18 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	offset+=sizeof(tamanio_info);
 
 	//Id del DTB
-
 	memcpy(buffer+offset,&dtb.id,sizeof(dtb.id));
 	offset+=sizeof(dtb.id);
-	//Program counter del DTB
 
+	//Program counter del DTB
 	memcpy(buffer+offset,&dtb.pc,sizeof(dtb.pc));
 	offset+=sizeof(dtb.pc);
-	//Flag de inicializacion
 
+	//Quantum_restante del DTB
+	memcpy(buffer+offset,&dtb.quantum_sobrante,sizeof(dtb.quantum_sobrante));
+	offset+=sizeof(dtb.quantum_sobrante);
+
+	//Flag de inicializacion
 	memcpy(buffer+offset,&dtb.f_inicializacion,sizeof(dtb.f_inicializacion));
 	offset+=sizeof(dtb.f_inicializacion);
 
@@ -404,17 +407,18 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	recv(fd,buffer,tamanio_buffer,0);
 
 	//Id del DTB
-
 	memcpy(&(dtb.id),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
 	//Program counter del DTB
-
 	memcpy(&(dtb.pc),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
-	//Flag de inicializacion
+	//Quantum sobrante del DTB
+	memcpy(&(dtb.quantum_sobrante),buffer+offset,sizeof(int));
+	offset+=sizeof(int);
 
+	//Flag de inicializacion
 	memcpy(&(dtb.f_inicializacion),buffer+offset,sizeof(int));
 	offset+=sizeof(int);
 
@@ -423,13 +427,11 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	offset+=sizeof(int);
 
 	//Ruta del script
-
 	dtb.escriptorio=malloc(sizeof(char)*tamanio_script);
 	memcpy(dtb.escriptorio,buffer+offset,tamanio_script);
 	offset+=tamanio_script;
 
 	//Cantidad de archivos
-
 	memcpy(&cant_archivos,buffer+offset,sizeof(int));
 
 	//Si hay archivos en el DTB...

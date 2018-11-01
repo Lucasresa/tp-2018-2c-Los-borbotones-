@@ -66,7 +66,8 @@ typedef enum{
 	EJECUTAR_PROCESO,	//PARA EL SAFA
 	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
 	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
-	FIN_QUANTUM,
+	DESBLOQUEAR_PROCESO,//PARA SAFA Y DAM
+	FIN_QUANTUM,		//PARA CPU Y SAFA
 	DESBLOQUEAR_DUMMY	//PARA CPU Y DAM
 }t_protocolo;
 
@@ -119,6 +120,7 @@ typedef struct{
 
 	int id;
 	int pc;
+	int quantum_sobrante;
 	int f_inicializacion;
 	char* escriptorio;
 	int cant_archivos;

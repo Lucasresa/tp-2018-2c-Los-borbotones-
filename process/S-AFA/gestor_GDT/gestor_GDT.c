@@ -90,6 +90,7 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->escriptorio=string_duplicate(path);
 	dtb->f_inicializacion=0;
 	dtb->pc=0;
+	dtb->quantum_sobrante=0; //Cuando este valor sea 0, el CPU sabra que tiene que ejecutar el quantum completo
 	dtb->id=cont_id;
 	dtb->cant_archivos=0;
 	cont_id++;
@@ -130,6 +131,7 @@ void ejecutarPLP(){
 
 		ejecutarPCP(EJECUTAR_PROCESO,NULL);
 	}
+	usleep(config_SAFA.retardo*1000);
 }
 
 //Planificador a corto plazo
@@ -144,27 +146,21 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 				log_warning(log_SAFA,"Todas las CPU estan ejecutando");
 		}
 		else{
-			//Si no hay procesos para ejecutar en Ready tampoco hace nada
-			if(queue_size(cola_ready)==0){
-				log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
-			}
-			else{
-				switch(config_SAFA.algoritmo){
-				case FIFO:
-					algoritmo_FIFO(dtb);
-					break;
-				case RR:
-					algoritmo_RR(dtb);
-					break;
+			switch(config_SAFA.algoritmo){
 				case VRR:
 					algoritmo_VRR(dtb);
 					break;
+				default:
+					algoritmo_FIFO_RR(dtb);
+					break;
 				}
 			}
-		}
 		break;
 	case BLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Bloqueando el DTB %d",dtb->id);
+		if(config_SAFA.algoritmo!=VRR){
+			dtb->quantum_sobrante=0;
+		}
 		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
 		break;
 	case FINALIZAR_PROCESO:
@@ -175,8 +171,10 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
 		queue_push(cola_ready,dtb);
+		break;
 	}
 
+	usleep(config_SAFA.retardo*1000);
 
 }
 //Envio a la CPU el DTB para que ejecute
@@ -186,14 +184,21 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 
 		dictionary_put(cola_exec,string_itoa(CPU_vacio),proceso);
 
+		log_info(log_SAFA,"Enviando info del quantum al CPU %d...",CPU_vacio);
+
+		send(CPU_vacio,&config_SAFA.quantum,sizeof(int),0);
+
 		serializarYEnviarDTB(CPU_vacio,buffer,*proceso);
 
 		log_info(log_SAFA,"DTB enviado con exito!");
 
 }
-
-void algoritmo_FIFO(t_DTB* dtb){
-
+//Algoritmo FIFO y RR
+void algoritmo_FIFO_RR(t_DTB* dtb){
+	//Verifico que haya procesos en la cola de Ready normal
+	if(queue_size(cola_ready)==0){
+		log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
+	}else{
 		dtb=queue_pop(cola_ready);
 
 		int CPU_vacio=(int)list_remove(CPU_libres,0);
@@ -206,12 +211,29 @@ void algoritmo_FIFO(t_DTB* dtb){
 		usleep(config_SAFA.retardo*1000);
 
 		ejecutarProceso(dtb,CPU_vacio);
+	}
 }
-
-void algoritmo_RR(t_DTB* dtb){
-
-}
+//Algoritmo VRR
 void algoritmo_VRR(t_DTB* dtb){
+
+	if(queue_size(cola_ready_VRR)==0){
+		log_warning(log_SAFA,"La cola virtual esta vacia... ejecuto como si fuera RR/FIFO");
+		algoritmo_FIFO_RR(dtb);
+	}else{
+
+		dtb=queue_pop(cola_ready_VRR);
+
+		int CPU_vacio=(int)list_remove(CPU_libres,0);
+
+		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
+
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
+
+		usleep(config_SAFA.retardo*1000);
+
+		ejecutarProceso(dtb,CPU_vacio);
+
+	}
 
 }
 void algoritmo_PROPIO(t_DTB* dtb){

@@ -4,6 +4,7 @@ void crear_colas(){
 
 	cola_new = queue_create();
 	cola_ready = queue_create();
+	cola_ready_VRR = queue_create();
 	cola_block = dictionary_create();
 	cola_exec = dictionary_create();
 	cola_exit = queue_create();

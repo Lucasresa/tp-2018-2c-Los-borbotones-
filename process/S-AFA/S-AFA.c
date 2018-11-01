@@ -117,6 +117,8 @@ void eliminarSocketCPU(int fd){
 
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
+	int fd_DAM = *fd;
+
 
 }
 
@@ -125,10 +127,6 @@ void atenderCPU(int*fd){
 	int fd_CPU = *fd;
 
 	int protocolo;
-
-	log_info(log_SAFA,"Enviando info del quantum al CPU %d...",fd_CPU);
-
-	send(fd_CPU,&config_SAFA.quantum,sizeof(int),0);
 
 	log_info(log_SAFA,"ejecutando PCP...");
 
