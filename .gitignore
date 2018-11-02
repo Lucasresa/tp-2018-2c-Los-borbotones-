@@ -55,3 +55,6 @@ Mkfile.old
 dkms.conf
 /Debug/
 /.metadata/
+
+# Visual studio files
+.vscode

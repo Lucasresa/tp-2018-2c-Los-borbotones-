@@ -13,6 +13,37 @@ int main(){
 
 	config_destroy(file_FM9);
 
+	// Inicializo memoria.
+	void *base_memoria;
+	base_memoria = malloc(config_FM9.tamanio);
+
+	// Creo estructuras de segmentación
+	t_list *lista_tablas_segmentos;
+	lista_tablas_segmentos = list_create();
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%% EJEMPLO MANIPULANDO LAS TABLAS DE SEGMENTACION %%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	// Creo ejemplo de tabla de segmentación
+	list_add(lista_tablas_segmentos, list_create());
+
+	// Agrego una entrada a la tabla de segmentos
+	t_list *tabla_segmentos = list_get(lista_tablas_segmentos, 0);
+	list_add(tabla_segmentos, crear_fila_tabla_seg(5,1,1));
+
+	// Obtengo el id de la fila que acabo de agregar
+	t_list *tabla_segmentos_copia = list_get(lista_tablas_segmentos, 0);
+	fila_tabla_seg *fila_tabla_seg;
+	fila_tabla_seg = list_get(tabla_segmentos_copia, 0);
+	// printf("%i",fila_tabla_seg->id_segmento);
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 	int listener_socket;
 	crearSocket(&listener_socket);
 
@@ -32,6 +63,18 @@ int main(){
 		// Probablemente conviene sacar el sleep()
 		sleep(1);
 	}
+	free(base_memoria);
+	list_destroy(lista_tablas_segmentos);
+
+}
+
+struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento) {
+	   struct fila_tabla_seg *p;
+	   p = (struct fila_tabla_seg *) malloc(sizeof(struct fila_tabla_seg));
+	   p->id_segmento = id_segmento;
+	   p->limite_segmento = limite_segmento;
+	   p->base_segmento = base_segmento;
+	   return p;
 }
 
 void *consolaThread(void *vargp)
@@ -72,7 +115,7 @@ t_modo detectarModo(char* modo){
 }
 
 void funcionHandshake(int socket, void* argumentos) {
-	log_info(log_MDJ, "Conexión establecida");
+	log_info(log_FM9, "Conexión establecida");
 	return;
 }
 

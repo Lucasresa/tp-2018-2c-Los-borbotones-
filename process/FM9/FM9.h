@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <commons/log.h>
 #include <commons/config.h>
+#include <commons/collections/list.h>
 
 typedef enum{
 	SEG,
@@ -25,9 +26,19 @@ typedef struct{
 
 }t_config_FM9;
 
+typedef struct fila_tabla_seg{
+
+	int id_segmento;
+	int limite_segmento;
+	int base_segmento;
+
+}fila_tabla_seg;
+
 t_config_FM9 config_FM9;
 t_config* file_FM9;
 t_log* log_FM9;
+
+struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 
 void *consolaThread(void*);
 
