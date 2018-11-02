@@ -60,7 +60,8 @@ int mySocketM;
 int DAM_fd;
 int cmd_md5(char *linea);
 int string_archivo(char *pathfile,char **contenido);
-int existe_archivo(peticion_validar* peticion);
+int existe_archivo(char *path_archivo);
+int borrar_archivo(char *path_archivo);
 struct addrinfo *server_info;
 
 typedef struct{

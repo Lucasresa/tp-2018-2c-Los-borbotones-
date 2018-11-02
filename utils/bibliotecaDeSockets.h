@@ -62,7 +62,8 @@ typedef enum{
 	VALIDAR_ARCHIVO,	//PARA EL MDJ
 	CREAR_ARCHIVO,		//PARA EL MDJ
 	OBTENER_DATOS,		//PARA EL MDJ
-	GUARDAR_DATOS,	  	//PARA EL MDJ
+	GUARDAR_DATOS,		//PARA EL MDJ
+	BORRAR_ARCHIVO,		//PARA EL MDJ
 	EJECUTAR_PROCESO,	//PARA EL SAFA
 	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
 	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
@@ -85,6 +86,11 @@ typedef struct{
 	int offset;
 	int size;
 }peticion_obtener;
+
+typedef struct{
+	char*path;
+}peticion_borrar;
+
 
 typedef struct{
 	char*path;

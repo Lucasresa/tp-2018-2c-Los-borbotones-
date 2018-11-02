@@ -106,11 +106,7 @@ void cmd_cd(char *linea){
 			else{
 				chdir(parametros[1]);
 				cmd_pwd();
-
-
 			}
-
-
 	 }
 }
 void cmd_ls(char *linea){
@@ -218,7 +214,7 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
-		if(existe_archivo(validacion)==0){
+		if(existe_archivo(validacion->path)==0){
 			//send();
 
 		}
@@ -238,6 +234,12 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
 		break;
+	}
+	case BORRAR_ARCHIVO:
+	{
+			peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
+			borrar_archivo(borrar->path);
+			break;
 	}
 
 	case GUARDAR_DATOS:
@@ -377,10 +379,30 @@ int  conexion_dam(){
 	return 0;
 }
 
+char *archivo_bit(char *path_archivo){
 
-int existe_archivo(peticion_validar* peticion){
-	char **parametros = string_split(peticion->path, "/");
-	return 0;
+	char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path_archivo) + strlen(".bit") );
+    strcpy(complete_path, config_MDJ.mount_point);
+    strcat(complete_path, "/Archivos/");
+    strcat(complete_path, path_archivo);
+    strcat(complete_path, ".bit");
+}
+
+int existe_archivo(char *path_archivo){
+	struct stat   buffer;
+	return (stat (archivo_bit(path_archivo), &buffer) == 0);
+}
+
+int borrar_archivo(char *path_archivo){
+	char * complete_path;
+	if(existe_archivo(path_archivo)==0){
+		complete_path = archivo_bit(path_archivo);
+		remove(complete_path);
+		return 0;
+	}
+	else
+		return -1;
+
 }
 /*int cmd_md5(char *linea){
 	char **parametros = string_split(linea, " ");
