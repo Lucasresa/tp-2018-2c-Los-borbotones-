@@ -27,6 +27,9 @@ char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
 void ejecutarComando(int nro_op , char * args);
 
+char* buscarDTB(t_DTB** , int );
+t_DTB* buscarDTBEnCola(t_list* , int );
+
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
 void ejecutarPCP(int, t_DTB*);
@@ -36,14 +39,14 @@ void algoritmo_FIFO_RR(t_DTB* dtb);
 void algoritmo_VRR(t_DTB* dtb);
 void algoritmo_PROPIO(t_DTB* dtb);
 
-t_queue* cola_new;
-t_queue* cola_ready;
-t_queue* cola_ready_VRR;
+t_list* cola_new;
+t_list* cola_ready;
+t_list* cola_ready_VRR;
 
 t_dictionary* cola_block;
 t_dictionary* cola_exec;
 
-t_queue* cola_exit;
+t_list* cola_exit;
 
 t_config_SAFA config_SAFA;
 

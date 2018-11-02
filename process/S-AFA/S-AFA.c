@@ -143,8 +143,7 @@ void atenderCPU(int*fd){
 			if(dictionary_has_key(cola_exec,string_itoa(fd_CPU))){
 				t_DTB* dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
 				log_info(log_SAFA,"El CPU %d estaba ejecutando el proceso %d finalizando....",fd_CPU,dtb->id);
-				queue_push(cola_exit,dtb);
-				config_SAFA.multiprog+=1;
+				ejecutarPCP(FINALIZAR_PROCESO,dtb);
 				ejecutarPLP();
 			}
 			else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres

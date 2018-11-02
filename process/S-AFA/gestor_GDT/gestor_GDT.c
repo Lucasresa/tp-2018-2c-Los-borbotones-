@@ -60,11 +60,30 @@ void ejecutarComando(int nro_op, char * args){
 			break;
 			case 2:
 				printf("La operacion es status y el parametro es: %s \n",args);
-
+				if(args==NULL){
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
-						queue_size(cola_new),queue_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
-						queue_size(cola_exit),list_size(CPU_libres));
-			break;
+						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
+						list_size(cola_exit),list_size(CPU_libres));
+				}else{
+					t_DTB* dtb_status;
+					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
+					char* estado;
+					estado=buscarDTB(&dtb_status,dtb_id);
+					if(estado==NULL){
+						printf("No se encontro ningun DTB en el sistema con ese ID\n");
+					}else{
+
+						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
+							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
+								dtb_status->cant_archivos);
+						if(dtb_status->cant_archivos!=0){
+							for(i=0;i<dtb_status->cant_archivos;i++){
+								printf("\n\t%s",dtb_status->archivos[i]);
+							}
+						}
+					}
+				}
+				break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
 				log_destroy(log_SAFA);
@@ -81,6 +100,57 @@ void ejecutarComando(int nro_op, char * args){
 	}
 }
 
+char* buscarDTB(t_DTB** dtb, int id){
+
+	char* estado;
+
+	if((*dtb=buscarDTBEnCola(cola_new,id))!=NULL){
+		estado="NEW";
+		return estado;
+	}else if((*dtb=buscarDTBEnCola(cola_ready,id))!=NULL){
+		estado="READY";
+		return estado;
+	}else if((*dtb=buscarDTBEnCola(cola_ready_VRR,id))!=NULL){
+		estado="READY VIRTUAL";
+		return estado;
+	}else if((*dtb=buscarDTBEnCola(cola_exit,id))!=NULL){
+		estado="FINALIZADO";
+		return estado;
+	}else if(dictionary_has_key(cola_exec,string_itoa(id))){
+		*dtb=dictionary_get(cola_exec,string_itoa(id));
+		estado="EJECUTANDO";
+		return estado;
+	}else if(dictionary_has_key(cola_block,string_itoa(id))){
+		*dtb=dictionary_get(cola_block,string_itoa(id));
+		estado="BLOQUEADO";
+		return estado;
+	}else{
+		return NULL;
+	}
+}
+
+t_DTB* buscarDTBEnCola(t_list* cola, int id){
+	int i;
+
+	t_list* cola_copy = list_duplicate(cola);
+
+	t_DTB* dtb=malloc(sizeof(t_DTB));
+
+	for(i=0;i<list_size(cola_copy);i++){
+
+		dtb=list_remove(cola_copy,i);
+
+		if(dtb->id==id){
+			list_destroy_and_destroy_elements(cola_copy,free);
+			log_info(log_SAFA,"Se encontro el dtb con esa id");
+			sleep(1);
+			return dtb;
+		}
+	}
+	list_destroy_and_destroy_elements(cola_copy,free);
+	return NULL;
+}
+
 //----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
@@ -95,7 +165,7 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->cant_archivos=0;
 	cont_id++;
 
-	queue_push(cola_new,dtb);
+	list_add(cola_new,dtb);
 
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
@@ -112,12 +182,12 @@ void ejecutarPLP(){
 
 	if(config_SAFA.multiprog==0){
 		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
-	}else if(queue_size(cola_new)==0){
+	}else if(list_size(cola_new)==0){
 		log_warning(log_SAFA,"La cola de new esta vacia");
 	}else{
 		t_DTB* init_dummy;
 
-		init_dummy=queue_pop(cola_new);
+		init_dummy=list_remove(cola_new,0);
 
 		config_SAFA.multiprog = config_SAFA.multiprog - 1;
 
@@ -125,7 +195,7 @@ void ejecutarPLP(){
 
 		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
-		queue_push(cola_ready,init_dummy);
+		list_add(cola_ready,init_dummy);
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
 
@@ -165,12 +235,12 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
-		queue_push(cola_exit,dtb);
+		list_add(cola_exit,dtb);
 		config_SAFA.multiprog+=1;
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
-		queue_push(cola_ready,dtb);
+		list_add(cola_ready,dtb);
 		break;
 	}
 
@@ -196,10 +266,10 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 //Algoritmo FIFO y RR
 void algoritmo_FIFO_RR(t_DTB* dtb){
 	//Verifico que haya procesos en la cola de Ready normal
-	if(queue_size(cola_ready)==0){
+	if(list_size(cola_ready)==0){
 		log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
 	}else{
-		dtb=queue_pop(cola_ready);
+		dtb=list_remove(cola_ready,0);
 
 		int CPU_vacio=(int)list_remove(CPU_libres,0);
 
@@ -216,12 +286,12 @@ void algoritmo_FIFO_RR(t_DTB* dtb){
 //Algoritmo VRR
 void algoritmo_VRR(t_DTB* dtb){
 
-	if(queue_size(cola_ready_VRR)==0){
+	if(list_size(cola_ready_VRR)==0){
 		log_warning(log_SAFA,"La cola virtual esta vacia... ejecuto como si fuera RR/FIFO");
 		algoritmo_FIFO_RR(dtb);
 	}else{
 
-		dtb=queue_pop(cola_ready_VRR);
+		dtb=list_remove(cola_ready_VRR,0);
 
 		int CPU_vacio=(int)list_remove(CPU_libres,0);
 
