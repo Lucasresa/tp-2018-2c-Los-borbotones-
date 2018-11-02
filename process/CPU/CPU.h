@@ -1,6 +1,7 @@
 #include "../../utils/bibliotecaDeSockets.h"
 #include <commons/config.h>
 #include <commons/log.h>
+#include "Parser/parser.h"
 
 #ifndef CPU_H_
 #define CPU_H_

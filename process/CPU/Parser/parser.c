@@ -36,7 +36,7 @@ t_operacion parseLine(char* line){
 	string_trim(&auxLine);
 
 	if(auxLine[0]==COMENTARIO){
-		op.keyword=comentario;
+		op.keyword=COMENT;
 		return op;
 	}
 
@@ -48,41 +48,41 @@ t_operacion parseLine(char* line){
 	char* keyword=split[0];
 
 	if(string_equals_ignore_case(keyword,OP_ABRIR)){
-		op.keyword=abrir;
+		op.keyword=ABRIR;
 		op.argumentos.abrir.path=split[1];
 	}
 	else if(string_equals_ignore_case(keyword,OP_CONCENTRAR)){
-		op.keyword=concentrar;
+		op.keyword=CONCENTRAR;
 	}
 	else if(string_equals_ignore_case(keyword,OP_ASIGNAR)){
-		op.keyword=asignar;
+		op.keyword=ASIGNAR;
 		op.argumentos.asignar.path=split[1];
 		op.argumentos.asignar.linea=(int)strtol(split[2],(char**)NULL,10);
 		op.argumentos.asignar.valor=split[3];
 	}
 	else if(string_equals_ignore_case(keyword,OP_WAIT)){
-		op.keyword=wait;
+		op.keyword=WAIT;
 		op.argumentos.wait.recurso=split[1];
 	}
 	else if(string_equals_ignore_case(keyword,OP_SIGNAL)){
-		op.keyword=signal;
+		op.keyword=SIGNAL;
 		op.argumentos.signal.recurso=split[1];
 	}
 	else if(string_equals_ignore_case(keyword,OP_FLUSH)){
-		op.keyword=flush;
+		op.keyword=FLUSH;
 		op.argumentos.flush.path=split[1];
 	}
 	else if(string_equals_ignore_case(keyword,OP_CLOSE)){
-		op.keyword=close;
+		op.keyword=CLOSE;
 		op.argumentos.close.path=split[1];
 	}
 	else if(string_equals_ignore_case(keyword,OP_CREAR)){
-		op.keyword=crear;
+		op.keyword=CREAR;
 		op.argumentos.crear.path=split[1];
 		op.argumentos.crear.lineas=(int)strtol(split[2],(char**)NULL,10);
 	}
 	else if(string_equals_ignore_case(keyword,OP_BORRAR)){
-		op.keyword=borrar;
+		op.keyword=BORRAR;
 		op.argumentos.borrar.path=split[1];
 	}
 	free(auxLine);
@@ -106,26 +106,26 @@ int main(){
 
 		switch(op.keyword){
 
-		case abrir:
+		case ABRIR:
 			printf("abrir\tpath: %s\n",op.argumentos.abrir.path);
 			break;
-		case concentrar:
+		case CONCENTRAR:
 			printf("concentrando....\n");
 			break;
-		case asignar:
+		case ASIGNAR:
 			printf("asignar\tpath: %s\tlinea: %d\tvalor: %s\n",op.argumentos.asignar.path,op.argumentos.asignar.linea,
 					op.argumentos.asignar.valor);
 			break;
-		case close:
+		case CLOSE:
 			printf("close\tpath: %s\n",op.argumentos.close.path);
 			break;
-		case crear:
+		case CREAR:
 			printf("crear\tpath: %s\tlineas: %d\n",op.argumentos.crear.path,op.argumentos.crear.lineas);
 			break;
-		case borrar:
+		case BORRAR:
 			printf("borrar\tpath: %s\n",op.argumentos.borrar.path);
 			break;
-		case comentario:
+		case COMENTARIO:
 			printf("Linea comentada, salteando....\n");
 			break;
 		default:

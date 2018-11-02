@@ -109,6 +109,35 @@ void comenzarEjecucion(int DAM, int FM9, t_DTB dtb){
 	 * En caso de ser una I/O debo avisar a SAFA y desalojar el DTB para poder ejecutar otro
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
+
+	char* linea_fm9 = recibirYDeserializarString(FM9);
+
+	t_operacion linea_parseada=parseLine(linea_fm9);
+
+	switch(linea_parseada.keyword){
+	case ABRIR:
+		break;
+	case CONCENTRAR:
+		break;
+	case ASIGNAR:
+		break;
+	case WAIT:
+		break;
+	case SIGNAL:
+		break;
+	case FLUSH:
+		break;
+	case CLOSE:
+		break;
+	case CREAR:
+		break;
+	case BORRAR:
+		break;
+
+	}
+
+
+
 	usleep(config_CPU.retardo*3000);
 }
 

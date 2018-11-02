@@ -22,16 +22,16 @@
 typedef struct{
 
 	enum{
-		abrir,
-		concentrar,
-		asignar,
-		wait,
-		signal,
-		flush,
-		close,
-		crear,
-		borrar,
-		comentario
+		ABRIR,
+		CONCENTRAR,
+		ASIGNAR,
+		WAIT,
+		SIGNAL,
+		FLUSH,
+		CLOSE,
+		CREAR,
+		BORRAR,
+		COMENT
 	}keyword;
 	union{
 		struct{
@@ -75,5 +75,7 @@ typedef struct{
 
 } t_operacion;
 
+void destroyParse(t_operacion );
+t_operacion parseLine(char* );
 
 #endif /* PROCESS_S_AFA_PARSER_H_ */
