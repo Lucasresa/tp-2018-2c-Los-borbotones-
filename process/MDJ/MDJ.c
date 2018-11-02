@@ -87,7 +87,7 @@ void cmd_cat(char *linea){
 	}
 	else{
 		char *content;
-		if ((string_file(parametros[1],&content))>0){
+		if ((string_archivo(parametros[1],&content))>0){
 			puts(content);
 		}
 	}
@@ -153,9 +153,9 @@ void cmd_bloque(){
 	file1 = "1.txt";
 	file2 = "2.txt";
 	char *contenido;
-	string_file(file1,&contenido);
+	string_archivo(file1,&contenido);
 	char *agregar_contenido;
-	string_file(file2,&agregar_contenido);
+	string_archivo(file2,&agregar_contenido);
 	//strcat(contenido,agregar_contenido);
 	string_append(&contenido,agregar_contenido);
 	printf("%s",contenido);
@@ -163,7 +163,7 @@ void cmd_bloque(){
 	//puts("fermamdp");
 }
 
-int string_file(char *pathfile,char **contenido_archivo){
+int string_archivo(char *pathfile,char **contenido_archivo){
 	char *contentenido;
 	//printf("Parametros %s.\n", pathfile);
 	int size = 0;
@@ -218,14 +218,28 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
+		if(existe_archivo(validacion)==0){
+			//send();
+
+		}
+		else
+			//send();
+			puts("Hola");
+		break;
+
+	}
+	case CREAR_ARCHIVO:{
+		peticion_crear* creacion = recibirYDeserializar(fd,operacion);
+		crearArchivo(creacion->path, creacion->cant_lineas);
 		break;
 	}
-	case CREAR_ARCHIVO:
-		crearArchivo("ejemplo.txt", 0);
-		break;
-	case OBTENER_DATOS:
 
+	case OBTENER_DATOS:
+	{
+		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
 		break;
+	}
+
 	case GUARDAR_DATOS:
 	{
 		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
@@ -324,6 +338,49 @@ int mkdir_p(const char *path)
     }
 
     return 0;
+}
+int inicializar(){
+
+	leerMetaData();
+	return 0;
+
+}
+
+int leerMetaData(){
+	char *direccionArchivoMedata;
+	direccionArchivoMedata = config_MDJ.mount_point;
+	strcpy(direccionArchivoMedata,config_MDJ.mount_point);
+	string_append(&direccionArchivoMedata,"/Metadata/Metadata.bin");
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(direccionArchivoMedata);
+	config_MetaData.cantidad_bloques=config_get_int_value(archivo_MetaData,"CANTIDAD_BLOQUES");
+    config_MetaData.magic_number=string_duplicate(config_get_string_value(archivo_MetaData,"MAGIC_NUMBER"));
+	config_MetaData.tamanio_bloques=config_get_int_value(archivo_MetaData,"TAMANIO_BLOQUES");
+	config_destroy(archivo_MetaData);
+	return 0;
+}
+
+int  conexion_dam(){
+	int MDJ_fd;
+	crearSocket(&MDJ_fd);
+	setearParaEscuchar(&MDJ_fd, config_MDJ.puerto_mdj);
+	log_info(log_MDJ, "Esperando conexion del DAM");
+
+	DAM_fd=aceptarConexion(MDJ_fd);
+	if(DAM_fd==-1){
+			log_error(log_MDJ,"Error al establecer conexion con el DAM");
+			log_destroy(log_MDJ);
+			return -1;
+	}
+	log_info(log_MDJ,"Conexion establecida con DAM");
+	iniciar_recibirDatos();
+	return 0;
+}
+
+
+int existe_archivo(peticion_validar* peticion){
+	char **parametros = string_split(peticion->path, "/");
+	return 0;
 }
 /*int cmd_md5(char *linea){
 	char **parametros = string_split(linea, " ");

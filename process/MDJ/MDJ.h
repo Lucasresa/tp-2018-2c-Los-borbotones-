@@ -59,7 +59,8 @@ void determinarOperacion(int operacion,int fd);
 int mySocketM;
 int DAM_fd;
 int cmd_md5(char *linea);
-int string_file(char *pathfile,char **contenido);
+int string_archivo(char *pathfile,char **contenido);
+int existe_archivo(peticion_validar* peticion);
 struct addrinfo *server_info;
 
 typedef struct{
@@ -68,12 +69,20 @@ typedef struct{
 	int time_delay;
  }t_config_MDJ;
 
- t_config_MDJ config_MDJ;
+ typedef struct{
+  	int tamanio_bloques;
+ 	char* magic_number;
+ 	int cantidad_bloques;
+  }t_config_MetaData;
 
+
+t_config_MDJ config_MDJ;
+t_config_MetaData  config_MetaData;
 int crear_carpetas();
 int mkdir_p(const char *path);
 void guardarDatos(char *path, int size, int offset, char *buffer) ;
 void crearArchivo(char *path, int numero_lineas) ;
-
-
+int leerMetaData();
+int inicializar();
+int  conexion_dam();
 #endif /* MDJ_H_ */
