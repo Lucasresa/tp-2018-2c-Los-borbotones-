@@ -158,9 +158,13 @@ void atenderCPU(int*fd){
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
+		int id_dtb;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		dtb=dictionary_remove(cola_exec,string_itoa(fd_CPU));
+		id_dtb=*recibirYDeserializarEntero(fd_CPU);
+
+		dtb=dictionary_remove(cola_exec,string_itoa(id_dtb));
+
 		//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 		ejecutarPCP(protocolo,dtb);
 

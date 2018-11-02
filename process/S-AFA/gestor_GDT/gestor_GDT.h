@@ -22,13 +22,18 @@ typedef struct{
 
 }t_config_SAFA;
 
+typedef enum{
+	STATUS,
+	FINALIZAR
+}operaciones;
+
 void* consola_SAFA(void);
 char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
 void ejecutarComando(int nro_op , char * args);
 
-char* buscarDTB(t_DTB** , int );
-t_DTB* buscarDTBEnCola(t_list* , int );
+char* buscarDTB(t_DTB** ,int ,int );
+t_DTB* buscarDTBEnCola(t_list* ,int ,int );
 
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();

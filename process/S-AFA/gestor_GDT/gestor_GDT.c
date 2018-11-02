@@ -68,7 +68,7 @@ void ejecutarComando(int nro_op, char * args){
 					t_DTB* dtb_status;
 					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
 					char* estado;
-					estado=buscarDTB(&dtb_status,dtb_id);
+					estado=buscarDTB(&dtb_status,dtb_id,STATUS);
 					if(estado==NULL){
 						printf("No se encontro ningun DTB en el sistema con ese ID\n");
 					}else{
@@ -86,8 +86,23 @@ void ejecutarComando(int nro_op, char * args){
 				break;
 			case 3:
 				printf("La operacion es finalizar y el parametro es: %s \n",args);
-				log_destroy(log_SAFA);
-				exit(4);
+
+				if(args==NULL){
+					printf("ERROR: se debe ingresar un id por favor escriba 'help'\n");
+				}else{
+					t_DTB* dtb;
+					int dtb_id = (int)strtol(args,(char**)NULL,10);
+					char* estado;
+					estado=buscarDTB(&dtb,dtb_id,FINALIZAR);
+
+					if(estado==NULL){
+						printf("No se encontro ningun DTB en el sistema con ese ID\n");
+					}else if(string_equals_ignore_case(estado,"EJECUTANDO")){
+						printf("No se puede finalizar este proceso, se encuentra ejecutando\n");
+					}else{
+						ejecutarPCP(FINALIZAR_PROCESO,dtb);
+					}
+				}
 			break;
 			case 4:
 				printf("La operacion es metricas y el parametro es: %s \n",args);
@@ -100,20 +115,20 @@ void ejecutarComando(int nro_op, char * args){
 	}
 }
 
-char* buscarDTB(t_DTB** dtb, int id){
+char* buscarDTB(t_DTB** dtb, int id, int operacion){
 
 	char* estado;
 
-	if((*dtb=buscarDTBEnCola(cola_new,id))!=NULL){
+	if((*dtb=buscarDTBEnCola(cola_new,id,operacion))!=NULL){
 		estado="NEW";
 		return estado;
-	}else if((*dtb=buscarDTBEnCola(cola_ready,id))!=NULL){
+	}else if((*dtb=buscarDTBEnCola(cola_ready,id,operacion))!=NULL){
 		estado="READY";
 		return estado;
-	}else if((*dtb=buscarDTBEnCola(cola_ready_VRR,id))!=NULL){
+	}else if((*dtb=buscarDTBEnCola(cola_ready_VRR,id,operacion))!=NULL){
 		estado="READY VIRTUAL";
 		return estado;
-	}else if((*dtb=buscarDTBEnCola(cola_exit,id))!=NULL){
+	}else if((*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
 		estado="FINALIZADO";
 		return estado;
 	}else if(dictionary_has_key(cola_exec,string_itoa(id))){
@@ -123,31 +138,36 @@ char* buscarDTB(t_DTB** dtb, int id){
 	}else if(dictionary_has_key(cola_block,string_itoa(id))){
 		*dtb=dictionary_get(cola_block,string_itoa(id));
 		estado="BLOQUEADO";
+		if(operacion==FINALIZAR)
+			dictionary_remove(cola_block,string_itoa(id));
 		return estado;
 	}else{
 		return NULL;
 	}
 }
 
-t_DTB* buscarDTBEnCola(t_list* cola, int id){
+t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 	int i;
 
 	t_list* cola_copy = list_duplicate(cola);
 
-	t_DTB* dtb=malloc(sizeof(t_DTB));
+	t_DTB* dtb;
 
 	for(i=0;i<list_size(cola_copy);i++){
 
-		dtb=list_remove(cola_copy,i);
+		dtb=list_get(cola_copy,i);
 
 		if(dtb->id==id){
-			list_destroy_and_destroy_elements(cola_copy,free);
+			list_clean(cola_copy);
+			list_destroy(cola_copy);
 			log_info(log_SAFA,"Se encontro el dtb con esa id");
-			sleep(1);
+			if(operacion==FINALIZAR)
+				list_remove(cola,i);
 			return dtb;
 		}
 	}
-	list_destroy_and_destroy_elements(cola_copy,free);
+	list_clean(cola_copy);
+	list_destroy(cola_copy);
 	return NULL;
 }
 
@@ -252,7 +272,9 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 
 		void*buffer;
 
-		dictionary_put(cola_exec,string_itoa(CPU_vacio),proceso);
+		int id_dtb = proceso->id;
+
+		dictionary_put(cola_exec,string_itoa(id_dtb),proceso);
 
 		log_info(log_SAFA,"Enviando info del quantum al CPU %d...",CPU_vacio);
 

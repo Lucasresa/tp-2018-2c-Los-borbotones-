@@ -85,6 +85,7 @@ int main(){
 
 void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 
+	void*buffer;
 	int protocolo=BLOQUEAR_PROCESO;
 	//Enviar peticion de "abrir" al MDJ por medio de "el diego"
 	//desbloqueo_dummy dummy = {.path = string_duplicate(dtb->escriptorio), .id_dtb = dtb->id};
@@ -94,6 +95,8 @@ void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 	//Una vez enviando el dummy a DAM tengo que avisarle a SAFA que bloquee el proceso mientras se carga en memoria el script
 
 	send(SAFA_fd,&protocolo,sizeof(int),0);
+
+	serializarYEnviarEntero(SAFA_fd,&(dtb->id));
 
 }
 
