@@ -61,7 +61,7 @@ int existe_archivo(char *path_archivo);
 int borrar_archivo(char *path_archivo);
 char *archivo_path(char *path_archivo);
 char *bloque_path(char *numeroBloque);
-char *crearStringDeArchivoConBloques(peticion_obtener *obtener);
+void crearStringDeArchivoConBloques(peticion_obtener *obtener);
 struct addrinfo *server_info;
 
 typedef struct{

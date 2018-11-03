@@ -115,7 +115,7 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
 		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\n",
 							obtener->path,obtener->offset,obtener->size);
-		char *stringArchivo =crearStringDeArchivoConBloques(obtener);
+		crearStringDeArchivoConBloques(obtener);
 
 		break;
 	}
@@ -128,6 +128,14 @@ void determinarOperacion(int operacion,int fd) {
 		//guardarDatos(guardado->path, 0, 0, guardado->buffer);
 		break;
 	}
+	case BORRAR_ARCHIVO:
+	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
+		puts(borrar->path);
+		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
+	    borrar_archivo(borrar->path);
+	    break;
+	}
+
 	}
 
 }
@@ -352,7 +360,7 @@ int string_archivo(char *pathfile,char **contenido_archivo){
 	return 1;
 }
 
-char *crearStringDeArchivoConBloques(peticion_obtener *obtener){
+void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	char *archivoPathCompleto = archivo_path(obtener->path);
 	puts(archivoPathCompleto);
 	char *path;
@@ -364,15 +372,13 @@ char *crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
-	char *numero_bloque;
 	int sizeArchivoBloque;
 	int size = 0;
 	struct stat statbuf;
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
-	char *contenido;
-	for(i=0;i<=cantidadBloques;i++){
+	for(i=0;i<cantidadBloques+1;i++){
 		metadataArchivo.tamanio=metadataArchivo.tamanio -sizeArchivoBloque;
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
@@ -401,14 +407,15 @@ char *crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			printf ("mmap error for input");
 
 		}
-		free(pathBloqueCompleto);
-		close(f);
+
 		if(i==0){
 			strcpy(contenidoArchivo,src);
 		}
 		else
 			string_append(&contenidoArchivo,src);
 		puts(contenidoArchivo);
+		free(pathBloqueCompleto);
+		close(f);
 		//string_archivo(file2,&agregar_contenido);
 		//string_append(&contenido,agregar_contenido);
 
@@ -416,12 +423,19 @@ char *crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		//strcat(src,contenido);
 		//printf("%s",src);
 		//puts(contenido);
+
 	}
+	char *sub;
+	int desplazamiento_archivo;
+	desplazamiento_archivo=obtener->offset*obtener->size +1;
+	strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
+	sub[obtener->size] = '\0';
 	//puts(contenidoArchivo);
 	//config_destroy(archivo_MetaData);
 	//puts(contenido);
 	//return src;
-	return contenidoArchivo;
+	//return contenidoArchivo;
+	free(sub);
 
 }
 char *archivo_path(char *path_archivo){
@@ -432,7 +446,6 @@ char *archivo_path(char *path_archivo){
     strcat(complete_path, path_archivo);
     puts(path_archivo);
     return complete_path;
-
 }
 char *bloque_path(char *numeroBloque){
 
@@ -457,3 +470,43 @@ int leerMetaData(){
 	config_destroy(archivo_MetaData);
 	return 0;
 }
+
+int borrar_archivo(char *path_archivo){
+        char * complete_path;
+        if(existe_archivo(path_archivo)==0){
+        	    complete_path = archivo_path(path_archivo);
+                remove(complete_path);
+                return 0;
+        }
+        else
+                return -1;
+
+}
+
+int existe_archivo(char *path_archivo){
+        struct stat   buffer;
+        return (stat (archivo_path(path_archivo), &buffer) == 0);
+}
+
+
+/*int cmd_md5(char *linea){
+        char **parametros = string_split(linea, " ");
+        puts(parametros[1]);
+        if(parametros[1] == NULL){
+                        printf("El Comando md5 debe recibir un parametro.\n");
+                        return -1;
+        }
+        char *contenido;
+        int size;
+        string_file(parametros[1] ,&contenido);
+        MD5_CTX md5;
+        size=sizeof(contenido);
+        void * md5_resultado = malloc(size+1);
+        MD5_Init(&md5);
+        MD5_Update(&md5,contenido , size+1);
+        MD5_Final(md5_resultado, &md5);
+        free(contenido);
+        puts(md5_resultado);
+        return 0;
+}
+*/

@@ -165,7 +165,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->segmento);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
 		break;
+	case BORRAR_ARCHIVO:
+		serializarYEnviarString(socket,((peticion_borrar*)package)->path);
+		break;
 	}
+
 }
 
 void serializarYEnviarString(int socket, char *string){
@@ -252,6 +256,12 @@ void* recibirYDeserializar(int socket,int tipo){
 		direccion->segmento=*recibirYDeserializarEntero(socket);
 		direccion->offset=*recibirYDeserializarEntero(socket);
 		return direccion;
+	}
+	case BORRAR_ARCHIVO:
+	{
+			peticion_borrar* borrar = malloc(sizeof(peticion_borrar));
+			borrar->path = recibirYDeserializarString(socket);
+			return borrar;
 	}
 	default:
 		return NULL;
