@@ -260,6 +260,26 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		}
 		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
 		break;
+	case DESBLOQUEAR_DUMMY:
+		log_info(log_SAFA,"Desbloqueando el DTB Dummy %d",dtb->id);
+		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
+		dtb->f_inicializacion=1;
+		list_add(cola_ready,dtb);
+		break;
+	case DESBLOQUEAR_PROCESO:
+		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
+		t_archivo* archivo=NULL;
+		if(list_size(dtb->archivos)>0){
+			archivo=list_get(dtb->archivos,0);
+		}
+		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
+		if(archivo!=NULL)
+			list_add(dtb->archivos,archivo);
+		if(config_SAFA.algoritmo==VRR&&dtb->quantum_sobrante>0)
+			list_add(cola_ready_VRR,dtb);
+		else
+			list_add(cola_ready,dtb);
+		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
 		list_add(cola_exit,dtb);

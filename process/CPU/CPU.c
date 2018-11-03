@@ -122,7 +122,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		direccion->segmento=0;
 		direccion->offset=dtb.pc;
 
-
 		serializarYEnviar(FM9,PEDIR_DATOS,direccion);
 
 		char* linea_fm9 = recibirYDeserializarString(FM9);
@@ -139,6 +138,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				serializarYEnviarEntero(DAM,&protocolo);
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+				return;
 			}
 			break;
 		case CONCENTRAR:
@@ -152,13 +152,22 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		case FLUSH:
 			break;
 		case CLOSE:
+
+			if(isOpenFile(dtb,linea_parseada.argumentos.close.path)){
+				//Mandar a FM9 la informacion necesaria para que libere la memoria de dicho archivo
+				//Luego hay que actualizar la lista de archivos abiertos del dtb
+			}else{
+				notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
+				return;
+			}
 			break;
 		case CREAR:
 			protocolo=CREAR_ARCHIVO;
 			serializarYEnviarEntero(DAM,&protocolo);
 			serializarYEnviarString(DAM,linea_parseada.argumentos.crear.path);
-			serializarYEnviarEntero(DAM,linea_parseada.argumentos.crear.lineas);
+			serializarYEnviarEntero(DAM,&(linea_parseada.argumentos.crear.lineas));
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			return;
 			break;
 		case BORRAR:
 			break;

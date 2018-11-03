@@ -118,12 +118,31 @@ void eliminarSocketCPU(int fd){
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
-
 	int protocolo;
+	t_DTB* dtb=malloc(sizeof(t_DTB));
+	dtb->archivos=list_create();
 
-	protocolo=recibirYDeserializarEntero(fd_DAM);
+	protocolo=*recibirYDeserializarEntero(fd_DAM);
 
-
+	switch(protocolo){
+	case FINAL_CARGA_DUMMY:
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
+		break;
+	case FINAL_ABRIR:
+	{
+		t_archivo* archivo=malloc(sizeof(t_archivo));
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		archivo->path=recibirYDeserializarString(fd_DAM);
+		archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
+		list_add(dtb->archivos,archivo);
+		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+		break;
+	}
+	case FINAL_CREAR:
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+	}
 
 }
 
@@ -172,6 +191,9 @@ void atenderCPU(int*fd){
 
 		dtb->pc=dtb_modificado.pc;
 		dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+
+		list_clean(dtb->archivos);
+		list_add_all(dtb->archivos,dtb_modificado.archivos);
 
 		//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 		ejecutarPCP(protocolo,dtb);
