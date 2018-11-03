@@ -139,6 +139,9 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 	serializarYEnviarEntero(socket, &tipoDePaquete);
 
 	switch(tipoDePaquete){
+	case ENVIAR_ARCHIVO:
+		serializarYEnviarString(socket,(char*)package);
+		break;
 	case VALIDAR_ARCHIVO:
 		serializarYEnviarString(socket,((peticion_validar*)package)->path);
 		break;
@@ -202,6 +205,11 @@ void serializarYEnviarEntero(int socket, int* entero){
 void* recibirYDeserializar(int socket,int tipo){
 
 	switch(tipo){
+	case ENVIAR_ARCHIVO:
+	{
+		char *string_archivo=recibirYDeserializarString(socket);
+		return string_archivo;
+	}
 	case VALIDAR_ARCHIVO:
 	{
 		peticion_validar* validacion = malloc(sizeof(peticion_validar));

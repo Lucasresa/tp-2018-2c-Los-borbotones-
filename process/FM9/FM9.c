@@ -14,10 +14,7 @@ int main(){
 	config_destroy(file_FM9);
 
 	// Memoria es un array de strings de tamaño=MAX_LINEA.
-	char** memoria = iniciar_memoria();
-
-	strcpy(memoria[0],"mi linea");
-	printf("linea 0: %s", memoria[0]);
+	memoria = iniciar_memoria();
 
 	// Creo estructuras de segmentación
 	t_list *lista_tablas_segmentos;
@@ -62,8 +59,6 @@ int main(){
 	FD_SET(listener_socket, &fd_set);
 	while(true) {
 		escuchar(listener_socket, &fd_set, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
-		// Probablemente conviene sacar el sleep()
-		sleep(1);
 	}
 	free(memoria);
 	list_destroy(lista_tablas_segmentos);
@@ -73,6 +68,8 @@ int main(){
 char** iniciar_memoria() {
 	char** memoria;
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
+
+	memoria_counter = 0;
 
 	memoria = malloc(cantidad_lineas * sizeof(memoria));
 
@@ -129,11 +126,33 @@ t_modo detectarModo(char* modo){
 }
 
 void funcionHandshake(int socket, void* argumentos) {
+	printf("conexion establecida con socket %i\n", socket);
 	log_info(log_FM9, "Conexión establecida");
 	return;
 }
 
 void funcionRecibirPeticion(int socket, void* argumentos) {
 	// Acá estaría la lógica para manejar un pedido.
+	int length;
+	int header;
+	length = recv(socket,&header,sizeof(int),0);
+	if ( length <= 0 ) {
+	//	perror("Un socket sin conexión.");
+	//	close(socket);
+		return;
+	}
+
+	switch(header){
+
+	case ENVIAR_ARCHIVO:
+	{
+		char* linea_string;
+		linea_string = recibirYDeserializar(socket,header);
+		strcpy(memoria[memoria_counter],linea_string);
+		printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
+		memoria_counter++;
+		break;
+	}
+	}
 	return;
 }
