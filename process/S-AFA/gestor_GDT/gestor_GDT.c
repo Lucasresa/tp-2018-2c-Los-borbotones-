@@ -64,6 +64,9 @@ void ejecutarComando(int nro_op, char * args){
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
+					if(config_SAFA.algoritmo==VRR){
+						printf("Virtual: %d\n",list_size(cola_ready_VRR));
+					}
 				}else{
 					t_DTB* dtb_status;
 					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
@@ -76,6 +79,7 @@ void ejecutarComando(int nro_op, char * args){
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
 								list_size(dtb_status->archivos));
+
 						if(list_size(dtb_status->archivos)!=0){
 							t_archivo* archivo;
 							for(i=0;i<list_size(dtb_status->archivos);i++){

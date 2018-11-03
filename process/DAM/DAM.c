@@ -21,7 +21,7 @@ int main(){
 	crearSocket(&MDJ_fd);
 	crearSocket(&FM9_fd);
 	//El DAM se conecta con FM9_fd
-/*
+
 	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
 		log_error(log_DAM,"Error al conectarse con FM9");
 		exit(1);
@@ -30,7 +30,7 @@ int main(){
 	}
 
 	// Espero para recibir un BUFFER a enviar
-
+/*
 	char buffer[] = "abrir racing.txt\nflush loQueSea\nsave otraCosa";
     char* linea = NULL;
 
