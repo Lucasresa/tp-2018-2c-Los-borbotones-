@@ -21,13 +21,33 @@ int main(){
 	crearSocket(&MDJ_fd);
 	crearSocket(&FM9_fd);
 	//El DAM se conecta con FM9_fd
-	/*if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
+
+	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
 		log_error(log_DAM,"Error al conectarse con FM9");
 		exit(1);
 	} else {
 		log_info(log_DAM, "Conexión con FM9 establecido");
-	}*/
-	//El DAM se conecta con MDJ
+	}
+
+	// Espero para recibir un BUFFER a enviar
+
+	char buffer[] = "abrir racing.txt\nflush loQueSea\nsave otraCosa";
+    char* linea = NULL;
+
+	linea = strtok(buffer, "\n");
+
+    while (linea != NULL)
+    {
+    	log_info(log_DAM,"Enviando archivo al FM9...");
+        serializarYEnviar(FM9_fd,ENVIAR_ARCHIVO,linea);
+        printf("%s\n", linea);
+        linea = strtok(NULL, "\n");
+    }
+    while (true){
+    	sleep(1);
+    }
+
+	/*//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
 		exit(1);
@@ -47,7 +67,7 @@ int main(){
 	serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 
 	log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
-
+	*/
 
 
 	return 0;

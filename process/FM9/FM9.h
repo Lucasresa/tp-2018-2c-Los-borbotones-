@@ -38,6 +38,9 @@ t_config_FM9 config_FM9;
 t_config* file_FM9;
 t_log* log_FM9;
 
+char** memoria;
+int memoria_counter;
+
 char** iniciar_memoria();
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
