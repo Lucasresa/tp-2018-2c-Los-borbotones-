@@ -62,6 +62,8 @@ int cmd_md5(char *linea);
 int string_archivo(char *pathfile,char **contenido);
 int existe_archivo(char *path_archivo);
 int borrar_archivo(char *path_archivo);
+char *archivo_path(char *path_archivo);
+char *crearStringDeArchivoConBloques(peticion_obtener *obtener);
 struct addrinfo *server_info;
 
 typedef struct{
@@ -75,6 +77,11 @@ typedef struct{
  	char* magic_number;
  	int cantidad_bloques;
   }t_config_MetaData;
+
+  typedef struct{
+   	int tamanio;
+  	char** bloques;
+   }t_config_MetaArchivo;
 
 
 t_config_MDJ config_MDJ;

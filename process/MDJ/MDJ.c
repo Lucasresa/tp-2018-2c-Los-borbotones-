@@ -161,7 +161,6 @@ void cmd_bloque(){
 
 int string_archivo(char *pathfile,char **contenido_archivo){
 	char *contentenido;
-	//printf("Parametros %s.\n", pathfile);
 	int size = 0;
 	FILE *f = fopen(pathfile, "rb");
 	if (f == NULL){
@@ -169,18 +168,17 @@ int string_archivo(char *pathfile,char **contenido_archivo){
 		return -1;
 	}
 	fseek(f, 0, SEEK_END);
-	//fseek(f, 0, SEEK_CUR-1);
 	size = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	contentenido = (char *)malloc(size+1);
 	if (size != fread(contentenido, sizeof(char), size, f))	{
 		free(contentenido);
 	}
-	//puts(contentenido);
 	fclose(f);
 	*contenido_archivo = contentenido;
 	return 1;
 }
+
 int iniciar_recibirDatos(){
 
 	int tipo_operacion,bytesRecibidos;
@@ -233,6 +231,8 @@ void determinarOperacion(int operacion,int fd) {
 	case OBTENER_DATOS:
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
+		char *stringArchivo =crearStringDeArchivoConBloques(obtener);
+		puts(stringArchivo);
 		break;
 	}
 	case BORRAR_ARCHIVO:
@@ -379,24 +379,25 @@ int  conexion_dam(){
 	return 0;
 }
 
-char *archivo_bit(char *path_archivo){
+char *archivo_path(char *path_archivo){
 
-	char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path_archivo) + strlen(".bit") );
+	char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path_archivo));
     strcpy(complete_path, config_MDJ.mount_point);
     strcat(complete_path, "/Archivos/");
     strcat(complete_path, path_archivo);
-    strcat(complete_path, ".bit");
+    return path_archivo;
+
 }
 
 int existe_archivo(char *path_archivo){
 	struct stat   buffer;
-	return (stat (archivo_bit(path_archivo), &buffer) == 0);
+	return (stat (archivo_path(path_archivo), &buffer) == 0);
 }
 
 int borrar_archivo(char *path_archivo){
 	char * complete_path;
 	if(existe_archivo(path_archivo)==0){
-		complete_path = archivo_bit(path_archivo);
+		complete_path = archivo_path(path_archivo);
 		remove(complete_path);
 		return 0;
 	}
@@ -404,6 +405,52 @@ int borrar_archivo(char *path_archivo){
 		return -1;
 
 }
+
+char *crearStringDeArchivoConBloques(peticion_obtener *obtener){
+	char *archivoPathCompleto = archivo_path(obtener->path);
+	char *path;
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(archivoPathCompleto);
+	t_config_MetaArchivo metadataArchivo;
+	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	int cantidadBloques=sizeof(metadataArchivo.bloques);
+	char * contenidoArchivo = (char *) malloc(1 + metadataArchivo.tamanio );
+	char *numero_bloque;
+	int sizeArchivoBloque;
+	int size = 0;
+	for(int i=0;i<=cantidadBloques;i++){
+		//string_bloque(metadataArchivo.bloques[i],&contenidoArchivo,&metadataArchivo.tamanio);
+
+		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
+			sizeArchivoBloque = config_MetaData.tamanio_bloques;
+		}
+		else{
+			sizeArchivoBloque = metadataArchivo.tamanio;
+		}
+		char * complete_path_bloque = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Bloques/") + strlen(metadataArchivo.bloques[i]));
+		char *contentenido;
+
+		FILE *f = fopen(complete_path_bloque, "rb");
+		if (f == NULL){
+			printf("no se encontro el archivo %s.\n",complete_path_bloque );
+		}
+		contentenido = (char *)malloc(sizeArchivoBloque+1);
+		if (size != fread(contentenido, sizeof(char), size, f))	{
+			free(contentenido);
+		}
+		free(complete_path_bloque);
+		fclose(f);
+		metadataArchivo.tamanio-=sizeArchivoBloque;
+		string_append(&contenidoArchivo,contentenido);
+
+	}
+
+	config_destroy(archivo_MetaData);
+	return contenidoArchivo;
+
+}
+
 /*int cmd_md5(char *linea){
 	char **parametros = string_split(linea, " ");
 	puts(parametros[1]);
