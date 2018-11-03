@@ -75,10 +75,12 @@ void ejecutarComando(int nro_op, char * args){
 
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
-								dtb_status->cant_archivos);
-						if(dtb_status->cant_archivos!=0){
-							for(i=0;i<dtb_status->cant_archivos;i++){
-								printf("\n\t%s",dtb_status->archivos[i]);
+								list_size(dtb_status->archivos));
+						if(list_size(dtb_status->archivos)!=0){
+							t_archivo* archivo;
+							for(i=0;i<list_size(dtb_status->archivos);i++){
+								archivo=list_get(dtb_status->archivos,i);
+								printf("\t%s\n",archivo->path);
 							}
 						}
 					}
@@ -114,6 +116,10 @@ void ejecutarComando(int nro_op, char * args){
 				printf("No se reconoce la operacion, escriba 'help' para ver las operaciones disponibles\n");
 	}
 }
+
+//-----------------------------------------------------------------------------------------
+//Funciones de busqueda de un DTB en las colas por su ID
+
 
 char* buscarDTB(t_DTB** dtb, int id, int operacion){
 
@@ -172,6 +178,7 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 }
 
 //----------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
 //Creo el dtb y lo agrego a la cola de New
@@ -182,7 +189,7 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->pc=0;
 	dtb->quantum_sobrante=0; //Cuando este valor sea 0, el CPU sabra que tiene que ejecutar el quantum completo
 	dtb->id=cont_id;
-	dtb->cant_archivos=0;
+	dtb->archivos=list_create();
 	cont_id++;
 
 	list_add(cola_new,dtb);

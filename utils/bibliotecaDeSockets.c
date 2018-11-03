@@ -157,6 +157,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->size);
 		serializarYEnviarString(socket,((peticion_guardar*)package)->buffer);
 		break;
+	case PEDIR_DATOS:
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->numero_tabla);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->segmento);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
+		break;
 	}
 }
 
@@ -232,6 +237,14 @@ void* recibirYDeserializar(int socket,int tipo){
 		guardado->buffer = recibirYDeserializarString(socket);
 		return guardado;
 	}
+	case PEDIR_DATOS:
+	{
+		direccion_logica* direccion = malloc(sizeof(direccion_logica));
+		direccion->numero_tabla=*recibirYDeserializarEntero(socket);
+		direccion->segmento=*recibirYDeserializarEntero(socket);
+		direccion->offset=*recibirYDeserializarEntero(socket);
+		return direccion;
+	}
 	default:
 		return NULL;
 	}
@@ -303,20 +316,21 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	int i, tamanio_info;
 	int offset=0;
 	int tamanio_script=strlen(dtb.escriptorio)+1;
+	int cantidad_archivos = list_size(dtb.archivos);
 
 	//Calculo el tamaño total que tendra el buffer y reservo memoria para el mismo
 	int tamanio_buffer=(sizeof(int)*7)+(sizeof(char)*tamanio_script);
 
 	//Reservo memoria para cada archivo abierto si es que lo hay
-	if(dtb.cant_archivos!=0){
+	if(cantidad_archivos!=0){
 
-		for(i=0;i<dtb.cant_archivos;i++){
-
-			tamanio_buffer+=((sizeof(char)*strlen(dtb.archivos[i]))+1);
-
+		for(i=0;i<cantidad_archivos;i++){
+			t_archivo* archivo=list_get(dtb.archivos,i);
+			tamanio_buffer+=((sizeof(char)*strlen(archivo->path))+1);
+			tamanio_buffer+=sizeof(archivo->acceso);
 		}
 
-		tamanio_buffer+=sizeof(int)*dtb.cant_archivos;
+		tamanio_buffer+=(cantidad_archivos*sizeof(int));
 
 	}
 
@@ -361,21 +375,29 @@ void serializarYEnviarDTB(int fd,void* buffer,t_DTB dtb){
 	offset+=tamanio_script;
 
 	//Cantidad de archivos abiertos por el DTB
-	memcpy(buffer+offset,&dtb.cant_archivos,sizeof(dtb.cant_archivos));
-	offset+=sizeof(dtb.cant_archivos);
+	memcpy(buffer+offset,&cantidad_archivos,sizeof(cantidad_archivos));
+	offset+=sizeof(cantidad_archivos);
 
 	//Contenido de cada archivo abierto y su tamaño
-	if(dtb.cant_archivos!=0){ //Hay archivos
+	if(cantidad_archivos!=0){ //Hay archivos
+
+		t_archivo* archivo;
 
 		//Guardo el tamanio seguido del string de cada archivo
-		for(i=0;i<dtb.cant_archivos;i++){
-			int tamanio_archivo=string_length(dtb.archivos[i])+1;
+		for(i=0;i<cantidad_archivos;i++){
+			archivo=list_get(dtb.archivos,i);
+
+			int tamanio_archivo=string_length(archivo->path)+1;
 
 			memcpy(buffer+offset,&tamanio_archivo,sizeof(int));
 			offset+=sizeof(int);
 
-			memcpy(buffer+offset,dtb.archivos[i],tamanio_archivo);
+			memcpy(buffer+offset,archivo->path,tamanio_archivo);
 			offset+=tamanio_archivo;
+
+			memcpy(buffer+offset,&(archivo->acceso),sizeof(int));
+			offset+=sizeof(int);
+
 		}
 
 	}
@@ -392,6 +414,7 @@ t_DTB RecibirYDeserializarDTB(int fd){
 
 	void*buffer;
 	t_DTB dtb;
+	dtb.archivos=list_create();
 	int offset=0;
 	int tamanio_script,cant_archivos,i;
 	int tamanio_buffer;
@@ -438,9 +461,7 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	if(cant_archivos!=0){
 
 		int tamanio_archivo;
-
-		dtb.archivos=malloc(cant_archivos);
-		dtb.cant_archivos=cant_archivos;
+		t_archivo* archivo=malloc(sizeof(t_archivo));
 
 		offset+=sizeof(int);
 
@@ -449,16 +470,17 @@ t_DTB RecibirYDeserializarDTB(int fd){
 			memcpy(&tamanio_archivo,buffer+offset,sizeof(int));
 			offset+=sizeof(int);
 
-			dtb.archivos[i]=malloc(sizeof(char)*tamanio_archivo);
+			archivo->path=malloc(sizeof(char)*tamanio_archivo);
 
-			memcpy(dtb.archivos[i],buffer+offset,tamanio_archivo);
+			memcpy(archivo->path,buffer+offset,tamanio_archivo);
 			offset+=tamanio_archivo;
 
+			memcpy(&(archivo->acceso),buffer+offset,sizeof(int));
+			offset+=sizeof(int);
+
+			list_add(dtb.archivos,archivo);
+
 		}
-	}else{
-
-		dtb.cant_archivos=cant_archivos;
-
 	}
 
 	return dtb;

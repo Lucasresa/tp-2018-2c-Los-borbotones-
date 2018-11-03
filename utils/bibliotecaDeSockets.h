@@ -60,16 +60,18 @@ struct respuesta{
 //Estructura para manejar el protocolo
 typedef enum{
 	VALIDAR_ARCHIVO,	//PARA EL MDJ
-	CREAR_ARCHIVO,		//PARA EL MDJ
+	CREAR_ARCHIVO,		//PARA EL MDJ -- CPU Y DAM
 	OBTENER_DATOS,		//PARA EL MDJ
 	GUARDAR_DATOS,		//PARA EL MDJ
-	BORRAR_ARCHIVO,		//PARA EL MDJ
+	BORRAR_ARCHIVO,		//PARA EL MDJ -- CPU Y DAM
 	EJECUTAR_PROCESO,	//PARA EL SAFA
 	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
 	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
-	DESBLOQUEAR_PROCESO,//PARA SAFA Y DAM
+	DESBLOQUEAR_PROCESO,//PARA DAM Y SAFA
 	FIN_QUANTUM,		//PARA CPU Y SAFA
-	DESBLOQUEAR_DUMMY	//PARA CPU Y DAM
+	PEDIR_DATOS,		//PARA CPU Y FM9 - El CPU le avisa a FM9 que le va a pedir algo
+	ABRIR_ARCHIVO,		//PARA CPU Y DAM
+	CERRAR_ARCHIVO		//PARA CPU Y DAM
 }t_protocolo;
 
 typedef struct{
@@ -91,6 +93,9 @@ typedef struct{
 	char*path;
 }peticion_borrar;
 
+typedef struct{
+	char*path;
+}peticion_abrir;
 
 typedef struct{
 	char*path;
@@ -103,6 +108,12 @@ typedef struct{
 	char*path;
 	int id_dtb;
 }desbloqueo_dummy;
+
+typedef struct{
+	int numero_tabla;
+	int segmento;
+	int offset;
+}direccion_logica;
 
 enum paquete {
 	PAQ_INT,
@@ -123,15 +134,18 @@ typedef enum{
 }t_algoritmo;
 
 typedef struct{
+	char* path;
+	int acceso;
+}t_archivo;
+
+typedef struct{
 
 	int id;
 	int pc;
 	int quantum_sobrante;
 	int f_inicializacion;
 	char* escriptorio;
-	int cant_archivos;
-	char** archivos;
-
+	t_list* archivos;
 }__attribute__((packed)) t_DTB;
 
 t_log* log_s;

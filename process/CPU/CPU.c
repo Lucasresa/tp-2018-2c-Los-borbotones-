@@ -75,9 +75,8 @@ int main(){
 			inicializarDTB(DAM_fd,SAFA_fd,&dtb);
 		}else{
 			log_info(log_CPU,"El DTB tiene su flag en 1, comenzando con la ejecucion...");
-			comenzarEjecucion(DAM_fd,FM9_fd,dtb);
+			comenzarEjecucion(SAFA_fd,DAM_fd,FM9_fd,dtb);
 		}
-		usleep(config_CPU.retardo*3000);
 	}
 
 	return 0;
@@ -94,13 +93,11 @@ void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 
 	//Una vez enviando el dummy a DAM tengo que avisarle a SAFA que bloquee el proceso mientras se carga en memoria el script
 
-	send(SAFA_fd,&protocolo,sizeof(int),0);
-
-	serializarYEnviarEntero(SAFA_fd,&(dtb->id));
+	notificarSAFA(SAFA_fd,protocolo,*dtb);
 
 }
 
-void comenzarEjecucion(int DAM, int FM9, t_DTB dtb){
+void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	/*
 	 * Primero tengo que pedirle al fm9 las lineas para ejecutar
@@ -110,34 +107,105 @@ void comenzarEjecucion(int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
-	char* linea_fm9 = recibirYDeserializarString(FM9);
-
-	t_operacion linea_parseada=parseLine(linea_fm9);
-
-	switch(linea_parseada.keyword){
-	case ABRIR:
-		break;
-	case CONCENTRAR:
-		break;
-	case ASIGNAR:
-		break;
-	case WAIT:
-		break;
-	case SIGNAL:
-		break;
-	case FLUSH:
-		break;
-	case CLOSE:
-		break;
-	case CREAR:
-		break;
-	case BORRAR:
-		break;
-
+	if(dtb.quantum_sobrante!=0){
+		rafaga_actual=dtb.quantum_sobrante;
 	}
 
 
+	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	usleep(config_CPU.retardo*3000);
+	do{
+
+		direccion->numero_tabla=dtb.id;
+		direccion->segmento=0;
+		direccion->offset=dtb.pc;
+
+
+		serializarYEnviar(FM9,PEDIR_DATOS,direccion);
+
+		char* linea_fm9 = recibirYDeserializarString(FM9);
+
+		t_operacion linea_parseada=parseLine(linea_fm9);
+
+		switch(linea_parseada.keyword){
+		case ABRIR:
+
+			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path))
+				break;
+			else{
+
+			}
+
+			break;
+		case CONCENTRAR:
+			break;
+		case ASIGNAR:
+			break;
+		case WAIT:
+			break;
+		case SIGNAL:
+			break;
+		case FLUSH:
+			break;
+		case CLOSE:
+			break;
+		case CREAR:
+			break;
+		case BORRAR:
+			break;
+		default:
+			log_info(log_CPU,"Se termino de ejecutar el script");
+			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
+			return;
+		}
+
+		rafaga_actual--;
+
+		dtb.pc++;
+		dtb.quantum_sobrante=rafaga_actual;
+
+		if(rafaga_actual==0){
+			notificarSAFA(SAFA,FIN_QUANTUM,dtb);
+			return;
+		}
+		usleep(config_CPU.retardo*3000);
+	}while(1);
+
+
 }
 
+void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
+
+	void*buffer;
+
+	send(SAFA,&protocolo,sizeof(int),0);
+
+	serializarYEnviarDTB(SAFA,buffer,DTB);
+
+}
+
+void notificarDAM(int DAM, int protocolo, void* paquete){
+
+}
+
+int isOpenFile(t_DTB dtb, char* path){
+
+	int i, retorno = 0;
+
+	int cant_archivos = list_size(dtb.archivos);
+
+	t_archivo* archivo;
+
+	for(i=0;i<cant_archivos;i++){
+
+		archivo=list_get(dtb.archivos,i);
+
+		if(strcmp(archivo->path,path)==0){
+			retorno = 1;
+			break;
+		}
+
+	}
+
+	return retorno;
+}
