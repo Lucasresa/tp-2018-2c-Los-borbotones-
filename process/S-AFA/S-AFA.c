@@ -119,6 +119,11 @@ void eliminarSocketCPU(int fd){
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
 
+	int protocolo;
+
+	protocolo=recibirYDeserializarEntero(fd_DAM);
+
+
 
 }
 

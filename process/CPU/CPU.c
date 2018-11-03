@@ -114,6 +114,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
+	int protocolo;
+
 	do{
 
 		direccion->numero_tabla=dtb.id;
@@ -133,9 +135,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path))
 				break;
 			else{
-
+				protocolo=ABRIR_ARCHIVO;
+				serializarYEnviarEntero(DAM,&protocolo);
+				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
+				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			}
-
 			break;
 		case CONCENTRAR:
 			break;
@@ -150,6 +154,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		case CLOSE:
 			break;
 		case CREAR:
+			protocolo=CREAR_ARCHIVO;
+			serializarYEnviarEntero(DAM,&protocolo);
+			serializarYEnviarString(DAM,linea_parseada.argumentos.crear.path);
+			serializarYEnviarEntero(DAM,linea_parseada.argumentos.crear.lineas);
+			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			break;
 		case BORRAR:
 			break;
@@ -168,6 +177,9 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			notificarSAFA(SAFA,FIN_QUANTUM,dtb);
 			return;
 		}
+
+		destroyParse(linea_parseada);
+
 		usleep(config_CPU.retardo*3000);
 	}while(1);
 
@@ -184,9 +196,6 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 }
 
-void notificarDAM(int DAM, int protocolo, void* paquete){
-
-}
 
 int isOpenFile(t_DTB dtb, char* path){
 

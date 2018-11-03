@@ -27,5 +27,7 @@ int rafaga_recibida, rafaga_actual;
 void inicializarDTB(int ,int ,t_DTB* );
 void comenzarEjecucion(int, int, int ,t_DTB);
 void notificarSAFA(int, int, t_DTB);
+int isOpenFile(t_DTB , char*);
+
 
 #endif /* CPU_H_ */
