@@ -13,9 +13,11 @@ int main(){
 
 	config_destroy(file_FM9);
 
-	// Inicializo memoria.
-	void *base_memoria;
-	base_memoria = malloc(config_FM9.tamanio);
+	// Memoria es un array de strings de tamaño=MAX_LINEA.
+	char** memoria = iniciar_memoria();
+
+	strcpy(memoria[0],"mi linea");
+	printf("linea 0: %s", memoria[0]);
 
 	// Creo estructuras de segmentación
 	t_list *lista_tablas_segmentos;
@@ -63,9 +65,21 @@ int main(){
 		// Probablemente conviene sacar el sleep()
 		sleep(1);
 	}
-	free(base_memoria);
+	free(memoria);
 	list_destroy(lista_tablas_segmentos);
 
+}
+
+char** iniciar_memoria() {
+	char** memoria;
+	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
+
+	memoria = malloc(cantidad_lineas * sizeof(memoria));
+
+	for (int n=0; n<16; n++) {
+		memoria[n] = malloc(config_FM9.max_linea * sizeof(char));
+	}
+	return memoria;
 }
 
 struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento) {
