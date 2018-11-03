@@ -1,9 +1,3 @@
-/*
- * MDJ.h
- *
- *  Created on: 19 sep. 2018
- *      Author: utnso
- */
 
 #ifndef MDJ_H_
 #define MDJ_H_
@@ -23,7 +17,10 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "../../utils/bibliotecaDeSockets.h"
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h> /* mmap() is defined in this header */
+#include <fcntl.h>
 
 char* server_ip;
 int server_puerto;
@@ -46,7 +43,7 @@ t_config *mdj_config;
 in_port_t get_in_port(struct sockaddr *sa);
 
 int iniciar_recibirDatos();
-void consola();
+void consola_MDJ();
 void configure_logger();
 void exit_gracefully(int return_nr);
 void leerArchivoConfiguracion(t_config * archivoConfig);
@@ -63,6 +60,7 @@ int string_archivo(char *pathfile,char **contenido);
 int existe_archivo(char *path_archivo);
 int borrar_archivo(char *path_archivo);
 char *archivo_path(char *path_archivo);
+char *bloque_path(char *numeroBloque);
 char *crearStringDeArchivoConBloques(peticion_obtener *obtener);
 struct addrinfo *server_info;
 
