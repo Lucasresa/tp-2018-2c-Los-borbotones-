@@ -39,24 +39,36 @@ int main(){
 
 
 	pthread_t hilo_consola;
+	pthread_t hilo_conexion;
 
-	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
-
-	pthread_detach(hilo_consola);
-
-	log_info(log_MDJ,"Consola en linea");
 	leerMetaData();
-	if (crear_carpetas() != 0) {
-		log_error(log_MDJ,"Error al crear los directorios para el MDJ");
-		return -1;
-	}
+	cerrarMDJ=0;
+	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
+	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
+	//conexion_DMA();
 
-	log_info(log_MDJ,"Directorios creados");
+	//if (crear_carpetas() != 0) {
+	//	log_error(log_MDJ,"Error al crear los directorios para el MDJ");
+	//	return -1;
+	//}
+
+	//log_info(log_MDJ,"Directorios creados");
 
 	//-----------------------------------------------------------------------------------------------
     //Espero que el DAM se conecte y logueo cuando esto ocurra
 
+	cerrado_cosola=0;
+	cerrado_conexion=0;
+	while(1){
+		if(cerrarMDJ==1)
+			break;
+	}
+	pthread_detach(hilo_consola);
+	pthread_detach(hilo_conexion);
 
+}
+void conexion_DMA(){
+	log_info(log_MDJ,"Iniciar conexion a DMA");
 	int tipo_operacion,bytesRecibidos;
 
 	int MDJ_fd;
@@ -77,8 +89,8 @@ int main(){
 
 	//Espero a que el DAM mande alguna solicitud y espero que me mande el tipo de operacion a realizar
 	while(1){
-
-		pthread_t hilo_operacion;
+		if(cerrarMDJ==1)
+			break;
 
 		bytesRecibidos=recv(DAM_fd,&tipo_operacion,sizeof(int),0);
 
@@ -88,12 +100,14 @@ int main(){
 			log_destroy(log_MDJ);
 			exit(1);
 		}
-
+		cerrado_conexion=1;
 		log_info(log_MDJ,"Peticion recibida del DAM, procesando....");
 
 		determinarOperacion(tipo_operacion,DAM_fd);
 
+
 	}
+	close(MDJ_fd);
 
 }
 
@@ -185,6 +199,7 @@ int crear_carpetas() {
 		return -1;
 	}
 	free(inner_folders);
+	return 0;
 }
 
 int mkdir_p(const char *path)
@@ -227,11 +242,12 @@ int mkdir_p(const char *path)
 }
 
 void consola_MDJ(){
+	log_info(log_MDJ,"Consola en linea");
 	char * linea;
 	dir_actual="/";
 	printf("\n");
 	chdir(dir_actual);
-	//char *string_actual;
+
 
 	//string_append(&dir_actual,"$");
 	cmd_pwd();
@@ -254,9 +270,11 @@ void consola_MDJ(){
 					cmd_bloque(linea);
 		}
 
-
 	}
+	free(dir_actual);
 	free(linea);
+	free(string_actual);
+	cerrado_cosola=1;
 }
 
 
@@ -269,6 +287,7 @@ void cmd_cat(char *linea){
 		char *content;
 		if ((string_archivo(parametros[1],&content))>0){
 			puts(content);
+			free(content);
 		}
 	}
 }
@@ -334,10 +353,12 @@ void cmd_bloque(){
 	string_archivo(file2,&agregar_contenido);
 	string_append(&contenido,agregar_contenido);
 	//strcat(contenido,agregar_contenido);
-
 	printf("%s",contenido);
 	//puts(contenido);
 	//puts("fermamdp");
+	//free(file1);
+	//free(file2);
+	free(contenido);
 }
 
 int string_archivo(char *pathfile,char **contenido_archivo){
@@ -415,6 +436,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			string_append(&contenidoArchivo,src);
 		puts(contenidoArchivo);
 		free(pathBloqueCompleto);
+		free(contenidoArchivo);
 		close(f);
 		//string_archivo(file2,&agregar_contenido);
 		//string_append(&contenido,agregar_contenido);
@@ -467,6 +489,7 @@ int leerMetaData(){
 	config_MetaData.cantidad_bloques=config_get_int_value(archivo_MetaData,"CANTIDAD_BLOQUES");
     config_MetaData.magic_number=string_duplicate(config_get_string_value(archivo_MetaData,"MAGIC_NUMBER"));
 	config_MetaData.tamanio_bloques=config_get_int_value(archivo_MetaData,"TAMANIO_BLOQUES");
+	free(direccionArchivoMedata);
 	config_destroy(archivo_MetaData);
 	return 0;
 }
@@ -476,6 +499,7 @@ int borrar_archivo(char *path_archivo){
         if(existe_archivo(path_archivo)==0){
         	    complete_path = archivo_path(path_archivo);
                 remove(complete_path);
+                free(complete_path);
                 return 0;
         }
         else

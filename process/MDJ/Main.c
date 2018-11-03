@@ -26,7 +26,7 @@ int main(){
 	inicializar();
 
 	pthread_create(&hilo_conexion_dam, NULL ,(void*)conexion_dam , NULL);
-	pthread_create(&hilo_consola, NULL ,(void*)consola , NULL);
+	//pthread_create(&hilo_consola, NULL ,(void*)consola , NULL);
 
 	//pthread_create(&server, NULL ,(void*)iniciar_conexion  , (void*)parametros);
 	while(1){
