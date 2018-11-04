@@ -35,7 +35,7 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-/*	DAM_fd=aceptarConexion(SAFA_fd);
+	DAM_fd=aceptarConexion(SAFA_fd);
 
 	if(DAM_fd==-1){
 		perror("Error de conexion con DAM");
@@ -50,7 +50,6 @@ int main(){
 	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
 
 	pthread_detach(hiloDAM);
-*/
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -118,7 +117,31 @@ void eliminarSocketCPU(int fd){
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
+	int protocolo;
+	t_DTB* dtb=malloc(sizeof(t_DTB));
+	dtb->archivos=list_create();
 
+	protocolo=*recibirYDeserializarEntero(fd_DAM);
+
+	switch(protocolo){
+	case FINAL_CARGA_DUMMY:
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
+		break;
+	case FINAL_ABRIR:
+	{
+		t_archivo* archivo=malloc(sizeof(t_archivo));
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		archivo->path=recibirYDeserializarString(fd_DAM);
+		archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
+		list_add(dtb->archivos,archivo);
+		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+		break;
+	}
+	case FINAL_CREAR:
+		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+	}
 
 }
 
@@ -158,12 +181,18 @@ void atenderCPU(int*fd){
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
-		int id_dtb;
+		t_DTB dtb_modificado;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		id_dtb=*recibirYDeserializarEntero(fd_CPU);
+		dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
 
-		dtb=dictionary_remove(cola_exec,string_itoa(id_dtb));
+		dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
+
+		dtb->pc=dtb_modificado.pc;
+		dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+
+		list_clean(dtb->archivos);
+		list_add_all(dtb->archivos,dtb_modificado.archivos);
 
 		//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 		ejecutarPCP(protocolo,dtb);

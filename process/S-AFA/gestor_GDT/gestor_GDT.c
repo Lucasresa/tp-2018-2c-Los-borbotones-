@@ -64,6 +64,9 @@ void ejecutarComando(int nro_op, char * args){
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
+					if(config_SAFA.algoritmo==VRR){
+						printf("Virtual: %d\n",list_size(cola_ready_VRR));
+					}
 				}else{
 					t_DTB* dtb_status;
 					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
@@ -75,10 +78,13 @@ void ejecutarComando(int nro_op, char * args){
 
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
-								dtb_status->cant_archivos);
-						if(dtb_status->cant_archivos!=0){
-							for(i=0;i<dtb_status->cant_archivos;i++){
-								printf("\n\t%s",dtb_status->archivos[i]);
+								list_size(dtb_status->archivos));
+
+						if(list_size(dtb_status->archivos)!=0){
+							t_archivo* archivo;
+							for(i=0;i<list_size(dtb_status->archivos);i++){
+								archivo=list_get(dtb_status->archivos,i);
+								printf("\t%s\n",archivo->path);
 							}
 						}
 					}
@@ -114,6 +120,10 @@ void ejecutarComando(int nro_op, char * args){
 				printf("No se reconoce la operacion, escriba 'help' para ver las operaciones disponibles\n");
 	}
 }
+
+//-----------------------------------------------------------------------------------------
+//Funciones de busqueda de un DTB en las colas por su ID
+
 
 char* buscarDTB(t_DTB** dtb, int id, int operacion){
 
@@ -172,6 +182,7 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 }
 
 //----------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
 //Creo el dtb y lo agrego a la cola de New
@@ -182,7 +193,7 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->pc=0;
 	dtb->quantum_sobrante=0; //Cuando este valor sea 0, el CPU sabra que tiene que ejecutar el quantum completo
 	dtb->id=cont_id;
-	dtb->cant_archivos=0;
+	dtb->archivos=list_create();
 	cont_id++;
 
 	list_add(cola_new,dtb);
@@ -252,6 +263,26 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 			dtb->quantum_sobrante=0;
 		}
 		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
+		break;
+	case DESBLOQUEAR_DUMMY:
+		log_info(log_SAFA,"Desbloqueando el DTB Dummy %d",dtb->id);
+		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
+		dtb->f_inicializacion=1;
+		list_add(cola_ready,dtb);
+		break;
+	case DESBLOQUEAR_PROCESO:
+		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
+		t_archivo* archivo=NULL;
+		if(list_size(dtb->archivos)>0){
+			archivo=list_get(dtb->archivos,0);
+		}
+		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
+		if(archivo!=NULL)
+			list_add(dtb->archivos,archivo);
+		if(config_SAFA.algoritmo==VRR&&dtb->quantum_sobrante>0)
+			list_add(cola_ready_VRR,dtb);
+		else
+			list_add(cola_ready,dtb);
 		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);

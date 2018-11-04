@@ -33,6 +33,9 @@ typedef enum{
 	FIN_QUANTUM,		//PARA CPU Y SAFA
 	DESBLOQUEAR_DUMMY,	//PARA CPU Y DAM
 	ENVIAR_ARCHIVO,     //PARA DAM Y MDJ/FM9
+	FINAL_CARGA_DUMMY,	//PARA SAFA Y DAM
+	FINAL_ABRIR,		//PARA SAFA Y DAM
+	FINAL_CREAR			//PARA SAFA Y DAM
 	INICIAR_MEMORIA_PID,//Para el DAM al FM9
 	MEMORIA_INICIALIZADA,
 	INICIAR_SCRIPTORIO
@@ -114,6 +117,9 @@ typedef struct{
 	char*path;
 }peticion_borrar;
 
+typedef struct{
+	char*path;
+}peticion_abrir;
 
 typedef struct{
 	char*path;
@@ -127,6 +133,12 @@ typedef struct{
 	int id_dtb;
 }desbloqueo_dummy;
 
+typedef struct{
+	int numero_tabla;
+	int segmento;
+	int offset;
+}direccion_logica;
+
 typedef enum{
 	FIFO,
 	RR,
@@ -135,15 +147,18 @@ typedef enum{
 }t_algoritmo;
 
 typedef struct{
+	char* path;
+	int acceso;
+}t_archivo;
+
+typedef struct{
 
 	int id;
 	int pc;
 	int quantum_sobrante;
 	int f_inicializacion;
 	char* escriptorio;
-	int cant_archivos;
-	char** archivos;
-
+	t_list* archivos;
 }__attribute__((packed)) t_DTB;
 
 t_log* log_s;
