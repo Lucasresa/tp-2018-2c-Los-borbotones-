@@ -31,23 +31,56 @@ int main(){
 
 	// Espero para recibir un BUFFER a enviar
 
-	char buffer[] = "abrir racing.txt\nflush loQueSea\nsave otraCosa";
-    char* linea = NULL;
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%% EJEMPLO CARGANDO SCRIPTORIO AL FM9 %%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	// Este pid lo enviaría el S-AFA
+	int pid = 7;
+	// Este buffer lo envía el MDJ
+	char buffer[] = "abrir racing.txt\nflush loQueSea\nsave otraCosa";
+	int tamanio_buffer = (int)strlen(buffer);
+	int contador_offset;
+
+	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,pid);
+	//serializarYEnviarEntero(FM9_fd, &tamanio_buffer);
+
+	int header;
+	int length = recv(FM9_fd,&header,sizeof(int),0);
+	if ( length == -1 ) {
+		perror("error");
+		log_error(log_DAM, "Socket FM9 sin conexión.");
+		close(socket);
+		return -1;
+	}
+
+	if (header != MEMORIA_INICIALIZADA) {
+		length = recv(FM9_fd,&header,sizeof(int),0);
+		if (header != MEMORIA_INICIALIZADA) {
+			log_error(log_DAM, "No recibí el header que esperaba del FM9.");
+		}
+	}
+
+    char* linea = NULL;
 	linea = strtok(buffer, "\n");
+	cargar_en_memoria paquete = {.pid=pid,.base=0,.offset=0,.linea=NULL};
+
+	log_info(log_DAM,"Enviando archivo al FM9...\n");
 
     while (linea != NULL)
     {
-    	log_info(log_DAM,"Enviando archivo al FM9...");
-        serializarYEnviar(FM9_fd,ENVIAR_ARCHIVO,linea);
-        printf("%s\n", linea);
+    	paquete.linea=linea;
+        serializarYEnviar(FM9_fd,INICIAR_SCRIPTORIO,&paquete);
+        //printf("%i: %s\n", paquete.offset, paquete.linea);
+        paquete.offset++;
         linea = strtok(NULL, "\n");
     }
-    while (true){
-    	sleep(1);
-    }
 
-	/*//El DAM se conecta con MDJ
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	/* //El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
 		exit(1);
@@ -65,10 +98,11 @@ int main(){
 	sleep(2);
 
 	serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
-
+*/
 	log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
-	*/
-
+    while (true){
+    	sleep(1);
+    }
 
 	return 0;
 }

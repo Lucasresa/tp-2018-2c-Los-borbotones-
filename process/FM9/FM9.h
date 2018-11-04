@@ -34,12 +34,25 @@ typedef struct fila_tabla_seg{
 
 }fila_tabla_seg;
 
+typedef struct fila_tabla_segmentos_pid{
+
+	int id_proceso;
+	int id_tabla_segmentos;
+
+}fila_tabla_segmentos_pid;
+
 t_config_FM9 config_FM9;
 t_config* file_FM9;
 t_log* log_FM9;
 
 char** memoria;
 int memoria_counter;
+// Creo estructuras de segmentación
+t_list *lista_tablas_segmentos;
+t_list *tabla_segmentos_pid;
+int mem_libre_base = 0;
+
+fd_set set_fd;
 
 char** iniciar_memoria();
 
