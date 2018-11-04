@@ -29,7 +29,7 @@ all: FM9
 FM9: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc  -o "FM9" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L../../biblioteca/Debug -o "FM9" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
