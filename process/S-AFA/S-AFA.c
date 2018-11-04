@@ -35,7 +35,7 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-/*	DAM_fd=aceptarConexion(SAFA_fd);
+	DAM_fd=aceptarConexion(SAFA_fd);
 
 	if(DAM_fd==-1){
 		perror("Error de conexion con DAM");
@@ -50,7 +50,6 @@ int main(){
 	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
 
 	pthread_detach(hiloDAM);
-*/
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 

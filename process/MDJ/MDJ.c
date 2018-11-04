@@ -399,7 +399,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
-	for(i=0;i<cantidadBloques+1;i++){
+	for(i=0;i<cantidadBloques;i++){
 		metadataArchivo.tamanio=metadataArchivo.tamanio -sizeArchivoBloque;
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;

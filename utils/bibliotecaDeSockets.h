@@ -19,6 +19,50 @@
 #include <fcntl.h>
 #include <commons/log.h>
 
+//Estructura para manejar el protocolo
+typedef enum{
+	VALIDAR_ARCHIVO,	//PARA EL MDJ
+	CREAR_ARCHIVO,		//PARA EL MDJ
+	OBTENER_DATOS,		//PARA EL MDJ
+	GUARDAR_DATOS,		//PARA EL MDJ
+	BORRAR_ARCHIVO,		//PARA EL MDJ
+	EJECUTAR_PROCESO,	//PARA EL SAFA
+	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
+	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
+	DESBLOQUEAR_PROCESO,//PARA SAFA Y DAM
+	FIN_QUANTUM,		//PARA CPU Y SAFA
+	DESBLOQUEAR_DUMMY,	//PARA CPU Y DAM
+	ENVIAR_ARCHIVO,     //PARA DAM Y MDJ/FM9
+	FINAL_CARGA_DUMMY,	//PARA SAFA Y DAM
+	FINAL_ABRIR,		//PARA SAFA Y DAM
+	FINAL_CREAR,        //PARA SAFA Y DAM
+	INICIAR_MEMORIA_PID,//Para el DAM al FM9
+	MEMORIA_INICIALIZADA,
+	INICIAR_SCRIPTORIO
+}t_protocolo;
+
+enum paquete {
+	PAQ_INT,
+	PAQ_STRING,
+	PAQ_PCB,
+	PAQ_MPROCESO,
+	PAQ_PETICION_PAGINA_SWAP,
+	PAQ_LECTURA_CONTENIDO,
+	PAQ_RESPUESTA_OPERACION,
+};
+
+enum resultado{
+	CORRECTO,
+	ERROR,
+};
+
+typedef struct {
+	int pid;
+	int base;
+	int offset;
+	char* linea;
+} cargar_en_memoria;
+
 struct mProc {
 	int PID;
 	char* rutaRelativaDeArchivo;
@@ -48,36 +92,11 @@ struct paqContenido{
 	char* contenido;
 };
 
-enum resultado{
-	CORRECTO,
-	ERROR,
-};
+
 
 struct respuesta{
 	enum resultado res;
 };
-
-//Estructura para manejar el protocolo
-typedef enum{
-	VALIDAR_ARCHIVO,	//PARA EL MDJ
-	CREAR_ARCHIVO,		//PARA EL MDJ -- CPU Y DAM
-	OBTENER_DATOS,		//PARA EL MDJ
-	GUARDAR_DATOS,		//PARA EL MDJ
-	BORRAR_ARCHIVO,		//PARA EL MDJ -- CPU Y DAM
-	EJECUTAR_PROCESO,	//PARA EL SAFA
-	FINALIZAR_PROCESO, 	//PARA CPU Y SAFA
-	BLOQUEAR_PROCESO,	//PARA CPU y SAFA
-	DESBLOQUEAR_PROCESO,//PARA DAM Y SAFA
-	FIN_QUANTUM,		//PARA CPU Y SAFA
-	PEDIR_DATOS,		//PARA CPU Y FM9 - El CPU le avisa a FM9 que le va a pedir algo
-	ABRIR_ARCHIVO,		//PARA CPU Y DAM
-	CERRAR_ARCHIVO,		//PARA CPU Y DAM
-	DESBLOQUEAR_DUMMY,	//PARA CPU Y DAM
-	ENVIAR_ARCHIVO,     //PARA DAM Y MDJ/FM9
-	FINAL_CARGA_DUMMY,	//PARA SAFA Y DAM
-	FINAL_ABRIR,		//PARA SAFA Y DAM
-	FINAL_CREAR			//PARA SAFA Y DAM
-}t_protocolo;
 
 typedef struct{
 	char*path;
@@ -119,17 +138,6 @@ typedef struct{
 	int segmento;
 	int offset;
 }direccion_logica;
-
-enum paquete {
-	PAQ_INT,
-	PAQ_STRING,
-	PAQ_PCB,
-	PAQ_MPROCESO,
-	PAQ_PETICION_PAGINA_SWAP,
-	PAQ_LECTURA_CONTENIDO,
-	PAQ_RESPUESTA_OPERACION,
-};
-
 
 typedef enum{
 	FIFO,

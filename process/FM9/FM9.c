@@ -17,8 +17,8 @@ int main(){
 	memoria = iniciar_memoria();
 
 	// Creo estructuras de segmentación
-	t_list *lista_tablas_segmentos;
 	lista_tablas_segmentos = list_create();
+	tabla_segmentos_pid = list_create();
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%% EJEMPLO MANIPULANDO LAS TABLAS DE SEGMENTACION %%%%
@@ -49,16 +49,15 @@ int main(){
 	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
 
 	log_info(log_FM9, "Escuchando conexiones...");
-
+/*
     pthread_t thread_id;
 
     pthread_create(&thread_id, NULL, consolaThread, NULL);
-
-	fd_set fd_set;
-	FD_ZERO(&fd_set);
-	FD_SET(listener_socket, &fd_set);
+*/
+	FD_ZERO(&set_fd);
+	FD_SET(listener_socket, &set_fd);
 	while(true) {
-		escuchar(listener_socket, &fd_set, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
+		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
 	}
 	free(memoria);
 	list_destroy(lista_tablas_segmentos);
@@ -132,17 +131,58 @@ void funcionHandshake(int socket, void* argumentos) {
 }
 
 void funcionRecibirPeticion(int socket, void* argumentos) {
-	// Acá estaría la lógica para manejar un pedido.
 	int length;
 	int header;
 	length = recv(socket,&header,sizeof(int),0);
 	if ( length <= 0 ) {
-	//	perror("Un socket sin conexión.");
-	//	close(socket);
+		close(socket);
+		FD_CLR(socket, &set_fd);
+		log_error(log_FM9, "Se perdió la conexión con un socket.");
+		perror("error");
 		return;
 	}
 
 	switch(header){
+	case 4:
+	{
+		return;
+	}
+	case INICIAR_MEMORIA_PID:
+	{
+		int pid = *recibirYDeserializarEntero(socket);
+		int size_scriptorio = 0;
+
+		// Creo una tabla de segmentos
+		list_add(lista_tablas_segmentos, list_create());
+
+		// Obtengo el id de la tabla
+		int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
+
+		// Relaciono la tabla de segmentos con el PID
+		fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
+		relacion_pid_tabla->id_proceso=pid;
+		relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
+		list_add(tabla_segmentos_pid,relacion_pid_tabla);
+
+		// Obtengo la tabla de segmentos recién creada
+		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
+		// Busco en memoria espacio libre
+		// Creo un segmento en la tabla
+		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
+
+		int success=MEMORIA_INICIALIZADA;
+		serializarYEnviarEntero(socket,&success);
+		return;
+	}
+	case INICIAR_SCRIPTORIO:
+	{
+		puts("Recibo una linea");
+		cargar_en_memoria* info_a_cargar;
+		info_a_cargar = recibirYDeserializar(socket,header);
+		printf("Linea recibida!: %s\n\n", info_a_cargar->linea);
+		free(info_a_cargar);
+		return;
+	}
 
 	case ENVIAR_ARCHIVO:
 	{
@@ -151,8 +191,7 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		strcpy(memoria[memoria_counter],linea_string);
 		printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
 		memoria_counter++;
-		break;
+		return;
 	}
 	}
-	return;
 }
