@@ -1,0 +1,6 @@
+crear pepe.txt 13
+abrir pepe.txt
+asignar pepe.txt 13 caca
+concentrar
+close pepe.txt
+borrar pepe.txt
