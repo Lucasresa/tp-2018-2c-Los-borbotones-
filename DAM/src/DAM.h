@@ -1,7 +1,7 @@
 #ifndef DAM_H_
 #define DAM_H_
 
-#include "../../utils/bibliotecaDeSockets.h"
+#include "../../biblioteca/bibliotecaDeSockets.h"
 #include <pthread.h>
 #include <commons/log.h>
 #include <commons/config.h>
