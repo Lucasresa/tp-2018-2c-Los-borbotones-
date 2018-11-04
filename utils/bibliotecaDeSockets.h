@@ -39,7 +39,8 @@ typedef enum{
 	INICIAR_MEMORIA_PID,//Para el DAM al FM9
 	MEMORIA_INICIALIZADA,
 	INICIAR_SCRIPTORIO,
-	PEDIR_DATOS
+	PEDIR_DATOS,
+	ABRIR_ARCHIVO
 }t_protocolo;
 
 enum paquete {

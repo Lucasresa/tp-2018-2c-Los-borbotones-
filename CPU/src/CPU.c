@@ -1,5 +1,5 @@
 #include "CPU.h"
-#include "../S-AFA/S-AFA.h"
+#include "../../S-AFA/src/S-AFA.h"
 
 int main(){
 
@@ -107,7 +107,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	int protocolo;
+	t_protocolo protocolo;
 
 	if(dtb.quantum_sobrante!=0){
 		rafaga_actual=dtb.quantum_sobrante;
