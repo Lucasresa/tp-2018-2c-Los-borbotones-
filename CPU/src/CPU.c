@@ -7,7 +7,7 @@ int main(){
 
 	log_CPU = log_create("CPU.log","CPU",true,LOG_LEVEL_INFO);
 
-	file_CPU=config_create("CONFIG_CPU.cfg");
+	file_CPU=config_create("src/CONFIG_CPU.cfg");
 
 	config_CPU.ip_safa=string_duplicate(config_get_string_value(file_CPU,"IP_SAFA"));
 	config_CPU.puerto_safa=config_get_int_value(file_CPU,"PUERTO_SAFA");

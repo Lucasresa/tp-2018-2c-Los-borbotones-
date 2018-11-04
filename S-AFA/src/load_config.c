@@ -13,7 +13,7 @@ void crear_colas(){
 
 void load_config(void){
 
-	file_SAFA=config_create("CONFIG_S-AFA.cfg");
+	file_SAFA=config_create("src/CONFIG_S-AFA.cfg");
 
 	config_SAFA.port=config_get_int_value(file_SAFA,"PUERTO");
 	config_SAFA.algoritmo=detectarAlgoritmo(config_get_string_value(file_SAFA,"ALGORITMO"));
@@ -46,7 +46,7 @@ void actualizar_file_config()
 {
 	pthread_mutex_init(&File_config,NULL);
 	char buffer[BUF_LEN];
-	char* directorio = "/home/utnso/Escritorio/tp-2018-2c-Los-borbotones-/process/S-AFA/CONFIG_S-AFA.cfg";
+	char* directorio = "src/CONFIG_S-AFA.cfg";
 	while(1){
 	//Creando fd para el inotify
 	int file_descriptor = inotify_init();

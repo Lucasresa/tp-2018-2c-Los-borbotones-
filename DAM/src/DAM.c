@@ -4,7 +4,7 @@ int main(){
 
 	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
 
-	file_DAM = config_create("CONFIG_DAM.cfg");
+	file_DAM = config_create("src/CONFIG_DAM.cfg");
 
 	config_DAM.puerto_dam=config_get_int_value(file_DAM,"PUERTO");
 	config_DAM.ip_safa=string_duplicate(config_get_string_value(file_DAM,"IP_SAFA"));
