@@ -8,6 +8,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include src/gestor_GDT/subdir.mk
 -include src/subdir.mk
 -include subdir.mk
 -include objects.mk
@@ -29,7 +30,7 @@ all: S-AFA
 S-AFA: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc  -o "S-AFA" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L../../biblioteca/Debug -Lgestor_GDT -o "S-AFA" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

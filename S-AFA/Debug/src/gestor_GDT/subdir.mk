@@ -4,20 +4,17 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../src/S-AFA.c \
-../src/load_config.c 
+../src/gestor_GDT/gestor_GDT.c 
 
 OBJS += \
-./src/S-AFA.o \
-./src/load_config.o 
+./src/gestor_GDT/gestor_GDT.o 
 
 C_DEPS += \
-./src/S-AFA.d \
-./src/load_config.d 
+./src/gestor_GDT/gestor_GDT.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-src/%.o: ../src/%.c
+src/gestor_GDT/%.o: ../src/gestor_GDT/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
 	gcc -Igestor_GDT/gestor_GDT.h -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
