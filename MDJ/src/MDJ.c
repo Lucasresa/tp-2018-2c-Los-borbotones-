@@ -79,6 +79,8 @@ void conexion_DMA(){
 
 	int DAM_fd=aceptarConexion(MDJ_fd);
 
+
+
 	if(DAM_fd==-1){
 		log_error(log_MDJ,"Error al establecer conexion con el DAM");
 		log_destroy(log_MDJ);
