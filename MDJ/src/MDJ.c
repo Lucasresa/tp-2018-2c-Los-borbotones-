@@ -144,13 +144,13 @@ void determinarOperacion(int operacion,int fd) {
 		//guardarDatos(guardado->path, 0, 0, guardado->buffer);
 		break;
 	}
-	case BORRAR_ARCHIVO:
+	/*case BORRAR_ARCHIVO:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		puts(borrar->path);
 		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
 	    borrar_archivo(borrar->path);
 	    break;
-	}
+	}*/
 
 	}
 
@@ -401,7 +401,10 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
+	printf("%d",cantidadBloques);
 	for(i=0;i<cantidadBloques;i++){
+		puts("bloque:");
+		printf("%d",i);
 		metadataArchivo.tamanio=metadataArchivo.tamanio -sizeArchivoBloque;
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
@@ -438,23 +441,22 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			string_append(&contenidoArchivo,src);
 		puts(contenidoArchivo);
 		free(pathBloqueCompleto);
-		free(contenidoArchivo);
+		//free(contenidoArchivo);
 		close(f);
 		//string_archivo(file2,&agregar_contenido);
 		//string_append(&contenido,agregar_contenido);
-
 		//string_archivo(pathBloqueCompleto,&contenido);
 		//strcat(src,contenido);
 		//printf("%s",src);
 		//puts(contenido);
-
 	}
-	char *sub;
+	char *sub= malloc(obtener->size+1);
 	int desplazamiento_archivo;
-	desplazamiento_archivo=obtener->offset*obtener->size +1;
+	desplazamiento_archivo=obtener->offset*obtener->size;
+
 	strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
 	sub[obtener->size] = '\0';
-	//puts(contenidoArchivo);
+	puts(sub);
 	//config_destroy(archivo_MetaData);
 	//puts(contenido);
 	//return src;
