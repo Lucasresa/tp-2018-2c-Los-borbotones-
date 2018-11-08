@@ -3,7 +3,14 @@
 int main(){
 	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
-	file_FM9=config_create("src/CONFIG_FM9.cfg");
+
+    char *archivo;
+	archivo="../src/CONFIG_FM9.cfg";
+
+	if(validarArchivoConfig(archivo) <0)
+		return-1;
+
+	file_FM9=config_create(archivo);
 
 	config_FM9.puerto_fm9=config_get_int_value(file_FM9,"PUERTO");
 	config_FM9.modo=detectarModo(config_get_string_value(file_FM9,"MODO"));

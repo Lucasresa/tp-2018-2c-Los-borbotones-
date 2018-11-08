@@ -4,7 +4,12 @@ int main(){
 
 	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
 
-	file_DAM = config_create("src/CONFIG_DAM.cfg");
+    char *archivo;
+	archivo="../src/CONFIG_DAM.cfg";
+    if(validarArchivoConfig(archivo) <0)
+    	return -1;
+
+	file_DAM = config_create(archivo);
 
 	config_DAM.puerto_dam=config_get_int_value(file_DAM,"PUERTO");
 	config_DAM.ip_safa=string_duplicate(config_get_string_value(file_DAM,"IP_SAFA"));
@@ -21,7 +26,7 @@ int main(){
 	crearSocket(&MDJ_fd);
 	crearSocket(&FM9_fd);
 	//El DAM se conecta con FM9_fd
-
+/*
 	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
 		log_error(log_DAM,"Error al conectarse con FM9");
 		exit(1);
@@ -75,11 +80,11 @@ int main(){
         paquete.offset++;
         linea = strtok(NULL, "\n");
     }
-
+*/
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/*
+
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
@@ -93,18 +98,17 @@ int main(){
 
 	peticion_guardar guardado = {.path="users/luquitas.txt",.offset=1,.size=20,.buffer="holaholahola"};
 	peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=0,.size=20};
-	peticion_borrar borrar = {.path="/scripts/test"};
+
 	log_info(log_DAM,"Enviando peticion al MDJ...");
 
 	sleep(2);
 
 
-	serializarYEnviar(MDJ_fd,BORRAR_ARCHIVO,&borrar);
+
 	serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
 	serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 	log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
 
-*/
 
 	return 0;
 }

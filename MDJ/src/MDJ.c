@@ -26,7 +26,14 @@ int main(){
     log_MDJ = log_create("MDF.log","MDJ",true,LOG_LEVEL_INFO);
 
 	//Levanto archivo de configuracion del MDJ (FileSystem)
-	file_MDJ=config_create("src/CONFIG_MDJ.cfg");
+
+    char *archivo;
+	archivo="../src/CONFIG_MDJ.cfg";
+
+    if(validarArchivoConfig(archivo)<0)
+    	return -1;
+
+	file_MDJ=config_create(archivo);
 
 	config_MDJ.puerto_mdj=config_get_int_value(file_MDJ,"PUERTO");
 	config_MDJ.mount_point=string_duplicate(config_get_string_value(file_MDJ,"PUNTO_MONTAJE"));
