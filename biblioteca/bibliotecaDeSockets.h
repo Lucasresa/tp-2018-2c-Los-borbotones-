@@ -189,6 +189,7 @@ void serializarYEnviarEntero(int socket, int *numero);
 
 int enviarTodo(int socketReceptor, void *buffer, int *cantidadTotal);
 
+int validarArchivoConfig(char *archivo);
 void serializarYEnviarDTB(int,void*,t_DTB);
 t_DTB RecibirYDeserializarDTB(int);
 
