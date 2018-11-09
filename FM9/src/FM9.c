@@ -59,6 +59,12 @@ int main(){
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
 	}
+
+
+	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
+	for (int n=0; n<cantidad_lineas; n++) {
+		free(memoria[n]);
+	}
 	free(memoria);
 	list_destroy(lista_tablas_segmentos);
 
@@ -68,11 +74,11 @@ char** iniciar_memoria() {
 	char** memoria;
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
 
-	memoria_counter = 0;
+	mem_libre_base = 0;
 
 	memoria = malloc(cantidad_lineas * sizeof(memoria));
 
-	for (int n=0; n<16; n++) {
+	for (int n=0; n<cantidad_lineas; n++) {
 		memoria[n] = malloc(config_FM9.max_linea * sizeof(char));
 	}
 	return memoria;
@@ -169,6 +175,7 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		// Busco en memoria espacio libre
 		// Creo un segmento en la tabla
 		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
+		mem_libre_base = mem_libre_base+size_scriptorio+1;
 
 		int success=MEMORIA_INICIALIZADA;
 		serializarYEnviarEntero(socket,&success);
@@ -188,10 +195,13 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 	{
 		char* linea_string;
 		linea_string = recibirYDeserializar(socket,header);
-		strcpy(memoria[memoria_counter],linea_string);
-		printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
-		memoria_counter++;
+		//strcpy(memoria[memoria_counter],linea_string);
+		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
+		//memoria_counter++;
 		return;
 	}
 	}
+}
+void cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
+
 }

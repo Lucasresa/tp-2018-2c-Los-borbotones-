@@ -141,7 +141,7 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 	switch(tipoDePaquete){
 	case INICIAR_SCRIPTORIO:
 		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->pid);
-		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->base);
+		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->id_segmento);
 		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->offset);
 		printf("serializando y enviando %s\n",((cargar_en_memoria*)package)->linea);
 		serializarYEnviarString(socket,((cargar_en_memoria*)package)->linea);
@@ -229,7 +229,7 @@ void* recibirYDeserializar(int socket,int tipo){
 		cargar_en_memoria* info_a_cargar = malloc(sizeof(cargar_en_memoria));
 		puts("Malloc ejecutado!");
 		info_a_cargar->pid = *recibirYDeserializarEntero(socket);
-		info_a_cargar->base = *recibirYDeserializarEntero(socket);
+		info_a_cargar->id_segmento = *recibirYDeserializarEntero(socket);
 		info_a_cargar->offset = *recibirYDeserializarEntero(socket);
 		info_a_cargar->linea=recibirYDeserializarString(socket);
 		return info_a_cargar;

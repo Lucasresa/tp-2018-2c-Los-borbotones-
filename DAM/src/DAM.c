@@ -63,7 +63,7 @@ int main(){
 
     char* linea = NULL;
 	linea = strtok(buffer, "\n");
-	cargar_en_memoria paquete = {.pid=pid,.base=0,.offset=0,.linea=NULL};
+	cargar_en_memoria paquete = {.pid=pid,.id_segmento=0,.offset=0,.linea=NULL};
 
 	log_info(log_DAM,"Enviando archivo al FM9...\n");
 

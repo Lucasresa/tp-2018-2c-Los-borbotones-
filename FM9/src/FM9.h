@@ -46,15 +46,16 @@ t_config* file_FM9;
 t_log* log_FM9;
 
 char** memoria;
-int memoria_counter;
+int mem_libre_base;
 // Creo estructuras de segmentación
 t_list *lista_tablas_segmentos;
 t_list *tabla_segmentos_pid;
-int mem_libre_base = 0;
+
 
 fd_set set_fd;
 
 char** iniciar_memoria();
+void cargarEnMemoria(int pid, int segmento, char* linea);
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 

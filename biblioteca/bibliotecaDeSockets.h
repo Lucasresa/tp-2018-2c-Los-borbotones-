@@ -60,7 +60,7 @@ enum resultado{
 
 typedef struct {
 	int pid;
-	int base;
+	int id_segmento;
 	int offset;
 	char* linea;
 } cargar_en_memoria;
