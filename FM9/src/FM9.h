@@ -55,7 +55,7 @@ t_list *tabla_segmentos_pid;
 fd_set set_fd;
 
 char** iniciar_memoria();
-void cargarEnMemoria(int pid, int segmento, char* linea);
+int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea);
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 

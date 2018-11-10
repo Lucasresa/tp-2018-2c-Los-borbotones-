@@ -5,7 +5,7 @@ int main(){
 
 
     char *archivo;
-	archivo="../src/CONFIG_FM9.cfg";
+	archivo="src/CONFIG_FM9.cfg";
 
 	if(validarArchivoConfig(archivo) <0)
 		return-1;
@@ -163,7 +163,7 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 	case INICIAR_MEMORIA_PID:
 	{
 		int pid = *recibirYDeserializarEntero(socket);
-		int size_scriptorio = 0;
+		int size_scriptorio = 50;
 
 		// Creo una tabla de segmentos
 		list_add(lista_tablas_segmentos, list_create());
@@ -188,12 +188,13 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		serializarYEnviarEntero(socket,&success);
 		return;
 	}
-	case INICIAR_SCRIPTORIO:
+	case ESCRIBIR_LINEA:
 	{
-		puts("Recibo una linea");
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
-		printf("Linea recibida!: %s\n\n", info_a_cargar->linea);
+		if (cargarEnMemoria(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<-1) {
+			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
+		}
 		free(info_a_cargar);
 		return;
 	}
@@ -209,6 +210,23 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 	}
 	}
 }
-void cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
+int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
+	// Obtengo la tabla de segmentos para ese PID
+	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
+		return (p->id_proceso == pid);
+	}
+	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
+	t_list *tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 
+	// Obtengo la direccion real/fisica base
+	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	int base_segmento = segmento->base_segmento;
+
+	if (segmento->limite_segmento < offset) {
+		return -1;
+	}
+
+	memoria[base_segmento+offset] = linea;
+	printf("Escribí en Posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	return 0;
 }
