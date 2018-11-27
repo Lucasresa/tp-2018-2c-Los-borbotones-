@@ -1,5 +1,4 @@
 #include "CPU.h"
-#include "../../S-AFA/src/S-AFA.h"
 
 int main(){
 
@@ -137,6 +136,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
 				actualizarDTB(&dtb);
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+				usleep(config_CPU.retardo*1000);
 				return;
 			}
 			break;
@@ -158,6 +158,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}else{
 				actualizarDTB(&dtb);
 				notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
+				usleep(config_CPU.retardo*1000);
 				return;
 			}
 			break;
@@ -168,6 +169,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			serializarYEnviarEntero(DAM,&(linea_parseada.argumentos.crear.lineas));
 			actualizarDTB(&dtb);
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			usleep(config_CPU.retardo*1000);
 			return;
 			break;
 		case BORRAR:
@@ -175,16 +177,18 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		default:
 			log_info(log_CPU,"Se termino de ejecutar el script");
 			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
+			usleep(config_CPU.retardo*1000);
 			return;
 		}
 
 		actualizarDTB(&dtb);
 
-		if(rafaga_actual==0){
-			notificarSAFA(SAFA,FIN_QUANTUM,dtb);
-			return;
+		if(rafaga_recibida!=0){
+			if(rafaga_actual==0){
+				notificarSAFA(SAFA,FIN_QUANTUM,dtb);
+				return;
+			}
 		}
-
 		destroyParse(linea_parseada);
 
 		usleep(config_CPU.retardo*1000);
@@ -205,11 +209,12 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 void actualizarDTB(t_DTB* dtb){
 
-	rafaga_actual--;
+	if(rafaga_recibida==0){
+		rafaga_actual--;
 
-	dtb->pc++;
-	dtb->quantum_sobrante=rafaga_actual;
-
+		dtb->pc++;
+		dtb->quantum_sobrante=rafaga_actual;
+	}
 }
 
 int isOpenFile(t_DTB dtb, char* path){
