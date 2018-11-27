@@ -51,6 +51,19 @@ int mem_libre_base;
 t_list *lista_tablas_segmentos;
 t_list *tabla_segmentos_pid;
 
+//PAGINACION INVERTIDA
+
+typedef struct fila_pag_invertida{
+
+	int indice;
+	int pid;
+	int pagina;
+
+}fila_pag_invertida;
+
+// Estructuras de paginacion
+t_list *lista_tabla_pagina;
+
 
 fd_set set_fd;
 
