@@ -61,8 +61,8 @@ struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento
 
 void *consolaThread(void*);
 
-void funcionHandshake(int, void*);
-void funcionRecibirPeticion(int, void*);
+void *funcionHandshake(int, void*);
+void *funcionRecibirPeticion(int, void*);
 
 t_modo detectarModo(char*);
 
