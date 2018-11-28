@@ -71,12 +71,14 @@ int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea);
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 
-struct fila_tabla_pag_inv* crear_fila_tabla_pag_inv(int indice, int pid, int pagina);
+struct fila_pag_invertida* crear_fila_tabla_pag_inv(int indice, int pid, int pagina);
 
 void *consolaThread(void*);
 
 void *funcionHandshake(int, void*);
-void *funcionRecibirPeticion(int, void*);
+void *recibirPeticion(int, void*);
+
+int recibirPeticionSeg(int);
 
 t_modo detectarModo(char*);
 
