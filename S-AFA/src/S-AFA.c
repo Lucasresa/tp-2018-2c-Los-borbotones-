@@ -8,6 +8,8 @@ int main(){
 
 	CPU_libres=list_create();
 
+	claves=dictionary_create();
+
 	//Creo las colas del S-AFA
 
 	crear_colas();
@@ -186,23 +188,106 @@ void atenderCPU(int*fd){
 
 		dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
 
-		dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
+		char* clave;
+		int respuesta;
 
-		dtb->pc=dtb_modificado.pc;
-		dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+		if(protocolo==WAIT_RECURSO){
+			clave=recibirYDeserializarString(fd_CPU);
 
-		list_clean(dtb->archivos);
-		list_add_all(dtb->archivos,dtb_modificado.archivos);
+			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
+				t_semaforo sem_clave=*dictionary_remove(claves,clave);
 
-		//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
-		ejecutarPCP(protocolo,dtb);
+				sem_wait(&sem_clave,clave);
 
-		//El CPU queda libre para ejecutar otro proceso
-		list_add(CPU_libres,(void*)fd_CPU);
+				if(sem_clave->valor){
+					sem_clave->valor=0;
+					dictionary_put(claves,clave,sem_clave);
+					respuesta=WAIT_EXITOSO;
+				}else{
+					dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 
-		//Vuelvo a ejecutar el planificador pero esta vez para que, de ser posible, asigne otro proceso al CPU
-		ejecutarPCP(EJECUTAR_PROCESO,NULL);
+					dtb->pc=dtb_modificado.pc;
+					dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
 
+					list_add(sem_clave->cola_bloqueados,&dtb_modificado);
+					ejecutarPCP(BLOQUEAR_PROCESO,dtb);
+					respuesta=-1;
+				}
+
+			}else{ //Si no existe la clave en el sistema, tengo que generarla
+				t_semaforo* clave_nueva = malloc(sizeof(t_semaforo));
+				clave_nueva->valor=1;
+				clave_nueva->cola_bloqueados=list_create();
+				dictionary_put(claves,clave,clave_nueva);
+				respuesta=WAIT_EXITOSO;
+			}
+			serializarYEnviarEntero(fd_CPU,&respuesta);
+
+		}else if(protocolo==SIGNAL_RECURSO){
+			clave=recibirYDeserializarString(fd_CPU);
+
+			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
+				t_semaforo* sem_clave=dictionary_remove(claves,clave);
+
+				if(list_size(sem_clave->cola_bloqueados)!=0){
+
+					dtb=list_remove(sem_clave->cola_bloqueados,0);
+
+
+					ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+
+				}else{
+
+
+				}
+
+
+			}else{ //Si no existe la clave en el sistema, tengo que generarla
+				t_semaforo* clave_nueva = malloc(sizeof(t_semaforo));
+				clave_nueva->valor=0;
+				clave_nueva->cola_bloqueados=list_create();
+				dictionary_put(claves,clave,clave_nueva);
+				respuesta=WAIT_EXITOSO;
+			}
+			serializarYEnviarEntero(fd_CPU,&respuesta);
+
+
+
+		}else{
+
+			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
+
+			dtb->pc=dtb_modificado.pc;
+			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+
+			//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
+			ejecutarPCP(protocolo,dtb);
+
+			//El CPU queda libre para ejecutar otro proceso
+			list_add(CPU_libres,(void*)fd_CPU);
+
+			//Vuelvo a ejecutar el planificador pero esta vez para que, de ser posible, asigne otro proceso al CPU
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+		}
 	}
 }
+
+void wait_sem(t_semaforo* semaforo, t_DTB* dtb){
+
+	semaforo->valor--;
+	if(semaforo->valor<0){
+		list_add(semaforo->cola_bloqueados,dtb);
+	}
+
+}
+
+t_DTB* signal_sem(t_semaforo* semaforo){
+	t_DTB* dtb=NULL;
+	if(semaforo->valor<0){
+		dtb=list_remove(semaforo->cola_bloqueados,0);
+	}
+	semaforo->valor++;
+	return dtb;
+}
+
 
