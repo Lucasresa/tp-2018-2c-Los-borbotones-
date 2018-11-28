@@ -6,6 +6,11 @@ DAM/DAM
 S-AFA/SAFA
 CPU/CPU
 MDJ/MDJ
+S-AFA/.settings/language.settings.xml
+FM9/.settings/language.settings.xml
+DAM/.settings/language.settings.xml
+CPU/.settings/language.settings.xml
+biblioteca/.settings/language.settings.xml
 
 # Logs
 *.log
