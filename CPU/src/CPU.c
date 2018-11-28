@@ -38,15 +38,15 @@ int main(){
 
 
 	//El CPU se conecta con "el diego"
-	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
-		log_error(log_CPU,"Error al conectarse con DAM");
-		exit(1);
-	}
-
-	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
-		log_error(log_CPU,"Error al conectarse con FM9");
-		exit(1);
-	}
+//	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+//		log_error(log_CPU,"Error al conectarse con DAM");
+//		exit(1);
+//	}
+//
+//	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
+//		log_error(log_CPU,"Error al conectarse con FM9");
+//		exit(1);
+//	}
 
 
 	while(1){
@@ -61,6 +61,8 @@ int main(){
 		log_info(log_CPU,"Esperando DTB del S-AFA");
 
 		t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
+
+		serializarYEnviarEntero(SAFA_fd,&dtb.id);
 
 		log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
 
@@ -108,7 +110,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	t_protocolo protocolo;
+	int protocolo;
 
 	if(dtb.quantum_sobrante!=0){
 		rafaga_actual=dtb.quantum_sobrante;

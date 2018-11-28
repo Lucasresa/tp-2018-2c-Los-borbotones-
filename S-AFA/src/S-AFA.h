@@ -12,7 +12,7 @@ void eliminarSocketCPU(int);
 void atenderDAM(int*);
 void atenderCPU(int*);
 
-void sem_wait(t_semaforo*, t_DTB*);
-t_DTB* sem_signal(t_semaforo*);
+int wait_sem(t_semaforo*, int, char*);
+int signal_sem(t_semaforo*,char*);
 
 #endif /* S_AFA_H_ */
