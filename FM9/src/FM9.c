@@ -48,6 +48,8 @@ int main(){
 	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	// Creo estructuras de paginación invertida
+	lista_tabla_pag_inv = list_create();
 
 
 	int listener_socket;
@@ -97,6 +99,15 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   p->id_segmento = id_segmento;
 	   p->limite_segmento = limite_segmento;
 	   p->base_segmento = base_segmento;
+	   return p;
+}
+
+struct fila_tabla_pag_inv *crear_fila_tabla_pag_inv(int indice, int pid, int pagina) {
+	   struct fila_tabla_pag_inv *p;
+	   p = (struct fila_tabla_pag_inv *) malloc(sizeof(struct fila_tabla_pag_inv));
+	   p->indice = indice;
+	   p->pid = pid;
+	   p->pagina = base_segmento;
 	   return p;
 }
 
