@@ -116,7 +116,7 @@ void *consolaThread(void *vargp)
 	while(true) {
 		char *line = readline("$ ");
 
-		if (*line==NULL) continue;
+		if (*line==(int)NULL) continue;
 
 		char *command = strtok(line, " ");
 
@@ -148,13 +148,13 @@ t_modo detectarModo(char* modo){
 	return modo_enum;
 }
 
-void funcionHandshake(int socket, void* argumentos) {
+void* funcionHandshake(int socket, void* argumentos) {
 	printf("conexion establecida con socket %i\n", socket);
 	log_info(log_FM9, "Conexión establecida");
-	return;
+	return 0;
 }
 
-void funcionRecibirPeticion(int socket, void* argumentos) {
+void* funcionRecibirPeticion(int socket, void* argumentos) {
 	int length;
 	int header;
 	length = recv(socket,&header,sizeof(int),0);
@@ -163,28 +163,29 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		FD_CLR(socket, &set_fd);
 		log_error(log_FM9, "Se perdió la conexión con un socket.");
 		perror("error");
-		return;
+		return 0;
 	}
 
 	switch(header){
 	case 4:
 	{
-		return;
+		return 0;
 	}
 	case INICIAR_MEMORIA_PID:
 	{
-		int pid = *recibirYDeserializarEntero(socket);
-		int size_scriptorio = 50;
+		puts("recibiendo size");
+		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
+		int size_scriptorio = datos_script->size_script;
 
 		// Creo una tabla de segmentos
 		list_add(lista_tablas_segmentos, list_create());
 
 		// Obtengo el id de la tabla
 		int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
-
+		puts("iniciando memoria");
 		// Relaciono la tabla de segmentos con el PID
 		fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
-		relacion_pid_tabla->id_proceso=pid;
+		relacion_pid_tabla->id_proceso=datos_script->pid;
 		relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
 		list_add(tabla_segmentos_pid,relacion_pid_tabla);
 
@@ -195,9 +196,11 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
 		mem_libre_base = mem_libre_base+size_scriptorio+1;
 
+		free(datos_script);
+
 		int success=MEMORIA_INICIALIZADA;
 		serializarYEnviarEntero(socket,&success);
-		return;
+		return 0;
 	}
 	case ESCRIBIR_LINEA:
 	{
@@ -207,7 +210,7 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
-		return;
+		return 0;
 	}
 
 	case ENVIAR_ARCHIVO:
@@ -217,7 +220,7 @@ void funcionRecibirPeticion(int socket, void* argumentos) {
 		//strcpy(memoria[memoria_counter],linea_string);
 		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
 		//memoria_counter++;
-		return;
+		return 0;
 	}
 	}
 }

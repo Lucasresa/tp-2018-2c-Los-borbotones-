@@ -38,15 +38,15 @@ int main(){
 
 
 	//El CPU se conecta con "el diego"
-	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
-		log_error(log_CPU,"Error al conectarse con DAM");
-		exit(1);
-	}
-
-	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
-		log_error(log_CPU,"Error al conectarse con FM9");
-		exit(1);
-	}
+//	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+//		log_error(log_CPU,"Error al conectarse con DAM");
+//		exit(1);
+//	}
+//
+//	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
+//		log_error(log_CPU,"Error al conectarse con FM9");
+//		exit(1);
+//	}
 
 
 	while(1){
@@ -61,6 +61,8 @@ int main(){
 		log_info(log_CPU,"Esperando DTB del S-AFA");
 
 		t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
+
+		serializarYEnviarEntero(SAFA_fd,&dtb.id);
 
 		log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
 
@@ -104,9 +106,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
+	int interrupcion=0;
+
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	t_protocolo protocolo;
+	int protocolo;
 
 	if(dtb.quantum_sobrante!=0){
 		rafaga_actual=dtb.quantum_sobrante;
@@ -134,10 +138,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				protocolo=ABRIR_ARCHIVO;
 				serializarYEnviarEntero(DAM,&protocolo);
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
-				actualizarDTB(&dtb);
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
-				usleep(config_CPU.retardo*1000);
-				return;
+				interrupcion=1;
 			}
 			break;
 		case CONCENTRAR:
@@ -145,8 +147,20 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		case ASIGNAR:
 			break;
 		case WAIT:
+			notificarSAFA(SAFA,WAIT_RECURSO,dtb);
+			serializarYEnviarString(SAFA,linea_parseada.argumentos.wait.recurso);
+			int* resultado_wait=recibirYDeserializarEntero(SAFA);
+			if(*resultado_wait!=WAIT_EXITOSO){
+				interrupcion=1;
+			}
 			break;
 		case SIGNAL:
+			notificarSAFA(SAFA,SIGNAL_RECURSO,dtb);
+			serializarYEnviarString(SAFA,linea_parseada.argumentos.signal.recurso);
+			int* resultado_signal=recibirYDeserializarEntero(SAFA);
+			if(*resultado_signal!=SIGNAL_EXITOSO){
+				interrupcion=1;
+			}
 			break;
 		case FLUSH:
 			break;
@@ -156,10 +170,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				//Mandar a FM9 la informacion necesaria para que libere la memoria de dicho archivo
 				//Luego hay que actualizar la lista de archivos abiertos del dtb
 			}else{
-				actualizarDTB(&dtb);
 				notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
-				usleep(config_CPU.retardo*1000);
-				return;
+				interrupcion=1;
 			}
 			break;
 		case CREAR:
@@ -167,18 +179,16 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			serializarYEnviarEntero(DAM,&protocolo);
 			serializarYEnviarString(DAM,linea_parseada.argumentos.crear.path);
 			serializarYEnviarEntero(DAM,&(linea_parseada.argumentos.crear.lineas));
-			actualizarDTB(&dtb);
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
-			usleep(config_CPU.retardo*1000);
-			return;
+			interrupcion=1;
 			break;
 		case BORRAR:
 			break;
 		default:
 			log_info(log_CPU,"Se termino de ejecutar el script");
 			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
-			usleep(config_CPU.retardo*1000);
-			return;
+			interrupcion=1;
+			break;
 		}
 
 		actualizarDTB(&dtb);
@@ -191,8 +201,10 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		}
 		destroyParse(linea_parseada);
 
+		log_warning(log_CPU, "Instruccion ejecutada, quantum restante = %d",dtb.quantum_sobrante);
+
 		usleep(config_CPU.retardo*1000);
-	}while(1);
+	}while(!interrupcion);
 
 
 }
@@ -209,7 +221,7 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 void actualizarDTB(t_DTB* dtb){
 
-	if(rafaga_recibida==0){
+	if(rafaga_recibida!=0){
 		rafaga_actual--;
 
 		dtb->pc++;

@@ -84,7 +84,7 @@ void conexion_DMA(){
 
 	log_info(log_MDJ, "Esperando conexion del DAM");
 
-	int DAM_fd=aceptarConexion(MDJ_fd);
+	DAM_fd=aceptarConexion(MDJ_fd);
 
 
 
@@ -151,13 +151,13 @@ void determinarOperacion(int operacion,int fd) {
 		//guardarDatos(guardado->path, 0, 0, guardado->buffer);
 		break;
 	}
-	/*case BORRAR_ARCHIVO:
+	case BORRAR_DATOS:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		puts(borrar->path);
 		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
 	    borrar_archivo(borrar->path);
 	    break;
-	}*/
+	}
 
 	}
 
@@ -391,6 +391,7 @@ int string_archivo(char *pathfile,char **contenido_archivo){
 }
 
 void crearStringDeArchivoConBloques(peticion_obtener *obtener){
+	printf("%d\tsize",obtener->size);
 	char *archivoPathCompleto = archivo_path(obtener->path);
 	puts(archivoPathCompleto);
 	char *path;
@@ -458,12 +459,25 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		//puts(contenido);
 	}
 	char *sub= malloc(obtener->size+1);
+	//int algo;
+	//algo = obtener->size;
+	//printf("%d",algo);
 	int desplazamiento_archivo;
 	desplazamiento_archivo=obtener->offset*obtener->size;
+	printf("%d",desplazamiento_archivo);
+	if ( desplazamiento_archivo + obtener->size < metadataArchivo.tamanio ){
+		strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
+	}
+	else{
+		int copiarHasta = desplazamiento_archivo + obtener->size;
+		copiarHasta -= metadataArchivo.tamanio;
+		strncpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
+		sub[copiarHasta+1] = '\0';
+	}
 
-	strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
-	sub[obtener->size] = '\0';
 	puts(sub);
+	//bytesRecibidos=recv(DAM_fd,&tipo_operacion,sizeof(int),0);
+	serializarYEnviarString(DAM_fd, sub);
 	//config_destroy(archivo_MetaData);
 	//puts(contenido);
 	//return src;

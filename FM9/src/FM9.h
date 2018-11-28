@@ -75,8 +75,8 @@ struct fila_tabla_pag_inv* crear_fila_tabla_pag_inv(int indice, int pid, int pag
 
 void *consolaThread(void*);
 
-void funcionHandshake(int, void*);
-void funcionRecibirPeticion(int, void*);
+void *funcionHandshake(int, void*);
+void *funcionRecibirPeticion(int, void*);
 
 t_modo detectarModo(char*);
 

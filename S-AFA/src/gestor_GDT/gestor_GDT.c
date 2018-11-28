@@ -238,7 +238,7 @@ void ejecutarPLP(){
 //Planificador a corto plazo
 void ejecutarPCP(int operacion, t_DTB* dtb){
 
-	t_DTB* dtb_aux = dtb;
+	t_DTB* dtb_aux;
 
 	switch(operacion){
 	case EJECUTAR_PROCESO:
@@ -269,20 +269,20 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
 		dtb->f_inicializacion=1;
 		list_add(cola_ready,dtb);
+		if(list_size(CPU_libres)>0)
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 		break;
 	case DESBLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
-		t_archivo* archivo=NULL;
-		if(list_size(dtb->archivos)>0){
-			archivo=list_get(dtb->archivos,0);
-		}
-		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
-		if(archivo!=NULL)
-			list_add(dtb->archivos,archivo);
-		if(config_SAFA.algoritmo==VRR&&dtb->quantum_sobrante>0)
-			list_add(cola_ready_VRR,dtb);
+
+		dtb_aux=dictionary_remove(cola_block,string_itoa(dtb->id));
+
+		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
+			list_add(cola_ready_VRR,dtb_aux);
 		else
-			list_add(cola_ready,dtb);
+			list_add(cola_ready,dtb_aux);
+		if(list_size(CPU_libres)>0)
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);

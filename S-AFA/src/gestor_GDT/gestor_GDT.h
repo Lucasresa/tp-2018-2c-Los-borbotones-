@@ -22,6 +22,11 @@ typedef struct{
 
 }t_config_SAFA;
 
+typedef struct{
+	int valor;
+	t_list* cola_bloqueados;
+}t_semaforo;
+
 typedef enum{
 	STATUS,
 	FINALIZAR
@@ -59,5 +64,6 @@ t_log* log_SAFA;
 
 t_list* CPU_libres;
 
+t_dictionary* claves;
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

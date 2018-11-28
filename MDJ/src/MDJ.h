@@ -28,7 +28,7 @@ int cerrarMDJ;
 int cerrado_cosola;
 int cerrado_conexion;
 
-
+int DAM_fd;
 int tamanio,max_linea,tam_pagina;
 int socket_planificador;
 int socketFD;
