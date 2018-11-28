@@ -44,10 +44,14 @@ int main(){
 	int pid = 7;
 	// Este buffer lo envía el MDJ
 	char buffer[] = "abrir racing.txt\nflush loQueSea\nsave otraCosa";
-	int tamanio_buffer = (int)strlen(buffer);
 	int contador_offset;
+	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 
-	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,pid);
+	datos_script->pid = pid;
+	datos_script->size_script = (int)strlen(buffer);
+	puts("enviando datos_script");
+	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
+	free(datos_script);
 	//serializarYEnviarEntero(FM9_fd, &tamanio_buffer);
 
 	int header;
@@ -55,7 +59,7 @@ int main(){
 	if ( length == -1 ) {
 		perror("error");
 		log_error(log_DAM, "Socket FM9 sin conexión.");
-		close(socket);
+		close(FM9_fd);
 		return -1;
 	}
 

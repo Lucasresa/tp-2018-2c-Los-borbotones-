@@ -70,6 +70,11 @@ typedef struct {
 	char* linea;
 } cargar_en_memoria;
 
+typedef struct {
+	int pid;
+	int size_script;
+} iniciar_scriptorio_memoria;
+
 struct mProc {
 	int PID;
 	char* rutaRelativaDeArchivo;
