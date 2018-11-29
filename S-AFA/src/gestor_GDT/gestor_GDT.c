@@ -54,12 +54,10 @@ int identificarProceso(char** linea_parseada){
 void ejecutarComando(int nro_op, char * args){
 	switch(nro_op){
 			case 1:
-				printf("La operacion es ejecutar y el parametro es: %s \n",args);
 				t_DTB* dtb_new=malloc(sizeof(t_DTB));
 				agregarDTBDummyANew(args,dtb_new);
 			break;
 			case 2:
-				printf("La operacion es status y el parametro es: %s \n",args);
 				if(args==NULL){
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
@@ -91,8 +89,6 @@ void ejecutarComando(int nro_op, char * args){
 				}
 				break;
 			case 3:
-				printf("La operacion es finalizar y el parametro es: %s \n",args);
-
 				if(args==NULL){
 					printf("ERROR: se debe ingresar un id por favor escriba 'help'\n");
 				}else{
@@ -196,14 +192,16 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->archivos=list_create();
 	cont_id++;
 
+	pthread_mutex_lock(&mx_colas);
 	list_add(cola_new,dtb);
+	pthread_mutex_unlock(&mx_colas);
 
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
 	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
-
+	pthread_mutex_lock(&mx_PLP);
 	ejecutarPLP();
-
+	pthread_mutex_unlock(&mx_PLP);
 }
 
 
@@ -218,6 +216,7 @@ void ejecutarPLP(){
 	}else{
 		t_DTB* init_dummy;
 
+		pthread_mutex_lock(&mx_colas);
 		init_dummy=list_remove(cola_new,0);
 
 		config_SAFA.multiprog = config_SAFA.multiprog - 1;
@@ -226,11 +225,17 @@ void ejecutarPLP(){
 
 		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
-		list_add(cola_ready,init_dummy);
+		if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,init_dummy);
+		else
+			list_add(cola_ready,init_dummy);
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
+		pthread_mutex_unlock(&mx_colas);
 
+		pthread_mutex_lock(&mx_PCP);
 		ejecutarPCP(EJECUTAR_PROCESO,NULL);
+		pthread_mutex_unlock(&mx_PCP);
 	}
 	usleep(config_SAFA.retardo*1000);
 }
@@ -251,6 +256,9 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 				case VRR:
 					algoritmo_VRR(dtb);
 					break;
+				case IOBF:
+					algoritmo_PROPIO(dtb);
+					break;
 				default:
 					algoritmo_FIFO_RR(dtb);
 					break;
@@ -262,36 +270,58 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		if(config_SAFA.algoritmo!=VRR){
 			dtb->quantum_sobrante=0;
 		}
+		pthread_mutex_lock(&mx_colas);
 		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
+		pthread_mutex_unlock(&mx_colas);
 		break;
 	case DESBLOQUEAR_DUMMY:
 		log_info(log_SAFA,"Desbloqueando el DTB Dummy %d",dtb->id);
+		pthread_mutex_lock(&mx_colas);
 		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
 		dtb->f_inicializacion=1;
-		list_add(cola_ready,dtb);
-		if(list_size(CPU_libres)>0)
+		if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,dtb);
+		else
+			list_add(cola_ready,dtb);
+		pthread_mutex_unlock(&mx_colas);
+		if(list_size(CPU_libres)>0){
+			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+		}
 		break;
 	case DESBLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
 
+		pthread_mutex_lock(&mx_colas);
 		dtb_aux=dictionary_remove(cola_block,string_itoa(dtb->id));
 
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
+		else if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,dtb_aux);
 		else
 			list_add(cola_ready,dtb_aux);
-		if(list_size(CPU_libres)>0)
+		pthread_mutex_unlock(&mx_colas);
+		if(list_size(CPU_libres)>0){
+			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+		}
 		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
+		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
+		pthread_mutex_unlock(&mx_colas);
 		config_SAFA.multiprog+=1;
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
+
+		pthread_mutex_lock(&mx_colas);
 		list_add(cola_ready,dtb);
+		pthread_mutex_unlock(&mx_colas);
 		break;
 	}
 
@@ -361,4 +391,22 @@ void algoritmo_VRR(t_DTB* dtb){
 }
 void algoritmo_PROPIO(t_DTB* dtb){
 
+	if(list_size(cola_ready_IOBF)==0){
+		log_warning(log_SAFA,"La cola de mayor prioridad esta vacia... ejecuto procesos en la de menor prioridad");
+		algoritmo_FIFO_RR(dtb);
+	}else{
+
+		dtb=list_remove(cola_ready_IOBF,0);
+
+		int CPU_vacio=(int)list_remove(CPU_libres,0);
+
+		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
+
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
+
+		usleep(config_SAFA.retardo*1000);
+
+		ejecutarProceso(dtb,CPU_vacio);
+
+	}
 }

@@ -5,6 +5,7 @@ void crear_colas(){
 	cola_new = list_create();
 	cola_ready = list_create();
 	cola_ready_VRR = list_create();
+	cola_ready_IOBF = list_create();
 	cola_block = dictionary_create();
 	cola_exec = dictionary_create();
 	cola_exit = list_create();
@@ -33,8 +34,8 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 		algo=RR;
 	}else if(string_equals_ignore_case(algoritmo,"VRR")){
 		algo=VRR;
-	}else if(string_equals_ignore_case(algoritmo,"PROPIO")){
-		algo=PROPIO;
+	}else if(string_equals_ignore_case(algoritmo,"IOBF")){
+		algo=IOBF;
 	}else{
 		algo=FIFO;
 	}

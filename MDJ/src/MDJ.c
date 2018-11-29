@@ -148,7 +148,7 @@ void determinarOperacion(int operacion,int fd) {
 		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\tbuffer: %s\n",
 				guardado->path,guardado->offset,guardado->size,guardado->buffer);
 
-		//guardarDatos(guardado->path, 0, 0, guardado->buffer);
+		guardarDatos(guardado);
 		break;
 	}
 	case BORRAR_DATOS:
@@ -177,21 +177,29 @@ void crearArchivo(char *path, int numero_lineas) {
 
 }
 
-void guardarDatos(char *path, int size, int offset, char *buffer) {
+int guardarDatos(peticion_guardar *guardado) {
 
-    FILE* fichero;
-
-    char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path) );
+    char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(guardado->path) );
     strcpy(complete_path, config_MDJ.mount_point);
     strcat(complete_path, "/Archivos/");
-    strcat(complete_path, path);
+    strcat(complete_path, guardado->path);
 
-    fichero = fopen(complete_path, "r+");
-    fseek(fichero, 0, SEEK_END);
-    fputs(buffer, fichero);
 
-    free(complete_path);
-    fclose(fichero);
+    if (!archivo_a_guardar.ocupado_archivo_a_guardar){
+    	string_archivo(complete_path,&archivo_a_guardar.strig_archivo);
+    	archivo_a_guardar.path=complete_path;
+    	archivo_a_guardar.ocupado_archivo_a_guardar=TRUE;
+    }
+    else{
+    	  if(guardado->size==0){
+    	    	guardarEnArchivo();
+    	    	return 0;
+    	   }
+    	  strncpy(archivo_a_guardar.strig_archivo+guardado->offset*guardado->size,guardado->buffer,guardado->size);
+
+    }
+    free(guardado);
+    return 0;
 }
 
 int crear_carpetas() {
@@ -276,7 +284,17 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-					cmd_bloque(linea);
+					//cmd_bloque(linea);
+					t_config *archivo_MetaData;
+					//ver path
+					puts("Funciono1");
+					archivo_MetaData=config_create("/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio");
+					puts("Funciono2");
+					t_config_MetaArchivo metadataArchivo;
+					metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+					metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+					archivo_a_guardar.path="/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio";
+					actualizarARchivo(&metadataArchivo,40,100);
 		}
 
 	}
@@ -434,14 +452,10 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			}
 			sizeArchivoBloque=statbuf.st_size - 1;
 		}
-
-
 		if ((src = mmap (0, sizeArchivoBloque, PROT_READ, MAP_SHARED, f, 0))== (caddr_t) -1)
 		{
 			printf ("mmap error for input");
-
 		}
-
 		if(i==0){
 			strcpy(contenidoArchivo,src);
 		}
@@ -449,39 +463,22 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			string_append(&contenidoArchivo,src);
 		puts(contenidoArchivo);
 		free(pathBloqueCompleto);
-		//free(contenidoArchivo);
 		close(f);
-		//string_archivo(file2,&agregar_contenido);
-		//string_append(&contenido,agregar_contenido);
-		//string_archivo(pathBloqueCompleto,&contenido);
-		//strcat(src,contenido);
-		//printf("%s",src);
-		//puts(contenido);
+
 	}
-	char *sub= malloc(obtener->size+1);
-	//int algo;
-	//algo = obtener->size;
-	//printf("%d",algo);
+	char *sub= malloc(obtener->size);
 	int desplazamiento_archivo;
 	desplazamiento_archivo=obtener->offset*obtener->size;
-	printf("%d",desplazamiento_archivo);
 	if ( desplazamiento_archivo + obtener->size < metadataArchivo.tamanio ){
 		strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
 	}
 	else{
 		int copiarHasta = desplazamiento_archivo + obtener->size;
 		copiarHasta -= metadataArchivo.tamanio;
-		strncpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
-		sub[copiarHasta+1] = '\0';
+		memcpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
 	}
-
-	puts(sub);
-	//bytesRecibidos=recv(DAM_fd,&tipo_operacion,sizeof(int),0);
+	printf("%s\n",sub);
 	serializarYEnviarString(DAM_fd, sub);
-	//config_destroy(archivo_MetaData);
-	//puts(contenido);
-	//return src;
-	//return contenidoArchivo;
 	free(sub);
 
 }
@@ -537,6 +534,86 @@ int existe_archivo(char *path_archivo){
         return (stat (archivo_path(path_archivo), &buffer) == 0);
 }
 
+
+void guardarEnArchivo(){
+	//archivo_a_guardar;
+	int seCreoBloque=FALSE;
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(archivo_a_guardar.path);
+	t_config_MetaArchivo metadataArchivo;
+	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	int sizeDelStringArchivoAGuardar;
+	sizeDelStringArchivoAGuardar=strlen(archivo_a_guardar.strig_archivo);
+	int sizeGuardar;
+	if (config_MetaData.tamanio_bloques*cantidadBloques<sizeDelStringArchivoAGuardar){
+		config_MetaData.cantidad_bloques++;
+		actualizarARchivo(&metadataArchivo,sizeDelStringArchivoAGuardar,config_MetaData.cantidad_bloques);
+		seCreoBloque=TRUE;
+	}
+
+	for(int i=0;i<cantidadBloques;i++){
+		char *pathBloqueCompleto;
+		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
+	    char *map;
+	    int size;
+	    struct stat s;
+	    int fd = open (pathBloqueCompleto, O_RDWR);
+	    /* Get the size of the file. */
+	    int status = fstat (fd, &s);
+	    size = s.st_size;
+	    if(status<0){
+	    	printf("archivo no existe %s\n",pathBloqueCompleto);
+	    }
+	    map = (char *) mmap (0, size, PROT_READ, MAP_PRIVATE | PROT_WRITE, fd, 0);
+	    int offset=0;
+	    offset=i*config_MetaData.tamanio_bloques;
+	    sizeGuardar=config_MetaData.tamanio_bloques;
+	    if((i+1)*config_MetaData.tamanio_bloques<sizeDelStringArchivoAGuardar){
+	    	sizeGuardar = (i+1)*config_MetaData.tamanio_bloques - sizeDelStringArchivoAGuardar;
+
+	    }
+	    memcpy(map, archivo_a_guardar.strig_archivo+offset, sizeGuardar);
+	    msync(map, sizeGuardar, MS_SYNC);
+	    munmap(map, sizeGuardar);
+	    close(fd);
+	}
+
+}
+
+
+int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque){
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(archivo_a_guardar.path);
+	t_config_MetaArchivo actualizarMetadataARchivo;
+	actualizarMetadataARchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	actualizarMetadataARchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	char *ultimoBloqueChar;
+	char *sizeDelStringArchivoAGuardarChar;
+	//sprintf(ultimoBloqueChar, "%d", ultimoBloque);
+	ultimoBloqueChar=string_itoa(ultimoBloque);
+	sizeDelStringArchivoAGuardarChar=string_itoa(sizeDelStringArchivoAGuardar);
+	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
+	char *actualizarBloques=malloc(strlen("[")+1);
+	strcpy(actualizarBloques,"[");
+    int cantidadDebloques=sizeof(actualizarMetadataARchivo.bloques)+1;
+    puts("Funciono6");
+	for(int i=0;i<cantidadDebloques; i++){
+		puts(actualizarMetadataARchivo.bloques[i]);
+		string_append(&actualizarBloques,actualizarMetadataARchivo.bloques[i]);
+		string_append(&actualizarBloques,",");
+	}
+	puts("Funciono7");
+	string_append(&actualizarBloques,ultimoBloqueChar);
+	puts("Funciono8");
+	string_append(&actualizarBloques,"]");
+	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
+	puts("Funciono9");
+	config_save(archivo_MetaData);
+	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	return 0;
+}
 
 /*int cmd_md5(char *linea){
         char **parametros = string_split(linea, " ");

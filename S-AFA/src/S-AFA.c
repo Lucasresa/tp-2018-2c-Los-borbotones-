@@ -171,7 +171,6 @@ void atenderCPU(int*fd){
 
 			log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
 
-			pthread_mutex_lock(&bloqueo_CPU);
 
 			//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
 			if(dictionary_has_key(cola_exec,string_itoa(dtb_cpu))){
@@ -184,7 +183,6 @@ void atenderCPU(int*fd){
 				log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lista....",fd_CPU);
 				eliminarSocketCPU(fd_CPU);
 			}
-			pthread_mutex_unlock(&bloqueo_CPU);
 
 			log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
 
