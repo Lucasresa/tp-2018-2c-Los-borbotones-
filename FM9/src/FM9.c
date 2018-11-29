@@ -20,35 +20,23 @@ int main(){
 
 	config_destroy(file_FM9);
 
-	// Memoria es un array de strings de tamaño=MAX_LINEA.
+	// Memoria es un array de strings, con el tamaño de cada string igual a MAX_LINEA.
 	memoria = iniciar_memoria();
 
-	// Creo estructuras de segmentación
-	lista_tablas_segmentos = list_create();
-	tabla_segmentos_pid = list_create();
+	if (config_FM9.modo == SEG) {
+		// Creo estructuras de segmentación
+		lista_tablas_segmentos = list_create();
+		tabla_segmentos_pid = list_create();
+	} else if (config_FM9.modo == TPI) {
+		// Creo estructuras de paginación invertida
+		lista_tabla_pag_inv = list_create();
+	}
 
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	// %%%% EJEMPLO MANIPULANDO LAS TABLAS DE SEGMENTACION %%%%
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	// Creo ejemplo de tabla de segmentación
-	list_add(lista_tablas_segmentos, list_create());
-
-	// Agrego una entrada a la tabla de segmentos
-	t_list *tabla_segmentos = list_get(lista_tablas_segmentos, 0);
-	list_add(tabla_segmentos, crear_fila_tabla_seg(5,1,1));
-
-	// Obtengo el id de la fila que acabo de agregar
-	t_list *tabla_segmentos_copia = list_get(lista_tablas_segmentos, 0);
-	fila_tabla_seg *fila_tabla_seg;
-	fila_tabla_seg = list_get(tabla_segmentos_copia, 0);
-	// printf("%i",fila_tabla_seg->id_segmento);
-
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
+	/*
+	// Creo el thread para la consola
+	pthread_t thread_id;
+	pthread_create(&thread_id, NULL, consolaThread, NULL);
+	*/
 
 	int listener_socket;
 	crearSocket(&listener_socket);
@@ -56,18 +44,14 @@ int main(){
 	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
 
 	log_info(log_FM9, "Escuchando conexiones...");
-/*
-    pthread_t thread_id;
 
-    pthread_create(&thread_id, NULL, consolaThread, NULL);
-*/
 	FD_ZERO(&set_fd);
 	FD_SET(listener_socket, &set_fd);
 	while(true) {
-		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &funcionRecibirPeticion, NULL );
+		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
 	}
 
-
+	// Limpio memoria
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
 	for (int n=0; n<cantidad_lineas; n++) {
 		free(memoria[n]);
@@ -97,6 +81,15 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   p->id_segmento = id_segmento;
 	   p->limite_segmento = limite_segmento;
 	   p->base_segmento = base_segmento;
+	   return p;
+}
+
+struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina) {
+	   struct fila_pag_invertida *p;
+	   p = (struct fila_pag_invertida *) malloc(sizeof(struct fila_pag_invertida));
+	   p->indice = indice;
+	   p->pid = pid;
+	   p->pagina = pagina;
 	   return p;
 }
 
@@ -143,7 +136,17 @@ void* funcionHandshake(int socket, void* argumentos) {
 	return 0;
 }
 
-void* funcionRecibirPeticion(int socket, void* argumentos) {
+void* recibirPeticion(int socket, void* argumentos) {
+
+	if (config_FM9.modo == SEG) {
+		recibirPeticionSeg(socket);
+	} else if (config_FM9.modo == TPI) {
+		// Llamar acá a la función que resuelve peticiones en modo TPI
+	}
+	return 0;
+}
+
+int recibirPeticionSeg(int socket) {
 	int length;
 	int header;
 	length = recv(socket,&header,sizeof(int),0);
@@ -162,7 +165,6 @@ void* funcionRecibirPeticion(int socket, void* argumentos) {
 	}
 	case INICIAR_MEMORIA_PID:
 	{
-		puts("recibiendo size");
 		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
 		int size_scriptorio = datos_script->size_script;
 
@@ -171,7 +173,6 @@ void* funcionRecibirPeticion(int socket, void* argumentos) {
 
 		// Obtengo el id de la tabla
 		int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
-		puts("iniciando memoria");
 		// Relaciono la tabla de segmentos con el PID
 		fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
 		relacion_pid_tabla->id_proceso=datos_script->pid;
@@ -180,8 +181,11 @@ void* funcionRecibirPeticion(int socket, void* argumentos) {
 
 		// Obtengo la tabla de segmentos recién creada
 		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
-		// Busco en memoria espacio libre
+
+		// TODO: Busco en memoria espacio libre
+
 		// Creo un segmento en la tabla
+		printf("Creo un segmento en posicion %i\n", mem_libre_base);
 		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
 		mem_libre_base = mem_libre_base+size_scriptorio+1;
 
@@ -191,11 +195,18 @@ void* funcionRecibirPeticion(int socket, void* argumentos) {
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
+	case PEDIR_LINEA:
+	{
+		direccion_logica* direccion;
+		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
+		//direccion = recibirYDeserializar(socket,header);
+		return 0;
+	}
 	case ESCRIBIR_LINEA:
 	{
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
-		if (cargarEnMemoria(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<-1) {
+		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
@@ -204,22 +215,24 @@ void* funcionRecibirPeticion(int socket, void* argumentos) {
 
 	case ENVIAR_ARCHIVO:
 	{
-		char* linea_string;
-		linea_string = recibirYDeserializar(socket,header);
+		//char* linea_string;
+		//linea_string = recibirYDeserializar(socket,header);
 		//strcpy(memoria[memoria_counter],linea_string);
 		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
 		//memoria_counter++;
 		return 0;
 	}
 	}
+	return 0;
 }
-int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
-	// Obtengo la tabla de segmentos para ese PID
-	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
-		return (p->id_proceso == pid);
-	}
-	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
-	t_list *tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+
+int leerMemoriaSeg(int pid, int id_segmento, int offset) {
+
+}
+
+int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
+
+	t_list *tabla_segmentos = buscarTablaSeg(pid);
 
 	// Obtengo la direccion real/fisica base
 	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
@@ -231,5 +244,29 @@ int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
 
 	memoria[base_segmento+offset] = linea;
 	printf("Escribí en Posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	return 0;
+}
+
+t_list* buscarTablaSeg(int pid) {
+	// Obtengo la tabla de segmentos para ese PID
+	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
+		return (p->id_proceso == pid);
+	}
+	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
+	t_list* tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+	return tabla_segmentos;
+}
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
+
+	//Buscamos
+	int es_pid_pagina_buscados(fila_pag_invertida *p) {
+		return (p->pid == pid)&&(p->pagina == pagina);
+	}
+
+	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
+	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
+
+	memoria[fila_tabla_pag_inv->indice+offset] = linea;
+	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
 	return 0;
 }

@@ -119,8 +119,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	do{
 
-		direccion->numero_tabla=dtb.id;
-		direccion->segmento=0;
+		direccion->pid=dtb.id;
+		direccion->base=0;
 		direccion->offset=dtb.pc;
 
 		serializarYEnviar(FM9,PEDIR_DATOS,direccion);

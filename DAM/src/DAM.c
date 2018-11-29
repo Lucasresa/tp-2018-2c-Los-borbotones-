@@ -5,7 +5,7 @@ int main(){
 	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
 
     char *archivo;
-	archivo="../src/CONFIG_DAM.cfg";
+	archivo="src/CONFIG_DAM.cfg";
     if(validarArchivoConfig(archivo) <0)
     	return -1;
 
@@ -33,7 +33,7 @@ int main(){
 	} else {
 		log_info(log_DAM, "Conexión con FM9 establecido");
 	}
-/*
+
 	// Espero para recibir un BUFFER a enviar
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,7 +88,7 @@ int main(){
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%%%%%%%%%%%%%%%%% FIN EJEMPLO %%%%%%%%%%%%%%%%%%%%%%%%
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-*/
+    /*
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
@@ -131,6 +131,6 @@ int main(){
 	serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 	log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
 
-
+*/
 	return 0;
 }

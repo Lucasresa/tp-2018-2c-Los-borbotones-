@@ -47,11 +47,10 @@ t_log* log_FM9;
 
 char** memoria;
 int mem_libre_base;
+
 // Creo estructuras de segmentación
 t_list *lista_tablas_segmentos;
 t_list *tabla_segmentos_pid;
-
-//PAGINACION INVERTIDA
 
 typedef struct fila_pag_invertida{
 
@@ -62,20 +61,25 @@ typedef struct fila_pag_invertida{
 }fila_pag_invertida;
 
 // Estructuras de paginacion
-t_list *lista_tabla_pagina;
+t_list *lista_tabla_pag_inv;
 
 
 fd_set set_fd;
 
 char** iniciar_memoria();
-int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea);
+int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea);
+t_list* buscarTablaSeg(int pid);
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
+
+struct fila_pag_invertida* crear_fila_tabla_pag_inv(int indice, int pid, int pagina);
 
 void *consolaThread(void*);
 
 void *funcionHandshake(int, void*);
-void *funcionRecibirPeticion(int, void*);
+void *recibirPeticion(int, void*);
+
+int recibirPeticionSeg(int);
 
 t_modo detectarModo(char*);
 
