@@ -194,9 +194,9 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		actualizarDTB(&dtb);
 
 		if(rafaga_recibida!=0){
-			if(rafaga_actual==0){
+			if(rafaga_actual==0 && interrupcion==0){
 				notificarSAFA(SAFA,FIN_QUANTUM,dtb);
-				return;
+				interrupcion=1;
 			}
 		}
 		destroyParse(linea_parseada);
@@ -206,7 +206,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		usleep(config_CPU.retardo*1000);
 	}while(!interrupcion);
 
-
+	log_warning(log_CPU,"Se produjo una interrupcion durante la ejecucion del dtb %d",dtb.id);
 }
 
 void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){

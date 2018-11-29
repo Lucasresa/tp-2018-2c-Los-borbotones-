@@ -156,7 +156,7 @@ typedef enum{
 	FIFO,
 	RR,
 	VRR,
-	PROPIO
+	IOBF
 }t_algoritmo;
 
 typedef struct{

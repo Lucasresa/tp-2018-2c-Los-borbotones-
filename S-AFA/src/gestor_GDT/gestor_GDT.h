@@ -52,6 +52,8 @@ void algoritmo_PROPIO(t_DTB* dtb);
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_ready_VRR;
+t_list* cola_ready_IOBF;
+
 
 t_dictionary* cola_block;
 t_dictionary* cola_exec;

@@ -251,6 +251,9 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 				case VRR:
 					algoritmo_VRR(dtb);
 					break;
+				case IOBF:
+					algoritmo_PROPIO(dtb);
+					break;
 				default:
 					algoritmo_FIFO_RR(dtb);
 					break;
