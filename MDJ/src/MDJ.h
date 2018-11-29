@@ -85,14 +85,30 @@ typedef struct{
   	char** bloques;
    }t_config_MetaArchivo;
 
+   typedef struct{
+	   char *strig_archivo;
+	   char *path;
+	   int  ocupado_archivo_a_guardar ;
+	   char **bloques;
+   }t_config_archivo_a_guardar;
 
+
+
+#define TRUE 1
+#define FALSE 0
+
+
+
+t_config_archivo_a_guardar archivo_a_guardar;
 t_config_MDJ config_MDJ;
 t_config_MetaData  config_MetaData;
 int crear_carpetas();
 int mkdir_p(const char *path);
-void guardarDatos(char *path, int size, int offset, char *buffer) ;
+int guardarDatos(peticion_guardar *guardado) ;
+void guardarEnArchivo();
 void crearArchivo(char *path, int numero_lineas) ;
 int leerMetaData();
 int inicializar();
 int  conexion_dam();
+int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque);
 #endif /* MDJ_H_ */
