@@ -238,3 +238,18 @@ int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
 	printf("Escribí en Posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
 	return 0;
 }
+
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
+
+	//Buscamos
+	int es_pid_pagina_buscados(fila_pag_invertida *p) {
+		return (p->pid == pid)&&(p->pagina == pagina);
+	}
+
+	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
+	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
+
+	memoria[fila_tabla_pag_inv->indice+offset] = linea;
+	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
+	return 0;
+}
