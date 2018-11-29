@@ -198,9 +198,9 @@ int recibirPeticionSeg(int socket) {
 	case PEDIR_LINEA:
 	{
 		direccion_logica* direccion;
-		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
 		direccion = recibirYDeserializar(socket,header);
 		char* linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		serializarYEnviarString(socket,linea);
 		return 0;
 	}
 	case ESCRIBIR_LINEA:

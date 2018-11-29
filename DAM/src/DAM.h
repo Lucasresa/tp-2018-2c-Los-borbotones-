@@ -23,5 +23,14 @@ t_config* file_DAM;
 t_config_DAM config_DAM;
 t_log* log_DAM;
 
+fd_set set_fd;
+int SAFA_fd, MDJ_fd, FM9_fd; //rafaga;
+void* funcionHandshake(int, void*);
+void* recibirPeticion(int socket, void* argumentos);
+
+int cargarArchivoFM9(int pid, char* buffer);
+
+int guardarArchivoMDJ(char* path, char* buffer);
+char* obtenerArchivoMDJ(char *path);
 
 #endif /* DAM_H_ */
