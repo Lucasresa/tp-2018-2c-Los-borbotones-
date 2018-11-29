@@ -147,8 +147,8 @@ typedef struct{
 }desbloqueo_dummy;
 
 typedef struct{
-	int numero_tabla;
-	int segmento;
+	int pid;
+	int base;
 	int offset;
 }direccion_logica;
 

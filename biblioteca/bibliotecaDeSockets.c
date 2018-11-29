@@ -173,8 +173,8 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarString(socket,((peticion_guardar*)package)->buffer);
 		break;
 	case PEDIR_DATOS:
-		serializarYEnviarEntero(socket,&((direccion_logica*)package)->numero_tabla);
-		serializarYEnviarEntero(socket,&((direccion_logica*)package)->segmento);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->pid);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->base);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
 		break;
 	case BORRAR_ARCHIVO:
@@ -279,8 +279,8 @@ void* recibirYDeserializar(int socket,int tipo){
 	case PEDIR_DATOS:
 	{
 		direccion_logica* direccion = malloc(sizeof(direccion_logica));
-		direccion->numero_tabla=*recibirYDeserializarEntero(socket);
-		direccion->segmento=*recibirYDeserializarEntero(socket);
+		direccion->pid=*recibirYDeserializarEntero(socket);
+		direccion->base=*recibirYDeserializarEntero(socket);
 		direccion->offset=*recibirYDeserializarEntero(socket);
 		return direccion;
 	}
