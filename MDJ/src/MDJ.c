@@ -579,17 +579,24 @@ int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArc
 	t_config_MetaArchivo actualizarMetadataARchivo;
 	actualizarMetadataARchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	actualizarMetadataARchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	char *tamanio;
-	sprintf(tamanio, "%d", ultimoBloque);
-	config_set_value(archivo_MetaData, "TAMANIO",tamanio);
-	char *bloques;
-	//memcpy(string, array, x);
-	int sizebloques=strlen(metadataArchivo->bloques);
-	char *actualizarBloques= (char *) malloc(1 + sizebloques + strlen("[]")+ strlen(*tamanio));
+	char *ultimoBloqueChar;
+	char *sizeDelStringArchivoAGuardarChar;
+	//sprintf(ultimoBloqueChar, "%d", ultimoBloque);
+	ultimoBloqueChar=string_itoa(ultimoBloque);
+	sizeDelStringArchivoAGuardarChar=string_itoa(sizeDelStringArchivoAGuardar);
+	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
+	char *actualizarBloques=malloc(strlen("["))+1;
 	memcpy(actualizarBloques,"[",strlen("["));
-	strcat(actualizarBloques,&metadataArchivo->bloques);
+    int cantidadDebloques=sizeof(actualizarMetadataARchivo.bloques)+1;
+	for(int i=0;i<cantidadDebloques; i++){
+		strcat(actualizarBloques,actualizarMetadataARchivo.bloques[i]);
+		strcat(actualizarBloques,",");
+	}
+	strcat(actualizarBloques,ultimoBloqueChar);
 	strcat(actualizarBloques,"]");
 	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
+	config_save(archivo_MetaData);
+	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	return 0;
 }
 
