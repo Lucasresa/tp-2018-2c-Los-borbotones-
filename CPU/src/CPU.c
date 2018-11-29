@@ -92,7 +92,8 @@ void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 	//Una vez enviando el dummy a DAM tengo que avisarle a SAFA que bloquee el proceso mientras se carga en memoria el script
 
 	notificarSAFA(SAFA_fd,protocolo,*dtb);
-	usleep(config_CPU.retardo*1000);
+
+	usleep(config_CPU.retardo*10000);
 
 }
 

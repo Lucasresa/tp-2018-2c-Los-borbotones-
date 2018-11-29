@@ -226,7 +226,10 @@ void ejecutarPLP(){
 
 		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
-		list_add(cola_ready,init_dummy);
+		if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,init_dummy);
+		else
+			list_add(cola_ready,init_dummy);
 
 		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
 
@@ -271,7 +274,10 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		log_info(log_SAFA,"Desbloqueando el DTB Dummy %d",dtb->id);
 		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
 		dtb->f_inicializacion=1;
-		list_add(cola_ready,dtb);
+		if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,dtb);
+		else
+			list_add(cola_ready,dtb);
 		if(list_size(CPU_libres)>0)
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 		break;
@@ -282,6 +288,8 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
+		else if(config_SAFA.algoritmo==IOBF)
+			list_add(cola_ready_IOBF,dtb_aux);
 		else
 			list_add(cola_ready,dtb_aux);
 		if(list_size(CPU_libres)>0)
@@ -364,4 +372,22 @@ void algoritmo_VRR(t_DTB* dtb){
 }
 void algoritmo_PROPIO(t_DTB* dtb){
 
+	if(list_size(cola_ready_IOBF)==0){
+		log_warning(log_SAFA,"La cola de mayor prioridad esta vacia... ejecuto procesos en la de menor prioridad");
+		algoritmo_FIFO_RR(dtb);
+	}else{
+
+		dtb=list_remove(cola_ready_IOBF,0);
+
+		int CPU_vacio=(int)list_remove(CPU_libres,0);
+
+		log_info(log_SAFA,"El DTB %d esta listo para ser ejecutado",dtb->id);
+
+		log_info(log_SAFA,"Se envio el DTB a ejecutar en el CPU %d",CPU_vacio);
+
+		usleep(config_SAFA.retardo*1000);
+
+		ejecutarProceso(dtb,CPU_vacio);
+
+	}
 }
