@@ -67,7 +67,8 @@ t_list *lista_tabla_pag_inv;
 fd_set set_fd;
 
 char** iniciar_memoria();
-int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea);
+int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea);
+t_list* buscarTablaSeg(int pid);
 
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 

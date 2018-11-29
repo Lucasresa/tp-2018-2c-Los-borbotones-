@@ -185,6 +185,7 @@ int recibirPeticionSeg(int socket) {
 		// TODO: Busco en memoria espacio libre
 
 		// Creo un segmento en la tabla
+		printf("Creo un segmento en posicion %i\n", mem_libre_base);
 		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
 		mem_libre_base = mem_libre_base+size_scriptorio+1;
 
@@ -194,11 +195,18 @@ int recibirPeticionSeg(int socket) {
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
+	case PEDIR_LINEA:
+	{
+		direccion_logica* direccion;
+		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
+		//direccion = recibirYDeserializar(socket,header);
+		return 0;
+	}
 	case ESCRIBIR_LINEA:
 	{
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
-		if (cargarEnMemoria(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
+		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
@@ -218,13 +226,13 @@ int recibirPeticionSeg(int socket) {
 	return 0;
 }
 
-int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
-	// Obtengo la tabla de segmentos para ese PID
-	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
-		return (p->id_proceso == pid);
-	}
-	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
-	t_list *tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+int leerMemoriaSeg(int pid, int id_segmento, int offset) {
+
+}
+
+int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
+
+	t_list *tabla_segmentos = buscarTablaSeg(pid);
 
 	// Obtengo la direccion real/fisica base
 	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
@@ -237,4 +245,14 @@ int cargarEnMemoria(int pid, int id_segmento, int offset, char* linea) {
 	memoria[base_segmento+offset] = linea;
 	printf("Escribí en Posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
 	return 0;
+}
+
+t_list* buscarTablaSeg(int pid) {
+	// Obtengo la tabla de segmentos para ese PID
+	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
+		return (p->id_proceso == pid);
+	}
+	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
+	t_list* tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+	return tabla_segmentos;
 }
