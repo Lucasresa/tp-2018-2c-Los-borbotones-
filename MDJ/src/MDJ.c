@@ -284,7 +284,17 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-					cmd_bloque(linea);
+					//cmd_bloque(linea);
+					t_config *archivo_MetaData;
+					//ver path
+					puts("Funciono1");
+					archivo_MetaData=config_create("/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio");
+					puts("Funciono2");
+					t_config_MetaArchivo metadataArchivo;
+					metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+					metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+					archivo_a_guardar.path="/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio";
+					actualizarARchivo(&metadataArchivo,40,100);
 		}
 
 	}
@@ -585,16 +595,21 @@ int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArc
 	ultimoBloqueChar=string_itoa(ultimoBloque);
 	sizeDelStringArchivoAGuardarChar=string_itoa(sizeDelStringArchivoAGuardar);
 	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
-	char *actualizarBloques=malloc(strlen("["))+1;
-	memcpy(actualizarBloques,"[",strlen("["));
+	char *actualizarBloques=malloc(strlen("[")+1);
+	strcpy(actualizarBloques,"[");
     int cantidadDebloques=sizeof(actualizarMetadataARchivo.bloques)+1;
+    puts("Funciono6");
 	for(int i=0;i<cantidadDebloques; i++){
-		strcat(actualizarBloques,actualizarMetadataARchivo.bloques[i]);
-		strcat(actualizarBloques,",");
+		puts(actualizarMetadataARchivo.bloques[i]);
+		string_append(&actualizarBloques,actualizarMetadataARchivo.bloques[i]);
+		string_append(&actualizarBloques,",");
 	}
-	strcat(actualizarBloques,ultimoBloqueChar);
-	strcat(actualizarBloques,"]");
+	puts("Funciono7");
+	string_append(&actualizarBloques,ultimoBloqueChar);
+	puts("Funciono8");
+	string_append(&actualizarBloques,"]");
 	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
+	puts("Funciono9");
 	config_save(archivo_MetaData);
 	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	return 0;
