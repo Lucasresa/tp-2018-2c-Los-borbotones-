@@ -172,13 +172,17 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->size);
 		serializarYEnviarString(socket,((peticion_guardar*)package)->buffer);
 		break;
-	case PEDIR_DATOS:
+	case PEDIR_LINEA:
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->pid);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->base);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
 		break;
 	case BORRAR_ARCHIVO:
 		serializarYEnviarString(socket,((peticion_borrar*)package)->path);
+		break;
+	case DESBLOQUEAR_DUMMY:
+		serializarYEnviarEntero(socket,&((desbloqueo_dummy*)package)->id_dtb);
+		serializarYEnviarString(socket,((desbloqueo_dummy*)package)->path);
 		break;
 	}
 
@@ -276,7 +280,7 @@ void* recibirYDeserializar(int socket,int tipo){
 		guardado->buffer = recibirYDeserializarString(socket);
 		return guardado;
 	}
-	case PEDIR_DATOS:
+	case PEDIR_LINEA:
 	{
 		direccion_logica* direccion = malloc(sizeof(direccion_logica));
 		direccion->pid=*recibirYDeserializarEntero(socket);
@@ -286,9 +290,16 @@ void* recibirYDeserializar(int socket,int tipo){
 	}
 	case BORRAR_ARCHIVO:
 	{
-			peticion_borrar* borrar = malloc(sizeof(peticion_borrar));
-			borrar->path = recibirYDeserializarString(socket);
-			return borrar;
+		peticion_borrar* borrar = malloc(sizeof(peticion_borrar));
+		borrar->path = recibirYDeserializarString(socket);
+		return borrar;
+	}
+	case DESBLOQUEAR_DUMMY:
+	{
+		desbloqueo_dummy* dummy = malloc(sizeof(desbloqueo_dummy));
+		dummy->id_dtb=*recibirYDeserializarEntero(socket);
+		dummy->path = recibirYDeserializarString(socket);
+		return dummy;
 	}
 	default:
 		return NULL;

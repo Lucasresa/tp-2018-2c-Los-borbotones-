@@ -6,10 +6,12 @@
 #include <commons/string.h>
 #include <stdlib.h>
 #include <commons/log.h>
+#include <commons/config.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/list.h>
 #include <commons/collections/dictionary.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include "../../../biblioteca/bibliotecaDeSockets.h"
 
 typedef struct{
@@ -49,6 +51,9 @@ void algoritmo_FIFO_RR(t_DTB* dtb);
 void algoritmo_VRR(t_DTB* dtb);
 void algoritmo_PROPIO(t_DTB* dtb);
 
+
+t_config* file_SAFA;
+
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_ready_VRR;
@@ -67,5 +72,16 @@ t_log* log_SAFA;
 t_list* CPU_libres;
 
 t_dictionary* claves;
+
+pthread_mutex_t mx_PCP;
+pthread_mutex_t mx_PLP;
+
+pthread_mutex_t mx_colas;
+pthread_mutex_t mx_CPUs;
+
+pthread_mutex_t mx_claves;
+
+
+
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

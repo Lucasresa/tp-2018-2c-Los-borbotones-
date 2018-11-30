@@ -198,8 +198,9 @@ int recibirPeticionSeg(int socket) {
 	case PEDIR_LINEA:
 	{
 		direccion_logica* direccion;
-		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
-		//direccion = recibirYDeserializar(socket,header);
+		direccion = recibirYDeserializar(socket,header);
+		char* linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		serializarYEnviarString(socket,linea);
 		return 0;
 	}
 	case ESCRIBIR_LINEA:
@@ -305,6 +306,18 @@ int recibirPeticionPagInv(int socket) {
 }
 
 int leerMemoriaSeg(int pid, int id_segmento, int offset) {
+char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
+
+	t_list *tabla_segmentos = buscarTablaSeg(pid);
+
+	// Obtengo la direccion real/fisica base
+	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	int base_segmento = segmento->base_segmento;
+
+	printf("Leo memoria en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+
+	return memoria[base_segmento+offset];
+
 
 }
 
@@ -321,7 +334,7 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 	}
 
 	memoria[base_segmento+offset] = linea;
-	printf("Escribí en Posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	printf("Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
 	return 0;
 }
 
@@ -350,4 +363,5 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	return 0;
 
 	//Restricciones?
+}
 }

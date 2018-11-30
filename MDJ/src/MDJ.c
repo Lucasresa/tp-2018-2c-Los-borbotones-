@@ -28,7 +28,7 @@ int main(){
 	//Levanto archivo de configuracion del MDJ (FileSystem)
 
     char *archivo;
-	archivo="../src/CONFIG_MDJ.cfg";
+	archivo="src/CONFIG_MDJ.cfg";
 
     if(validarArchivoConfig(archivo)<0)
     	return -1;
@@ -50,7 +50,7 @@ int main(){
 
 	leerMetaData();
 	cerrarMDJ=0;
-	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
+//	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
 	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
 	//conexion_DMA();
 
@@ -70,7 +70,7 @@ int main(){
 		if(cerrarMDJ==1)
 			break;
 	}
-	pthread_detach(hilo_consola);
+//	pthread_detach(hilo_consola);
 	pthread_detach(hilo_conexion);
 
 }
@@ -85,8 +85,6 @@ void conexion_DMA(){
 	log_info(log_MDJ, "Esperando conexion del DAM");
 
 	DAM_fd=aceptarConexion(MDJ_fd);
-
-
 
 	if(DAM_fd==-1){
 		log_error(log_MDJ,"Error al establecer conexion con el DAM");
@@ -466,7 +464,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		close(f);
 
 	}
-	char *sub= malloc(obtener->size);
+	char *sub= malloc(obtener->size+1);
 	int desplazamiento_archivo;
 	desplazamiento_archivo=obtener->offset*obtener->size;
 	if ( desplazamiento_archivo + obtener->size < metadataArchivo.tamanio ){
@@ -475,12 +473,11 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	else{
 		int copiarHasta = desplazamiento_archivo + obtener->size;
 		copiarHasta -= metadataArchivo.tamanio;
-		memcpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
+		strncpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
 	}
-	printf("%s\n",sub);
+	printf("Enviando: %s\n",sub);
 	serializarYEnviarString(DAM_fd, sub);
 	free(sub);
-
 }
 char *archivo_path(char *path_archivo){
 
