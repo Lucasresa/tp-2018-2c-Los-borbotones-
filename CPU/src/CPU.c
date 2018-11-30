@@ -38,10 +38,10 @@ int main(){
 
 
 	//El CPU se conecta con "el diego"
-	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
-		log_error(log_CPU,"Error al conectarse con DAM");
-		exit(1);
-	}
+//	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+//		log_error(log_CPU,"Error al conectarse con DAM");
+//		exit(1);
+//	}
 
 //	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
 //		log_error(log_CPU,"Error al conectarse con FM9");
@@ -62,7 +62,7 @@ int main(){
 
 		t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
 
-		serializarYEnviarEntero(SAFA_fd,&dtb.id);
+		notificarSAFA(SAFA_fd,ID_DTB,dtb);
 
 		log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
 
@@ -214,9 +214,14 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 	void*buffer;
 
+	int id_dtb=DTB.id;
+
 	send(SAFA,&protocolo,sizeof(int),0);
 
-	serializarYEnviarDTB(SAFA,buffer,DTB);
+	if(protocolo==ID_DTB)
+		serializarYEnviarEntero(SAFA,&id_dtb);
+	else
+		serializarYEnviarDTB(SAFA,buffer,DTB);
 
 }
 
