@@ -9,7 +9,7 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) + 24 )
 #define BUF_LEN     ( 1024 * EVENT_SIZE )
 
-t_config* file_SAFA;
+
 pthread_mutex_t File_config;
 
 void crear_colas(void);

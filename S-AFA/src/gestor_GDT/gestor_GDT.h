@@ -6,6 +6,7 @@
 #include <commons/string.h>
 #include <stdlib.h>
 #include <commons/log.h>
+#include <commons/config.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/list.h>
 #include <commons/collections/dictionary.h>
@@ -33,15 +34,6 @@ typedef enum{
 	FINALIZAR
 }operaciones;
 
-/*
-pthread_mutex_t mx_PCP = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mx_PLP = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_mutex_t mx_colas = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mx_CPUs = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_mutex_t mx_claves = PTHREAD_MUTEX_INITIALIZER;
-*/
 void* consola_SAFA(void);
 char** parsearLinea(char* linea);
 int identificarProceso(char ** linea_parseada);
@@ -58,6 +50,9 @@ void ejecutarProceso(t_DTB*,int);
 void algoritmo_FIFO_RR(t_DTB* dtb);
 void algoritmo_VRR(t_DTB* dtb);
 void algoritmo_PROPIO(t_DTB* dtb);
+
+
+t_config* file_SAFA;
 
 t_list* cola_new;
 t_list* cola_ready;
@@ -77,5 +72,16 @@ t_log* log_SAFA;
 t_list* CPU_libres;
 
 t_dictionary* claves;
+
+pthread_mutex_t mx_PCP;
+pthread_mutex_t mx_PLP;
+
+pthread_mutex_t mx_colas;
+pthread_mutex_t mx_CPUs;
+
+pthread_mutex_t mx_claves;
+
+
+
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */
