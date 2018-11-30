@@ -33,4 +33,6 @@ int cargarArchivoFM9(int pid, char* buffer);
 int guardarArchivoMDJ(char* path, char* buffer);
 char* obtenerArchivoMDJ(char *path);
 
+int recibirHeader(int socket, int headerEsperado);
+
 #endif /* DAM_H_ */

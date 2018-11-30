@@ -211,6 +211,7 @@ int recibirPeticionSeg(int socket) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
+		serializarYEnviarEntero(socket,LINEA_CARGADA);
 		return 0;
 	}
 

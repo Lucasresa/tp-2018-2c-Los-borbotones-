@@ -86,7 +86,11 @@ void* recibirPeticion(int socket, void* argumentos) {
 		desbloqueo_dummy* dummy;
 		dummy = recibirYDeserializar(socket,header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
-		char* misVeinteBytes = obtenerArchivoMDJ(dummy->path);
+		char* buffer = obtenerArchivoMDJ(dummy->path);
+
+		char* bufferTesteo = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
+		cargarArchivoFM9(dummy->id_dtb, bufferTesteo);
+
 		return 0;
 	}
 	}
@@ -126,25 +130,11 @@ int cargarArchivoFM9(int pid, char* buffer) {
 
 	datos_script->pid = pid;
 	datos_script->size_script = (int)strlen(buffer);
-	puts("enviando datos_script");
 	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
 	free(datos_script);
-	//serializarYEnviarEntero(FM9_fd, &tamanio_buffer);
 
-	int header;
-	int length = recv(FM9_fd,&header,sizeof(int),0);
-	if ( length == -1 ) {
-		perror("error");
-		log_error(log_DAM, "Socket FM9 sin conexión.");
-		close(FM9_fd);
+	if (recibirHeader(FM9_fd, MEMORIA_INICIALIZADA) != 0) {
 		return -1;
-	}
-
-	if (header != MEMORIA_INICIALIZADA) {
-		length = recv(FM9_fd,&header,sizeof(int),0);
-		if (header != MEMORIA_INICIALIZADA) {
-			log_error(log_DAM, "No recibí el header que esperaba del FM9.");
-		}
 	}
 
     char* linea = NULL;
@@ -160,6 +150,31 @@ int cargarArchivoFM9(int pid, char* buffer) {
         //printf("%i: %s\n", paquete.offset, paquete.linea);
         paquete.offset++;
         linea = strtok(NULL, "\n");
+    	if (recibirHeader(FM9_fd, LINEA_CARGADA) != 0) {
+    		return -1;
+    	}
     }
+    serializarYEnviarEntero(SAFA_fd,FINAL_CARGA_DUMMY);
+    serializarYEnviarEntero(SAFA_fd,pid);
     return 1;
+}
+
+int recibirHeader(int socket, int headerEsperado) {
+	int headerRecibido;
+	int length = recv(socket,&headerRecibido,sizeof(int),0);
+	if ( length == -1 ) {
+		perror("error");
+		log_error(log_DAM, "Socket sin conexión.");
+		close(socket);
+		return -1;
+	}
+
+	if (headerRecibido != headerEsperado) {
+		length = recv(socket,&headerRecibido,sizeof(int),0);
+		if (headerRecibido != headerEsperado) {
+			log_error(log_DAM, "No recibí el header que esperaba. Esperaba %s y recibí %s", headerEsperado, headerRecibido);
+			return -1;
+		}
+	}
+	return 0;
 }
