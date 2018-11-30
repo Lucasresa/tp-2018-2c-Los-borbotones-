@@ -226,6 +226,84 @@ int recibirPeticionSeg(int socket) {
 	return 0;
 }
 
+int recibirPeticionPagInv(int socket) {
+	int length;
+	int header;
+	length = recv(socket,&header,sizeof(int),0);
+	if ( length <= 0 ) {
+		close(socket);
+		FD_CLR(socket, &set_fd);
+		log_error(log_FM9, "Se perdió la conexión con un socket.");
+		perror("error");
+		return 0;
+	}
+
+	switch(header){
+	case 4:
+	{
+		return 0;
+	}
+	case INICIAR_MEMORIA_PID:
+	{
+		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
+		int pid = datos_script->pid;
+		int tamanio_script = datos_script->size_script;
+
+		int i = 0;
+
+		int cantidad_frames = tamanio_script/config_FM9.tam_pagina;
+
+		// Creo una tabla de paginas
+		list_add(lista_tabla_pag_inv, list_create());
+
+		// TODO: Busco en memoria espacio libre
+
+		// Creo una entrada en la tabla de paginacion invertida en un marco que tenga libre
+
+		for( i = 0; i < cantidad_frames; i = i + 1 ){
+		printf("Creo una entrada en el marco %i\n", ultimo_indice);
+		list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i)) ;
+		ultimo_indice = ultimo_indice+1;
+		}
+
+		free(datos_script);
+
+		int success=MEMORIA_INICIALIZADA;
+
+		serializarYEnviarEntero(socket,&success);
+		return 0;
+	}
+	case PEDIR_LINEA:
+	{
+		direccion_logica* direccion;
+		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
+		//direccion = recibirYDeserializar(socket,header);
+		return 0;
+	}
+	case ESCRIBIR_LINEA:
+	{
+		cargar_en_memoria* info_a_cargar;
+		info_a_cargar = recibirYDeserializar(socket,header);
+		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
+			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
+		}
+		free(info_a_cargar);
+		return 0;
+	}
+
+	case ENVIAR_ARCHIVO:
+	{
+		//char* linea_string;
+		//linea_string = recibirYDeserializar(socket,header);
+		//strcpy(memoria[memoria_counter],linea_string);
+		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
+		//memoria_counter++;
+		return 0;
+	}
+	}
+	return 0;
+}
+
 int leerMemoriaSeg(int pid, int id_segmento, int offset) {
 
 }
@@ -256,6 +334,7 @@ t_list* buscarTablaSeg(int pid) {
 	t_list* tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
 }
+
 int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 
 	//Buscamos
@@ -269,4 +348,6 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	memoria[fila_tabla_pag_inv->indice+offset] = linea;
 	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
 	return 0;
+
+	//Restricciones?
 }

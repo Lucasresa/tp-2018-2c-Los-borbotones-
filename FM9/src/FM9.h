@@ -48,10 +48,14 @@ t_log* log_FM9;
 char** memoria;
 int mem_libre_base;
 
+
+
 // Creo estructuras de segmentación
 t_list *lista_tablas_segmentos;
 t_list *tabla_segmentos_pid;
 
+
+//Fila de la tabla de paginacion invertida
 typedef struct fila_pag_invertida{
 
 	int indice;
@@ -60,9 +64,11 @@ typedef struct fila_pag_invertida{
 
 }fila_pag_invertida;
 
-// Estructuras de paginacion
+
+// Esta es la tabla de paginas entera
 t_list *lista_tabla_pag_inv;
 
+int ultimo_indice;
 
 fd_set set_fd;
 
