@@ -110,7 +110,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	int protocolo;
+	int protocolo, posicion_file;
 
 	if(dtb.quantum_sobrante!=0){
 		rafaga_actual=dtb.quantum_sobrante;
@@ -166,7 +166,20 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		case CLOSE:
 
-			if(isOpenFile(dtb,linea_parseada.argumentos.close.path)){
+			if((posicion_file=isOpenFile(dtb,linea_parseada.argumentos.close.path))!=-1){
+				direccion_logica* file = malloc(sizeof(direccion_logica));
+				file->pid=dtb.id;
+				file->offset=0;
+				file->base=getAccesoFile(dtb,linea_parseada.argumentos.close.path);
+
+				//Aca va lo de enviar la direccion al FM9
+
+				serializarYEnviar(FM9,CERRAR_ARCHIVO,file);
+
+				//---------------------------------------
+				//Actualizo la info del dtb (quito el archivo de su lista)
+				list_remove(dtb.archivos,posicion_file);
+
 				//Mandar a FM9 la informacion necesaria para que libere la memoria de dicho archivo
 				//Luego hay que actualizar la lista de archivos abiertos del dtb
 			}else{
@@ -238,7 +251,7 @@ void actualizarDTB(t_DTB* dtb){
 
 int isOpenFile(t_DTB dtb, char* path){
 
-	int i, retorno = 0;
+	int i, retorno = -1;
 
 	int cant_archivos = list_size(dtb.archivos);
 
@@ -249,7 +262,7 @@ int isOpenFile(t_DTB dtb, char* path){
 		archivo=list_get(dtb.archivos,i);
 
 		if(strcmp(archivo->path,path)==0){
-			retorno = 1;
+			retorno = i;
 			break;
 		}
 
@@ -257,3 +270,27 @@ int isOpenFile(t_DTB dtb, char* path){
 
 	return retorno;
 }
+
+int getAccesoFile(t_DTB dtb, char* path){
+
+	int cant_archivos = list_size(dtb.archivos);
+
+	int i,retorno;
+
+	t_archivo* archivo;
+
+	for(i=0;i<cant_archivos;i++){
+
+		archivo=list_get(dtb.archivos,i);
+
+		if(strcmp(archivo->path,path)==0){
+			retorno = archivo->acceso;
+			break;
+		}
+
+	}
+
+	return retorno;
+}
+
+

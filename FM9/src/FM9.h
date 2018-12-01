@@ -67,6 +67,7 @@ typedef struct fila_pag_invertida{
 	int indice;
 	int pid;
 	int pagina;
+	int flag;
 
 }fila_pag_invertida;
 
@@ -89,7 +90,7 @@ struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento
 int segmentoFirstFit(int tamanio);
 
 // Paginacion invertida
-struct fila_pag_invertida* crear_fila_tabla_pag_inv(int indice, int pid, int pagina);
+struct fila_pag_invertida* crear_fila_tabla_pag_inv(int indice, int pid, int pagina, int flag);
 
 void *consolaThread(void*);
 
@@ -99,5 +100,8 @@ void *recibirPeticion(int, void*);
 int recibirPeticionSeg(int);
 
 t_modo detectarModo(char*);
+
+int traducirOffset(int offset);
+int traducirPagina(int pagina,int offset);
 
 #endif /* FM9_H_ */

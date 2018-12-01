@@ -31,7 +31,7 @@ int main(){
 		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(0, config_FM9.tamanio/config_FM9.max_linea));
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
-		lista_tabla_pag_inv = list_create();
+		crearTablaPagInv();
 	}
 
 	/*
@@ -92,12 +92,13 @@ struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int tamanio) {
 	   return p;
 }
 
-struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina) {
+struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina,int flag) {
 	   struct fila_pag_invertida *p;
 	   p = (struct fila_pag_invertida *) malloc(sizeof(struct fila_pag_invertida));
 	   p->indice = indice;
 	   p->pid = pid;
 	   p->pagina = pagina;
+	   p->flag = flag;
 	   return p;
 }
 
@@ -287,9 +288,9 @@ int recibirPeticionPagInv(int socket) {
 		// Creo una entrada en la tabla de paginacion invertida en un marco que tenga libre
 
 		for( i = 0; i < cantidad_frames; i = i + 1 ){
-		printf("Creo una entrada en el marco %i\n", ultimo_indice);
-		list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i)) ;
-		ultimo_indice = ultimo_indice+1;
+			printf("Creo una entrada en el marco %i\n", ultimo_indice);
+			//list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i,0)) ;
+			ultimo_indice = ultimo_indice+1;
 		}
 
 		free(datos_script);
@@ -309,12 +310,17 @@ int recibirPeticionPagInv(int socket) {
 	case ESCRIBIR_LINEA:
 	{
 		cargar_en_memoria* info_a_cargar;
+
+		int pagina = 0;
+
 		info_a_cargar = recibirYDeserializar(socket,header);
-		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
-			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
-		}
+
+		//Cargo en memoria con mi pagina y offset traducido
+		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea, 1);
+
 		free(info_a_cargar);
 		return 0;
+
 	}
 
 	case ENVIAR_ARCHIVO:
@@ -345,6 +351,28 @@ char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
 
 }
 
+char* leerMemoriaPagInv(int pid, int pagina, int offset) {
+
+
+	int es_pid_pagina_buscados(fila_pag_invertida *p) {
+		return (p->pid == pid)&&(p->pagina == pagina);
+	}
+
+	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
+
+	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
+
+	int marcoEncontrado = fila_tabla_pag_inv->indice+offset;
+
+	printf("Leo memoria en posicion %i: '%s'\n", marcoEncontrado+offset, memoria[marcoEncontrado+offset]);
+
+	return memoria[marcoEncontrado+offset];
+
+
+}
+
+
+
 int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 
 	t_list *tabla_segmentos = buscarTablaSeg(pid);
@@ -372,7 +400,7 @@ t_list* buscarTablaSeg(int pid) {
 	return tabla_segmentos;
 }
 
-int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag) {
 
 	//Buscamos
 	int es_pid_pagina_buscados(fila_pag_invertida *p) {
@@ -386,7 +414,6 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
 	return 0;
 
-	//Restricciones?
 }
 
 int segmentoFirstFit(int lineas_segmento) {
@@ -404,3 +431,63 @@ int segmentoFirstFit(int lineas_segmento) {
 
 	return fila_memoria_vacia->base;
 }
+//Si el offset es mayor al tamaño maximo de una pagina, sumo la cantidad de paginas desplazadas a mi pagina, si no, no hago nada
+//EJEMPLO: Si mi offset es 30 y mi tamaño maximo de pagina es 15, voy a estar en la pagina 2, ya que 30/15 es 2 y 0+2 = 2
+
+int traducirPagina(int pagina,int offset){
+	if (offset > config_FM9.tam_pagina){
+		//la division del offset con el tamaño de la pagina me dice que tantas paginas se desplazo de la pagina 0
+		return pagina + (offset/config_FM9.tam_pagina);
+	}
+	else{
+		return pagina;
+	}
+}
+
+//Verifico como queda el offset después de desplazarme a una pagina (EL valor siempre va a dar menor a 15).
+//EJEMPLO: Si mi offset es 18 y mi tamaño maximo de pagina es 15, me va a quedar que el offset es 3
+
+int traducirOffset(int offset){
+	if (offset > config_FM9.tam_pagina){
+		return offset - config_FM9.tam_pagina * (offset/config_FM9.tam_pagina);
+	}
+	else{
+		return offset;
+	}
+}
+
+
+int crearTablaPagInv(){
+
+	int tamanio_memoria = config_FM9.tamanio;
+	int tamanio_pagina = config_FM9.tam_pagina;
+	int i;
+
+	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
+
+	for( i = 0; i < cantidad_marcos; i = i + 1 ){
+		crear_fila_tabla_pag_inv(i,0,0,0);
+	}
+
+
+}
+
+int estaVacio(fila_pag_invertida *p){
+	return (p->flag == 0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

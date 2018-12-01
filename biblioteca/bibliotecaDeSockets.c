@@ -184,6 +184,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((desbloqueo_dummy*)package)->id_dtb);
 		serializarYEnviarString(socket,((desbloqueo_dummy*)package)->path);
 		break;
+	case CERRAR_ARCHIVO:
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->pid);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->base);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
+		break;
 	}
 
 }
@@ -300,6 +305,14 @@ void* recibirYDeserializar(int socket,int tipo){
 		dummy->id_dtb=*recibirYDeserializarEntero(socket);
 		dummy->path = recibirYDeserializarString(socket);
 		return dummy;
+	}
+	case CERRAR_ARCHIVO:
+	{
+		direccion_logica* direccion = malloc(sizeof(direccion_logica));
+		direccion->pid=*recibirYDeserializarEntero(socket);
+		direccion->base=*recibirYDeserializarEntero(socket);
+		direccion->offset=*recibirYDeserializarEntero(socket);
+		return direccion;
 	}
 	default:
 		return NULL;
