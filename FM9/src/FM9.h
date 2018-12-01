@@ -90,4 +90,7 @@ int recibirPeticionSeg(int);
 
 t_modo detectarModo(char*);
 
+int traducirOffset(int offset);
+int traducirPagina(int pagina,int offset);
+
 #endif /* FM9_H_ */
