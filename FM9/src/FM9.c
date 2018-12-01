@@ -29,7 +29,7 @@ int main(){
 		tabla_segmentos_pid = list_create();
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
-		lista_tabla_pag_inv = list_create();
+		crearTablaPagInv();
 	}
 
 	/*
@@ -84,12 +84,13 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   return p;
 }
 
-struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina) {
+struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina,int flag) {
 	   struct fila_pag_invertida *p;
 	   p = (struct fila_pag_invertida *) malloc(sizeof(struct fila_pag_invertida));
 	   p->indice = indice;
 	   p->pid = pid;
 	   p->pagina = pagina;
+	   p->flag = flag;
 	   return p;
 }
 
@@ -278,9 +279,9 @@ int recibirPeticionPagInv(int socket) {
 		// Creo una entrada en la tabla de paginacion invertida en un marco que tenga libre
 
 		for( i = 0; i < cantidad_frames; i = i + 1 ){
-		printf("Creo una entrada en el marco %i\n", ultimo_indice);
-		list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i)) ;
-		ultimo_indice = ultimo_indice+1;
+			printf("Creo una entrada en el marco %i\n", ultimo_indice);
+			//list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i,0)) ;
+			ultimo_indice = ultimo_indice+1;
 		}
 
 		free(datos_script);
@@ -306,7 +307,7 @@ int recibirPeticionPagInv(int socket) {
 		info_a_cargar = recibirYDeserializar(socket,header);
 
 		//Cargo en memoria con mi pagina y offset traducido
-		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea);
+		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea, 1);
 
 		free(info_a_cargar);
 		return 0;
@@ -390,7 +391,7 @@ t_list* buscarTablaSeg(int pid) {
 	return tabla_segmentos;
 }
 
-int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag) {
 
 	//Buscamos
 	int es_pid_pagina_buscados(fila_pag_invertida *p) {
@@ -404,7 +405,6 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
 	return 0;
 
-	//Restricciones?
 }
 
 //Si el offset es mayor al tamaño maximo de una pagina, sumo la cantidad de paginas desplazadas a mi pagina, si no, no hago nada
@@ -431,4 +431,39 @@ int traducirOffset(int offset){
 		return offset;
 	}
 }
+
+
+int crearTablaPagInv(){
+
+	int tamanio_memoria = config_FM9.tamanio;
+	int tamanio_pagina = config_FM9.tam_pagina;
+	int i;
+
+	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
+
+	for( i = 0; i < cantidad_marcos; i = i + 1 ){
+		crear_fila_tabla_pag_inv(i,0,0,0);
+	}
+
+
+}
+
+int estaVacio(fila_pag_invertida *p){
+	return (p->flag == 0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
