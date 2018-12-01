@@ -211,7 +211,23 @@ int recibirPeticionSeg(int socket) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
+		int success=LINEA_CARGADA;
+		serializarYEnviarEntero(socket,&success);
 		return 0;
+	}
+	case CERRAR_ARCHIVO:
+	{
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		int id_segmento = direccion->base;
+
+		// Busco la tabla de segmentos del proceso:
+		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
+
+		// Remuevo el segmento indicado:
+		list_remove(tabla_segmentos, id_segmento);
+
+		//TODO: Registro que dicho espacio ahora está libre en memoria
 	}
 
 	case ENVIAR_ARCHIVO:

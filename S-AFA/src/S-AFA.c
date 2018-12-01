@@ -16,7 +16,9 @@ int main(){
 
 	crear_colas();
 
-	//Levanto archivo de configuracion del S-AFA
+	//Levanto archivo de configuracion del S-AFA e inicializo los semaforos
+
+	iniciar_semaforos();
 
 	load_config();
 
@@ -39,21 +41,21 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-//	DAM_fd=aceptarConexion(SAFA_fd);
-//
-//	if(DAM_fd==-1){
-//		perror("Error de conexion con DAM");
-//		log_destroy(log_SAFA);
-//		exit(1);
-//	}
-//
-//	log_info(log_SAFA,"Conexion exitosa con DAM");
-//
-//	pthread_t hiloDAM;
-//
-//	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
-//
-//	pthread_detach(hiloDAM);
+	DAM_fd=aceptarConexion(SAFA_fd);
+
+	if(DAM_fd==-1){
+		perror("Error de conexion con DAM");
+		log_destroy(log_SAFA);
+		exit(1);
+	}
+
+	log_info(log_SAFA,"Conexion exitosa con DAM");
+
+	pthread_t hiloDAM;
+
+	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
+
+	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -123,20 +125,27 @@ void eliminarSocketCPU(int fd){
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
-	int protocolo, id_dtb;
+	int* protocolo, id_dtb;
 	t_DTB* dtb=malloc(sizeof(t_DTB));
 	dtb->archivos=list_create();
 
-	protocolo=*recibirYDeserializarEntero(fd_DAM);
+	protocolo=recibirYDeserializarEntero(fd_DAM);
 
-	switch(protocolo){
+	if(protocolo==NULL){
+		log_error(log_SAFA,"Se perdio la conexion con DAM, cierro SAFA");
+		exit(0);
+	}
+
+	switch(*protocolo){
 	case FINAL_CARGA_DUMMY:
 		dtb->id=*recibirYDeserializarEntero(fd_DAM);
 
 		pthread_mutex_lock(&mx_PCP);
 		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
 		pthread_mutex_unlock(&mx_PCP);
-
+		pthread_mutex_lock(&mx_PCP);
+		ejecutarPCP(EJECUTAR_PROCESO,NULL);
+		pthread_mutex_unlock(&mx_PCP);
 		break;
 	case FINAL_ABRIR:
 	{

@@ -29,5 +29,6 @@ void comenzarEjecucion(int, int, int ,t_DTB);
 void notificarSAFA(int, int, t_DTB);
 int isOpenFile(t_DTB , char*);
 void actualizarDTB(t_DTB* );
+int getAccesoFile(t_DTB, char*);
 
 #endif /* CPU_H_ */
