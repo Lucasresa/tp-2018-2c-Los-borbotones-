@@ -12,6 +12,16 @@ void crear_colas(){
 
 }
 
+void iniciar_semaforos(){
+
+	pthread_mutex_init(&mx_CPUs,NULL);
+	pthread_mutex_init(&mx_PCP,NULL);
+	pthread_mutex_init(&mx_PLP,NULL);
+	pthread_mutex_init(&mx_claves,NULL);
+	pthread_mutex_init(&mx_colas,NULL);
+
+}
+
 void load_config(void){
 
 	file_SAFA=config_create("src/CONFIG_S-AFA.cfg");
