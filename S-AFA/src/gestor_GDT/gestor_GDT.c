@@ -304,11 +304,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		else
 			list_add(cola_ready,dtb);
 		pthread_mutex_unlock(&mx_colas);
-		if(list_size(CPU_libres)>0){
-			pthread_mutex_lock(&mx_PCP);
-			ejecutarPCP(EJECUTAR_PROCESO,NULL);
-			pthread_mutex_unlock(&mx_PCP);
-		}
 		break;
 	case DESBLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);

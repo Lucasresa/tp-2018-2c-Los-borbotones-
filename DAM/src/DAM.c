@@ -36,6 +36,7 @@ int main(){
 	FD_ZERO(&set_fd);
 	FD_SET(listener_socket, &set_fd);
 
+	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
 		exit(1);
@@ -44,10 +45,6 @@ int main(){
 		log_info(log_DAM,"Conexion con MDJ establecida");
 	}
 
-	while(true) {
-		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
-	}
-/*
 	//El DAM se conecta con FM9_fd
 	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
 		log_error(log_DAM,"Error al conectarse con FM9");
@@ -55,9 +52,18 @@ int main(){
 	} else {
 		log_info(log_DAM, "Conexión con FM9 establecido");
 	}
-*/
-	//El DAM se conecta con MDJ
 
+	//El DAM se conecta con SAFA
+	if(conectar(&SAFA_fd,config_DAM.puerto_safa,config_DAM.ip_safa)!=0){
+		log_error(log_DAM,"Error al conectarse con SAFA");
+		exit(1);
+	} else {
+		log_info(log_DAM, "Conexión con SAFA establecido");
+	}
+
+	while(true) {
+		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
+	}
 
 	return 0;
 }
@@ -82,15 +88,20 @@ void* recibirPeticion(int socket, void* argumentos) {
 	switch(header){
 	case DESBLOQUEAR_DUMMY:
 	{
-		log_info(log_DAM,"Recibi el header desbloquear dummy");
 		desbloqueo_dummy* dummy;
 		dummy = recibirYDeserializar(socket,header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
-		char* buffer = obtenerArchivoMDJ(dummy->path);
+		//char* buffer = obtenerArchivoMDJ(dummy->path);
 
-		char* bufferTesteo = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
+		char bufferTesteo[60] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
+		log_info(log_DAM,"Cargo archivo al FM9");
 		cargarArchivoFM9(dummy->id_dtb, bufferTesteo);
+		log_info(log_DAM,"Enviando final carga dummy");
 
+		int success=FINAL_CARGA_DUMMY;
+		serializarYEnviarEntero(SAFA_fd,&success);
+	    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
 	}
 	}
@@ -112,13 +123,11 @@ char* obtenerArchivoMDJ(char *path) {
 	serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
 	log_info(log_DAM,"Peticion envada...");
 	char *buffer = malloc(sizeof(char) * 21);
-	log_info(log_DAM,"asd");
 	while(1) {
 		buffer = recibirYDeserializarString(MDJ_fd);
 		//printf("Recibi: %s\n",buffer);
 		break;
 	}
-	log_info(log_DAM,"asd");
 
 	return buffer;
 }
@@ -154,8 +163,7 @@ int cargarArchivoFM9(int pid, char* buffer) {
     		return -1;
     	}
     }
-    serializarYEnviarEntero(SAFA_fd,FINAL_CARGA_DUMMY);
-    serializarYEnviarEntero(SAFA_fd,pid);
+
     return 1;
 }
 

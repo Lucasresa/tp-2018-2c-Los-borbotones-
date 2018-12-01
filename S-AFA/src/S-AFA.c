@@ -39,21 +39,21 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-//	DAM_fd=aceptarConexion(SAFA_fd);
-//
-//	if(DAM_fd==-1){
-//		perror("Error de conexion con DAM");
-//		log_destroy(log_SAFA);
-//		exit(1);
-//	}
-//
-//	log_info(log_SAFA,"Conexion exitosa con DAM");
-//
-//	pthread_t hiloDAM;
-//
-//	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
-//
-//	pthread_detach(hiloDAM);
+	DAM_fd=aceptarConexion(SAFA_fd);
+
+	if(DAM_fd==-1){
+		perror("Error de conexion con DAM");
+		log_destroy(log_SAFA);
+		exit(1);
+	}
+
+	log_info(log_SAFA,"Conexion exitosa con DAM");
+
+	pthread_t hiloDAM;
+
+	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
+
+	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -136,7 +136,9 @@ void atenderDAM(int*fd){
 		pthread_mutex_lock(&mx_PCP);
 		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
 		pthread_mutex_unlock(&mx_PCP);
-
+		pthread_mutex_lock(&mx_PCP);
+		ejecutarPCP(EJECUTAR_PROCESO,NULL);
+		pthread_mutex_unlock(&mx_PCP);
 		break;
 	case FINAL_ABRIR:
 	{

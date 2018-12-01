@@ -211,7 +211,8 @@ int recibirPeticionSeg(int socket) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
 		}
 		free(info_a_cargar);
-		serializarYEnviarEntero(socket,LINEA_CARGADA);
+		int success=LINEA_CARGADA;
+		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 
@@ -306,7 +307,6 @@ int recibirPeticionPagInv(int socket) {
 	return 0;
 }
 
-int leerMemoriaSeg(int pid, int id_segmento, int offset) {
 char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
 
 	t_list *tabla_segmentos = buscarTablaSeg(pid);
@@ -364,5 +364,4 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	return 0;
 
 	//Restricciones?
-}
 }

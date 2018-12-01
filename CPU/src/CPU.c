@@ -38,24 +38,23 @@ int main(){
 
 
 	//El CPU se conecta con "el diego"
-//	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
-//		log_error(log_CPU,"Error al conectarse con DAM");
-//		exit(1);
-//	}
+	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+		log_error(log_CPU,"Error al conectarse con DAM");
+		exit(1);
+	}
 
-//	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
-//		log_error(log_CPU,"Error al conectarse con FM9");
-//		exit(1);
-//	}
+	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
+		log_error(log_CPU,"Error al conectarse con FM9");
+		exit(1);
+	}
 
 
 	while(1){
-
+		log_info(log_CPU,"Recibo rafaga");
 		if(recv(SAFA_fd,&rafaga_recibida,sizeof(int),0)<=0){
 			perror("Error al recibir la rafaga de planificacion");
 			exit(1);
 		}
-
 		//Espero para recibir un DTB a ejecutar
 
 		log_info(log_CPU,"Esperando DTB del S-AFA");
