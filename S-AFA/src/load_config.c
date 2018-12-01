@@ -19,6 +19,7 @@ void iniciar_semaforos(){
 	pthread_mutex_init(&mx_PLP,NULL);
 	pthread_mutex_init(&mx_claves,NULL);
 	pthread_mutex_init(&mx_colas,NULL);
+	pthread_mutex_init(&mx_metricas,NULL);
 
 }
 

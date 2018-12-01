@@ -38,16 +38,21 @@ int main(){
 
 
 	//El CPU se conecta con "el diego"
-	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
-		log_error(log_CPU,"Error al conectarse con DAM");
-		exit(1);
-	}
+//	if(conectar(&DAM_fd,config_CPU.puerto_diego,config_CPU.ip_diego)!=0){
+//		log_error(log_CPU,"Error al conectarse con DAM");
+//		exit(1);
+//	}
+//
+//	log_info(log_CPU,"Conexion exitosa con DAM");
+//
+//	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
+//		log_error(log_CPU,"Error al conectarse con FM9");
+//		exit(1);
+//	}
+//
+//	log_info(log_CPU,"Conexion exitosa con FM9");
 
-	if(conectar(&FM9_fd,config_CPU.puerto_fm9,config_CPU.ip_fm9)!=0){
-		log_error(log_CPU,"Error al conectarse con FM9");
-		exit(1);
-	}
-
+	int test;
 
 	while(1){
 		log_info(log_CPU,"Recibo rafaga");
@@ -66,6 +71,17 @@ int main(){
 		log_info(log_CPU,"DTB Recibido con ID: %d",dtb.id);
 
 		rafaga_actual=rafaga_recibida;
+
+		while(1){
+			printf("Ejecutar una sentencia: ");
+			scanf("%d",&test);
+
+			if(test==3)
+				notificarSAFA(SAFA_fd,SENTENCIA_DAM,dtb);
+			else
+				notificarSAFA(SAFA_fd,SENTENCIA_EJECUTADA,dtb);
+
+		}
 
 		if(dtb.f_inicializacion==0){
 			log_info(log_CPU,"El DTB tiene su flag en 0, comenzando inicializacion...");
@@ -106,7 +122,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
-	int interrupcion=0;
+	int interrupcion=0,uso_DAM=0;
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
@@ -138,6 +154,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				protocolo=ABRIR_ARCHIVO;
 				serializarYEnviarEntero(DAM,&protocolo);
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
+				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
+				uso_DAM=1;
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 				interrupcion=1;
 			}
@@ -193,6 +211,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			crear_archivo->path=linea_parseada.argumentos.crear.path;
 			crear_archivo->cant_lineas=linea_parseada.argumentos.crear.lineas;
 			serializarYEnviar(DAM,CREAR_ARCHIVO,crear_archivo);
+			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
+			uso_DAM=1;
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			interrupcion=1;
 			break;
@@ -218,6 +238,9 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		log_warning(log_CPU, "Instruccion ejecutada, quantum restante = %d",dtb.quantum_sobrante);
 
+		if(!uso_DAM)
+			notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
+
 		usleep(config_CPU.retardo*1000);
 	}while(!interrupcion);
 
@@ -234,7 +257,7 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 	if(protocolo==ID_DTB)
 		serializarYEnviarEntero(SAFA,&id_dtb);
-	else
+	else if(protocolo!=SENTENCIA_EJECUTADA&&protocolo!=SENTENCIA_DAM)
 		serializarYEnviarDTB(SAFA,buffer,DTB);
 
 }

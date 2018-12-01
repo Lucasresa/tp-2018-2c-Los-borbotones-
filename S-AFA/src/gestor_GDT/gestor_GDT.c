@@ -88,7 +88,11 @@ void ejecutarComando(int nro_op, char * args){
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
 								list_size(dtb_status->archivos));
-
+						if(dtb_status->f_inicializacion==0){
+							printf("Tipo: DTB Dummy\n");
+						}else{
+							printf("Tipo: DTB Inicializado\n");
+						}
 						if(list_size(dtb_status->archivos)!=0){
 							t_archivo* archivo;
 							for(i=0;i<list_size(dtb_status->archivos);i++){
@@ -122,6 +126,21 @@ void ejecutarComando(int nro_op, char * args){
 			break;
 			case 4:
 				printf("La operacion es metricas y el parametro es: %s \n",args);
+				if(args==NULL){
+					printf("Sin parametro, sin terminar aun\n");
+				}else{
+					//Debo mostrar la cantidad de sentencias que espero el DTB en NEW
+					t_DTB* dtb_new;
+					int dtb_id = (int)strtol(args,(char**)NULL,10);
+					char* estado=buscarDTB(&dtb_new,dtb_id,0);
+					if(estado==NULL){
+						printf("El DTB no existe en el sistema\n");
+					}else{
+						t_metricas* metrica_dtb=buscarMetricasDTB(dtb_new->id);
+						printf("DTB %d\nCantidad de sentencias ejecutadas: %d\nCantidad de sentencias en NEW: %d\nCantidad de sentencias a DAM: %d\n",
+								metrica_dtb->id_dtb,metrica_dtb->sent_ejecutadas,metrica_dtb->sent_NEW,metrica_dtb->sent_DAM);
+					}
+				}
 			break;
 			case 5:
 				printf("Operaciones disponibles:\n\tejecutar <path archivo>\n\tstatus <ID-opcional->\n\tfinalizar <ID>\n\tmetricas <ID>\n");
@@ -131,7 +150,8 @@ void ejecutarComando(int nro_op, char * args){
 	}
 }
 
-//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
 //Funciones de busqueda de un DTB en las colas por su ID
 
 
@@ -198,6 +218,61 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 }
 
 //----------------------------------------------------------------------------------------------------------
+//_---------------------------------------------------------------------------------------------------------
+//Funciones para las metricas
+
+t_metricas* buscarMetricasDTB(int id){
+	int i;
+	int dtb_totales=list_size(info_metricas);
+	t_metricas* metrica;
+	for(i=0;i<dtb_totales;i++){
+		metrica=list_get(info_metricas,i);
+		if(metrica->id_dtb==id){
+			return metrica;
+		}
+	}
+
+	return NULL;
+}
+
+void actualizarMetricaDTB(int id, int protocolo){
+
+	int i, dtb_totales=list_size(info_metricas);
+
+	t_metricas* metrica;
+
+	for(i=0;i<dtb_totales;i++){
+		metrica=list_get(info_metricas,i);
+		if(metrica->id_dtb==id){
+			metrica->sent_ejecutadas++;
+			if(protocolo==SENTENCIA_DAM)
+				metrica->sent_DAM++;
+			break;
+		}
+	}
+}
+
+void actualizarMetricasDTBNew(){
+
+	int i, total_new=list_size(cola_new);
+	int id_dtb;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_new;i++){
+		id_dtb=((t_DTB*)list_get(cola_new,i))->id;
+
+		log_info(log_SAFA,"Actualizando metrica de espera en NEW para DTB %d",id_dtb);
+
+		metrica=buscarMetricasDTB(id_dtb);
+
+		metrica->sent_NEW++;
+
+	}
+
+}
+
+//----------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
@@ -211,6 +286,15 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->id=cont_id;
 	dtb->archivos=list_create();
 	cont_id++;
+
+	//Cargo informacion necesaria del DTB para el manejo de metricas
+	t_metricas* metrica_dtb=malloc(sizeof(t_metricas));
+	metrica_dtb->id_dtb=dtb->id;
+	metrica_dtb->sent_DAM=0;
+	metrica_dtb->sent_ejecutadas=0;
+	metrica_dtb->sent_NEW=0;
+	//Agrego esa informacion a esta lista auxiliar
+	list_add(info_metricas,metrica_dtb);
 
 	pthread_mutex_lock(&mx_colas);
 	list_add(cola_new,dtb);

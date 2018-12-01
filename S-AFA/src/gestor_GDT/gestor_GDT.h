@@ -25,6 +25,15 @@ typedef struct{
 }t_config_SAFA;
 
 typedef struct{
+
+	int id_dtb;
+	int sent_NEW;
+	int sent_ejecutadas;
+	int sent_DAM;
+
+}t_metricas;
+
+typedef struct{
 	int valor;
 	t_list* cola_bloqueados;
 }t_semaforo;
@@ -41,6 +50,9 @@ void ejecutarComando(int nro_op , char * args);
 
 char* buscarDTB(t_DTB** ,int ,int );
 t_DTB* buscarDTBEnCola(t_list* ,int ,int );
+t_metricas* buscarMetricasDTB(int);
+void actualizarMetricaDTB(int , int );
+void actualizarMetricasDTBNew();
 
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
@@ -53,19 +65,17 @@ void algoritmo_PROPIO(t_DTB* dtb);
 
 
 t_config* file_SAFA;
+t_config_SAFA config_SAFA;
 
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_ready_VRR;
 t_list* cola_ready_IOBF;
 
-
 t_dictionary* cola_block;
 t_dictionary* cola_exec;
 
 t_list* cola_exit;
-
-t_config_SAFA config_SAFA;
 
 t_log* log_SAFA;
 
@@ -81,7 +91,9 @@ pthread_mutex_t mx_CPUs;
 
 pthread_mutex_t mx_claves;
 
+pthread_mutex_t mx_metricas;
 
+t_list* info_metricas;
 
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */
