@@ -13,6 +13,7 @@
 pthread_mutex_t File_config;
 
 void crear_colas(void);
+void iniciar_semaforos();
 void load_config(void);
 t_algoritmo detectarAlgoritmo(char*algoritmo);
 

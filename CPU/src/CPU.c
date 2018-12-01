@@ -92,7 +92,7 @@ void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 
 	notificarSAFA(SAFA_fd,protocolo,*dtb);
 
-	usleep(config_CPU.retardo*10000);
+	usleep(config_CPU.retardo*1000);
 
 }
 
@@ -175,13 +175,15 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}
 			break;
 		case CREAR:
-			protocolo=CREAR_ARCHIVO;
-			serializarYEnviarEntero(DAM,&protocolo);
-			serializarYEnviarString(DAM,linea_parseada.argumentos.crear.path);
-			serializarYEnviarEntero(DAM,&(linea_parseada.argumentos.crear.lineas));
+		{
+			peticion_crear* crear_archivo=malloc(sizeof(peticion_crear));
+			crear_archivo->path=linea_parseada.argumentos.crear.path;
+			crear_archivo->cant_lineas=linea_parseada.argumentos.crear.lineas;
+			serializarYEnviar(DAM,CREAR_ARCHIVO,crear_archivo);
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			interrupcion=1;
 			break;
+		}
 		case BORRAR:
 			break;
 		default:

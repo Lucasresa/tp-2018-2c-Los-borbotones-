@@ -16,7 +16,9 @@ int main(){
 
 	crear_colas();
 
-	//Levanto archivo de configuracion del S-AFA
+	//Levanto archivo de configuracion del S-AFA e inicializo los semaforos
+
+	iniciar_semaforos();
 
 	load_config();
 
@@ -123,13 +125,18 @@ void eliminarSocketCPU(int fd){
 //Funcion que se encargara de recibir mensajes del DAM
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
-	int protocolo, id_dtb;
+	int* protocolo, id_dtb;
 	t_DTB* dtb=malloc(sizeof(t_DTB));
 	dtb->archivos=list_create();
 
-	protocolo=*recibirYDeserializarEntero(fd_DAM);
+	protocolo=recibirYDeserializarEntero(fd_DAM);
 
-	switch(protocolo){
+	if(protocolo==NULL){
+		log_error(log_SAFA,"Se perdio la conexion con DAM, cierro SAFA");
+		exit(0);
+	}
+
+	switch(*protocolo){
 	case FINAL_CARGA_DUMMY:
 		dtb->id=*recibirYDeserializarEntero(fd_DAM);
 
