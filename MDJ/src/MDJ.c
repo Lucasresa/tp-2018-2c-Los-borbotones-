@@ -427,8 +427,8 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	char *pathBloqueCompleto;
 	printf("%d",cantidadBloques);
 	for(i=0;i<cantidadBloques;i++){
-		puts("bloque:");
-		printf("%d",i);
+		puts("numero de bloque:");
+		printf("\n%d\n",i);
 		metadataArchivo.tamanio=metadataArchivo.tamanio -sizeArchivoBloque;
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
@@ -464,6 +464,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		close(f);
 
 	}
+	//int flag=2;
 	char *sub= malloc(obtener->size+1);
 	int desplazamiento_archivo;
 	desplazamiento_archivo=obtener->offset*obtener->size;
@@ -474,9 +475,14 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		int copiarHasta = desplazamiento_archivo + obtener->size;
 		copiarHasta -= metadataArchivo.tamanio;
 		strncpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
+		//flag=3;
 	}
 	printf("Enviando: %s\n",sub);
 	serializarYEnviarString(DAM_fd, sub);
+	/*if(flag=!2){
+		char *terminado="-1";
+		serializarYEnviarString(DAM_fd, "-1");
+	}*/
 	free(sub);
 }
 char *archivo_path(char *path_archivo){

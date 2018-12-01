@@ -91,7 +91,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		desbloqueo_dummy* dummy;
 		dummy = recibirYDeserializar(socket,header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
-		//char* buffer = obtenerArchivoMDJ(dummy->path);
+		char* buffer = obtenerArchivoMDJ(dummy->path);
 
 		char bufferTesteo[60] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
 		log_info(log_DAM,"Cargo archivo al FM9");
@@ -125,7 +125,7 @@ char* obtenerArchivoMDJ(char *path) {
 	char *buffer = malloc(sizeof(char) * 21);
 	while(1) {
 		buffer = recibirYDeserializarString(MDJ_fd);
-		//printf("Recibi: %s\n",buffer);
+		printf("Recibi: %s\n",buffer);
 		break;
 	}
 
