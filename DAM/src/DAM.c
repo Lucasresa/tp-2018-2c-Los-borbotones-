@@ -138,7 +138,13 @@ int cargarArchivoFM9(int pid, char* buffer) {
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 
 	datos_script->pid = pid;
-	datos_script->size_script = (int)strlen(buffer);
+    int count = 0;
+    char *ptr = buffer;
+    while((ptr = strchr(ptr, '\n')) != NULL) {
+        count++;
+        ptr++;
+    }
+	datos_script->size_script = count;
 	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
 	free(datos_script);
 
