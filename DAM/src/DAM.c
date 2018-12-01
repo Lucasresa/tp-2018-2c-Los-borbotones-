@@ -116,20 +116,32 @@ int guardarArchivoMDJ(char* path, char* buffer) {
 }
 
 char* obtenerArchivoMDJ(char *path) {
-	peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=0,.size=20};
-
-	log_info(log_DAM,"Enviando peticion al MDJ...");
-
-	serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
-	log_info(log_DAM,"Peticion envada...");
-	char *buffer = malloc(sizeof(char) * 21);
-	while(1) {
-		buffer = recibirYDeserializarString(MDJ_fd);
-		printf("Recibi: %s\n",buffer);
-		break;
+	char *enviar = malloc(sizeof(char) * 21);
+	int offset_enviar;
+	offset_enviar=0;
+	while (1){
+		peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=offset_enviar,.size=10};
+		log_info(log_DAM,"Enviando peticion al MDJ...");
+		serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
+		log_info(log_DAM,"Peticion envada...");
+		char *buffer = malloc(sizeof(char) * 21);
+		while(1) {
+			buffer = recibirYDeserializarString(MDJ_fd);
+			printf("Recibi: %s\n",buffer);
+			break;
+		}
+		if(offset_enviar==0){
+			strncpy(enviar,buffer,10);
+		}
+		if(!strncmp(buffer, "-1", 1)){
+			break;
+		}
+		offset_enviar++;
+		string_append(&enviar,buffer);
+		free(buffer);
 	}
-
-	return buffer;
+	puts(enviar);
+	return enviar;
 }
 
 int cargarArchivoFM9(int pid, char* buffer) {
