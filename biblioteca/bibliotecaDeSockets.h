@@ -44,8 +44,9 @@ typedef enum{
 	INICIAR_MEMORIA_PID, // Para el DAM al FM9
 	ESCRIBIR_LINEA,      // Para el DAM al FM9
 	MEMORIA_INICIALIZADA,// Para el FM9 al DAM
-	LINEA_CARGADA,      // Para el FM9 al DAM
+	LINEA_CARGADA,       // Para el FM9 al DAM
 	PEDIR_LINEA,         // Para el CPU al FM9
+	CERRAR_ARCHIVO,      // Para el CPU al FM9
 	PEDIR_DATOS,
 	ABRIR_ARCHIVO,
 	BORRAR_DATOS
