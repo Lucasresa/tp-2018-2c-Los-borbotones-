@@ -51,10 +51,9 @@ int main(){
 
 	leerMetaData();
 	cerrarMDJ=0;
-//	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
+	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
 	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
 	//conexion_DMA();
-
 	//if (crear_carpetas() != 0) {
 	//	log_error(log_MDJ,"Error al crear los directorios para el MDJ");
 	//	return -1;
@@ -71,7 +70,7 @@ int main(){
 		if(cerrarMDJ==1)
 			break;
 	}
-//	pthread_detach(hilo_consola);
+	pthread_detach(hilo_consola);
 	pthread_detach(hilo_conexion);
 
 }
@@ -172,15 +171,13 @@ void determinarOperacion(int operacion,int fd) {
 
 }
 
+
 void crearArchivo(char *path, int numero_lineas) {
     FILE* fichero_metadata;
     FILE* bloque_crear;
-
     //Creacion Del archivo
-    char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path)+strlen(".bit") );
-    strcpy(complete_path, config_MDJ.mount_point);
-    strcat(complete_path, "/Archivos/");
-    strcat(complete_path, path);
+
+    char *complete_path =archivo_path(path);
     fichero_metadata = fopen(complete_path, "wr");
     fclose(fichero_metadata);
 
@@ -321,17 +318,9 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-					//cmd_bloque(linea);
-					t_config *archivo_MetaData;
-					//ver path
-					puts("Funciono1");
-					archivo_MetaData=config_create("/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio");
-					puts("Funciono2");
-					t_config_MetaArchivo metadataArchivo;
-					metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
-					metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-					archivo_a_guardar.path="/home/utnso/fifa-examples/fifa-checkpoint/Archivos/scripts/checkpoint.escriptorio";
-					actualizarARchivo(&metadataArchivo,40,100);
+			char * path = "/scripts/test";
+			//crearArchivo(path,10);
+			borrar_archivo(path);
 		}
 
 	}
@@ -524,9 +513,10 @@ char *archivo_path(char *path_archivo){
     strcpy(complete_path, config_MDJ.mount_point);
     strcat(complete_path, "/Archivos/");
     strcat(complete_path, path_archivo);
-    puts(path_archivo);
+
     return complete_path;
 }
+
 char *bloque_path(char *numeroBloque){
 
 	char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Bloques/") + strlen(numeroBloque)+ strlen(".bin"));
@@ -554,8 +544,9 @@ int leerMetaData(){
 
 int borrar_archivo(char *path_archivo){
         char * complete_path;
-        if(existe_archivo(path_archivo)==0){
-        	    complete_path = archivo_path(path_archivo);
+        complete_path = archivo_path(path_archivo);
+        if(existe_archivo(complete_path)==0){
+
                 remove(complete_path);
                 free(complete_path);
                 return 0;
