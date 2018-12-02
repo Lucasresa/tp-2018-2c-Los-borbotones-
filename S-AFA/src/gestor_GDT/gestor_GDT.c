@@ -88,7 +88,11 @@ void ejecutarComando(int nro_op, char * args){
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
 								list_size(dtb_status->archivos));
-
+						if(dtb_status->f_inicializacion==0){
+							printf("Tipo: DTB Dummy\n");
+						}else{
+							printf("Tipo: DTB Inicializado\n");
+						}
 						if(list_size(dtb_status->archivos)!=0){
 							t_archivo* archivo;
 							for(i=0;i<list_size(dtb_status->archivos);i++){
@@ -121,7 +125,54 @@ void ejecutarComando(int nro_op, char * args){
 				}
 			break;
 			case 4:
-				printf("La operacion es metricas y el parametro es: %s \n",args);
+				pthread_mutex_lock(&mx_metricas);
+				if(args==NULL){
+
+					float sentencias_DAM, sentencias_Totales, sentencias_Exit, total_Procesos, procesos_Exit;
+					float promedio_sentencias_DAM, promedio_sentencias_Exit;
+					float porcentaje_sentencias_DAM;
+
+					sentencias_DAM = (float)getSentenciasDAM();
+					sentencias_Totales = (float)getSentenciasTotales();
+					sentencias_Exit = (float)getSentenciasParaExit();
+					total_Procesos = (float)list_size(info_metricas);
+					procesos_Exit = (float)list_size(cola_exit);
+
+					if(procesos_Exit!=0)
+						promedio_sentencias_Exit = sentencias_Exit/procesos_Exit;
+					else
+						promedio_sentencias_Exit = 0;
+
+					if(total_Procesos!=0)
+						promedio_sentencias_DAM = sentencias_DAM/total_Procesos;
+					else
+						promedio_sentencias_DAM = 0;
+
+					if(sentencias_Totales!=0)
+						porcentaje_sentencias_DAM = (sentencias_DAM/sentencias_Totales)*100;
+					else
+						porcentaje_sentencias_DAM = 0;
+
+					printf("Cantidad de sentencias ejecutadas promedio del sistema que usaron a 'El diego': %0.2f\n"
+							"Cantidad de sentencias ejecutadas promedio del sistema para que un DTB termine	en la cola EXIT: %0.2f\n"
+							"Porcentaje de las sentencias ejecutadas promedio que fueron a 'El Diego': %0.2f%%\n"
+							"Tiempo de Respuesta promedio del Sistema: ??\n",
+							promedio_sentencias_DAM, promedio_sentencias_Exit,porcentaje_sentencias_DAM);
+
+				}else{
+					//Debo mostrar la cantidad de sentencias que espero el DTB en NEW
+					t_DTB* dtb_new;
+					int dtb_id = (int)strtol(args,(char**)NULL,10);
+					char* estado=buscarDTB(&dtb_new,dtb_id,0);
+					if(estado==NULL){
+						printf("El DTB no existe en el sistema\n");
+					}else{
+						t_metricas* metrica_dtb=buscarMetricasDTB(dtb_new->id);
+						printf("DTB %d\nCantidad de sentencias ejecutadas: %d\nCantidad de sentencias en NEW: %d\nCantidad de sentencias a DAM: %d\n",
+								metrica_dtb->id_dtb,metrica_dtb->sent_ejecutadas,metrica_dtb->sent_NEW,metrica_dtb->sent_DAM);
+					}
+				}
+			pthread_mutex_unlock(&mx_metricas);
 			break;
 			case 5:
 				printf("Operaciones disponibles:\n\tejecutar <path archivo>\n\tstatus <ID-opcional->\n\tfinalizar <ID>\n\tmetricas <ID>\n");
@@ -131,7 +182,8 @@ void ejecutarComando(int nro_op, char * args){
 	}
 }
 
-//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
 //Funciones de busqueda de un DTB en las colas por su ID
 
 
@@ -198,6 +250,109 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 }
 
 //----------------------------------------------------------------------------------------------------------
+//_---------------------------------------------------------------------------------------------------------
+//Funciones para las metricas
+
+t_metricas* buscarMetricasDTB(int id){
+	int i;
+	int dtb_totales=list_size(info_metricas);
+	t_metricas* metrica;
+	for(i=0;i<dtb_totales;i++){
+		metrica=list_get(info_metricas,i);
+		if(metrica->id_dtb==id){
+			return metrica;
+		}
+	}
+
+	return NULL;
+}
+
+void actualizarMetricaDTB(int id, int protocolo){
+
+	int i, dtb_totales=list_size(info_metricas);
+
+	t_metricas* metrica;
+
+	for(i=0;i<dtb_totales;i++){
+		metrica=list_get(info_metricas,i);
+		if(metrica->id_dtb==id){
+			metrica->sent_ejecutadas++;
+			if(protocolo==SENTENCIA_DAM)
+				metrica->sent_DAM++;
+			break;
+		}
+	}
+}
+
+void actualizarMetricasDTBNew(){
+
+	int i, total_new=list_size(cola_new);
+	int id_dtb;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_new;i++){
+		id_dtb=((t_DTB*)list_get(cola_new,i))->id;
+
+		log_info(log_SAFA,"Actualizando metrica de espera en NEW para DTB %d",id_dtb);
+
+		metrica=buscarMetricasDTB(id_dtb);
+
+		metrica->sent_NEW++;
+
+	}
+
+}
+
+int getSentenciasDAM(){
+
+	int sumatoria=0,total_procesos=list_size(info_metricas),i;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_procesos;i++){
+		metrica=list_get(info_metricas,i);
+
+		sumatoria+=metrica->sent_DAM;
+
+	}
+
+	return sumatoria;
+}
+
+int getSentenciasTotales(){
+
+	int sumatoria=0,total_procesos=list_size(info_metricas),i;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_procesos;i++){
+		metrica=list_get(info_metricas,i);
+
+		sumatoria+=metrica->sent_ejecutadas;
+
+	}
+
+	return sumatoria;
+}
+
+int getSentenciasParaExit(){
+
+	int sumatoria=0,total_procesos=list_size(cola_exit),i;
+
+	t_DTB* dtb_aux;
+
+	for(i=0;i<total_procesos;i++){
+		dtb_aux=list_get(cola_exit,i);
+
+		sumatoria+=dtb_aux->pc;
+
+	}
+
+	return sumatoria;
+}
+
+//----------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
 
@@ -211,6 +366,15 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->id=cont_id;
 	dtb->archivos=list_create();
 	cont_id++;
+
+	//Cargo informacion necesaria del DTB para el manejo de metricas
+	t_metricas* metrica_dtb=malloc(sizeof(t_metricas));
+	metrica_dtb->id_dtb=dtb->id;
+	metrica_dtb->sent_DAM=0;
+	metrica_dtb->sent_ejecutadas=0;
+	metrica_dtb->sent_NEW=0;
+	//Agrego esa informacion a esta lista auxiliar
+	list_add(info_metricas,metrica_dtb);
 
 	pthread_mutex_lock(&mx_colas);
 	list_add(cola_new,dtb);
@@ -265,6 +429,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 	t_DTB* dtb_aux;
 
+	pthread_mutex_lock(&mx_metricas);
 	switch(operacion){
 	case EJECUTAR_PROCESO:
 		//Si no hay CPUs libres entonces no hace nada
@@ -340,6 +505,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		break;
 	}
 
+	pthread_mutex_unlock(&mx_metricas);
 	usleep(config_SAFA.retardo*1000);
 
 }

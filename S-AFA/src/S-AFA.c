@@ -16,6 +16,8 @@ int main(){
 
 	crear_colas();
 
+	info_metricas=list_create();
+
 	//Levanto archivo de configuracion del S-AFA e inicializo los semaforos
 
 	iniciar_semaforos();
@@ -41,21 +43,21 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-	DAM_fd=aceptarConexion(SAFA_fd);
-
-	if(DAM_fd==-1){
-		perror("Error de conexion con DAM");
-		log_destroy(log_SAFA);
-		exit(1);
-	}
-
-	log_info(log_SAFA,"Conexion exitosa con DAM");
-
-	pthread_t hiloDAM;
-
-	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
-
-	pthread_detach(hiloDAM);
+//	DAM_fd=aceptarConexion(SAFA_fd);
+//
+//	if(DAM_fd==-1){
+//		perror("Error de conexion con DAM");
+//		log_destroy(log_SAFA);
+//		exit(1);
+//	}
+//
+//	log_info(log_SAFA,"Conexion exitosa con DAM");
+//
+//	pthread_t hiloDAM;
+//
+//	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
+//
+//	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -185,7 +187,7 @@ void atenderCPU(int*fd){
 
 	log_info(log_SAFA,"ejecutando PCP...");
 
-	pthread_mutex_trylock(&mx_PCP);
+	pthread_mutex_lock(&mx_PCP);
 	ejecutarPCP(EJECUTAR_PROCESO,NULL);
 	pthread_mutex_unlock(&mx_PCP);
 
@@ -229,7 +231,7 @@ void atenderCPU(int*fd){
 		t_DTB dtb_modificado;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		if(protocolo!=ID_DTB)
+		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_EJECUTADA&&protocolo!=SENTENCIA_DAM)
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
 
 		char* clave;
@@ -306,6 +308,14 @@ void atenderCPU(int*fd){
 		}else if(protocolo==ID_DTB){
 			dtb_cpu=*recibirYDeserializarEntero(fd_CPU);
 			log_info(log_SAFA,"Recibido el id del dtb que ejecuta el CPU, %d",dtb_cpu);
+		}else if(protocolo==SENTENCIA_EJECUTADA){
+			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
+			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarMetricasDTBNew();
+		}else if(protocolo==SENTENCIA_DAM){
+			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
+			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarMetricasDTBNew();
 		}
 		else{
 

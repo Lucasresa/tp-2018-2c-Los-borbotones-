@@ -27,9 +27,11 @@ int main(){
 		// Creo estructuras de segmentación
 		lista_tablas_segmentos = list_create();
 		tabla_segmentos_pid = list_create();
+		memoria_vacia_seg = list_create();
+		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(0, config_FM9.tamanio/config_FM9.max_linea));
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
-		lista_tabla_pag_inv = list_create();
+		crearTablaPagInv();
 	}
 
 	/*
@@ -65,8 +67,6 @@ char** iniciar_memoria() {
 	char** memoria;
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
 
-	mem_libre_base = 0;
-
 	memoria = malloc(cantidad_lineas * sizeof(memoria));
 
 	for (int n=0; n<cantidad_lineas; n++) {
@@ -84,12 +84,21 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   return p;
 }
 
-struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina) {
+struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int tamanio) {
+	   struct fila_memoria_vacia_seg *p;
+	   p = (struct fila_memoria_vacia_seg *) malloc(sizeof(struct fila_memoria_vacia_seg));
+	   p->base = base;
+	   p->cant_lineas = tamanio;
+	   return p;
+}
+
+struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pagina,int flag) {
 	   struct fila_pag_invertida *p;
 	   p = (struct fila_pag_invertida *) malloc(sizeof(struct fila_pag_invertida));
 	   p->indice = indice;
 	   p->pid = pid;
 	   p->pagina = pagina;
+	   p->flag = flag;
 	   return p;
 }
 
@@ -183,11 +192,11 @@ int recibirPeticionSeg(int socket) {
 		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
 
 		// TODO: Busco en memoria espacio libre
+		int base_vacia = segmentoFirstFit(size_scriptorio);
 
 		// Creo un segmento en la tabla
-		printf("Creo un segmento en posicion %i\n", mem_libre_base);
-		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,mem_libre_base));
-		mem_libre_base = mem_libre_base+size_scriptorio+1;
+		printf("Creo un segmento en posicion %i\n", base_vacia);
+		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,base_vacia));
 
 		free(datos_script);
 
@@ -228,6 +237,7 @@ int recibirPeticionSeg(int socket) {
 		list_remove(tabla_segmentos, id_segmento);
 
 		//TODO: Registro que dicho espacio ahora está libre en memoria
+		return 0;
 	}
 
 	case ENVIAR_ARCHIVO:
@@ -278,9 +288,9 @@ int recibirPeticionPagInv(int socket) {
 		// Creo una entrada en la tabla de paginacion invertida en un marco que tenga libre
 
 		for( i = 0; i < cantidad_frames; i = i + 1 ){
-		printf("Creo una entrada en el marco %i\n", ultimo_indice);
-		list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i)) ;
-		ultimo_indice = ultimo_indice+1;
+			printf("Creo una entrada en el marco %i\n", ultimo_indice);
+			//list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i,0)) ;
+			ultimo_indice = ultimo_indice+1;
 		}
 
 		free(datos_script);
@@ -306,7 +316,7 @@ int recibirPeticionPagInv(int socket) {
 		info_a_cargar = recibirYDeserializar(socket,header);
 
 		//Cargo en memoria con mi pagina y offset traducido
-		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea);
+		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea, 1);
 
 		free(info_a_cargar);
 		return 0;
@@ -390,7 +400,7 @@ t_list* buscarTablaSeg(int pid) {
 	return tabla_segmentos;
 }
 
-int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag) {
 
 	//Buscamos
 	int es_pid_pagina_buscados(fila_pag_invertida *p) {
@@ -404,9 +414,23 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea) {
 	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
 	return 0;
 
-	//Restricciones?
 }
 
+int segmentoFirstFit(int lineas_segmento) {
+	//Buscamos
+	int tiene_suficiente_tamanio(fila_memoria_vacia_seg *p) {
+		return (p->cant_lineas > lineas_segmento);
+	}
+
+	// Busco el first fit y elimino el hueco ya que va a ser usado por el nuevo segmento
+	fila_memoria_vacia_seg *fila_memoria_vacia = list_remove_by_condition(memoria_vacia_seg, (void*) tiene_suficiente_tamanio);
+
+	// Añado el nuevo hueco reducido
+	fila_memoria_vacia_seg* nueva_fila = crear_fila_mem_vacia_seg(fila_memoria_vacia->base + lineas_segmento, fila_memoria_vacia->cant_lineas - lineas_segmento);
+	list_add(memoria_vacia_seg, nueva_fila);
+
+	return fila_memoria_vacia->base;
+}
 //Si el offset es mayor al tamaño maximo de una pagina, sumo la cantidad de paginas desplazadas a mi pagina, si no, no hago nada
 //EJEMPLO: Si mi offset es 30 y mi tamaño maximo de pagina es 15, voy a estar en la pagina 2, ya que 30/15 es 2 y 0+2 = 2
 
@@ -431,4 +455,39 @@ int traducirOffset(int offset){
 		return offset;
 	}
 }
+
+
+int crearTablaPagInv(){
+
+	int tamanio_memoria = config_FM9.tamanio;
+	int tamanio_pagina = config_FM9.tam_pagina;
+	int i;
+
+	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
+
+	for( i = 0; i < cantidad_marcos; i = i + 1 ){
+		crear_fila_tabla_pag_inv(i,0,0,0);
+	}
+
+
+}
+
+int estaVacio(fila_pag_invertida *p){
+	return (p->flag == 0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
