@@ -125,6 +125,7 @@ void ejecutarComando(int nro_op, char * args){
 				}
 			break;
 			case 4:
+				pthread_mutex_lock(&mx_metricas);
 				if(args==NULL){
 
 					float sentencias_DAM, sentencias_Totales, sentencias_Exit, total_Procesos, procesos_Exit;
@@ -171,6 +172,7 @@ void ejecutarComando(int nro_op, char * args){
 								metrica_dtb->id_dtb,metrica_dtb->sent_ejecutadas,metrica_dtb->sent_NEW,metrica_dtb->sent_DAM);
 					}
 				}
+			pthread_mutex_unlock(&mx_metricas);
 			break;
 			case 5:
 				printf("Operaciones disponibles:\n\tejecutar <path archivo>\n\tstatus <ID-opcional->\n\tfinalizar <ID>\n\tmetricas <ID>\n");
@@ -427,6 +429,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 	t_DTB* dtb_aux;
 
+	pthread_mutex_lock(&mx_metricas);
 	switch(operacion){
 	case EJECUTAR_PROCESO:
 		//Si no hay CPUs libres entonces no hace nada
@@ -502,6 +505,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		break;
 	}
 
+	pthread_mutex_unlock(&mx_metricas);
 	usleep(config_SAFA.retardo*1000);
 
 }

@@ -72,17 +72,6 @@ int main(){
 
 		rafaga_actual=rafaga_recibida;
 
-		while(1){
-			printf("Ejecutar una sentencia: ");
-			scanf("%d",&test);
-
-			if(test==3)
-				notificarSAFA(SAFA_fd,SENTENCIA_DAM,dtb);
-			else
-				notificarSAFA(SAFA_fd,SENTENCIA_EJECUTADA,dtb);
-
-		}
-
 		if(dtb.f_inicializacion==0){
 			log_info(log_CPU,"El DTB tiene su flag en 0, comenzando inicializacion...");
 			inicializarDTB(DAM_fd,SAFA_fd,&dtb);
