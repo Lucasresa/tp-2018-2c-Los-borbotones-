@@ -96,7 +96,10 @@ pthread_mutex_t mx_claves;
 
 pthread_mutex_t mx_metricas;
 
+pthread_mutex_t File_config;
+
 t_list* info_metricas;
 
+int multiprogramacion_actual;
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

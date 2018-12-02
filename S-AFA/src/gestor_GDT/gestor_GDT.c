@@ -65,6 +65,7 @@ void ejecutarComando(int nro_op, char * args){
 			}
 			case 2:
 				if(args==NULL){
+				pthread_mutex_lock(&File_config);
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
@@ -73,9 +74,11 @@ void ejecutarComando(int nro_op, char * args){
 					}else if(config_SAFA.algoritmo==IOBF){
 						printf("IOBF: %d\n",list_size(cola_ready_IOBF));
 					}
-				printf("Grado de Multiprogramacion: %d\n",config_SAFA.multiprog);
+				printf("Grado de Multiprogramacion General: %d\n",config_SAFA.multiprog);
+				printf("Grado de Multiprogramacion Actual: %d\n",multiprogramacion_actual);
 				printf("Retardo de planificacion: %d\n",config_SAFA.retardo);
 				printf("Quantum actual: %d\nSi es 0 significa que el sistema usa FIFO\n",config_SAFA.quantum);
+				pthread_mutex_unlock(&File_config);
 				}else{
 					t_DTB* dtb_status;
 					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
@@ -392,20 +395,127 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 //Planificador a largo plazo
 void ejecutarPLP(){
 	//Si el grado de multiprogramacion lo permite, entonces le aviso al PCP para que desbloquee el dummy
-
-	if(config_SAFA.multiprog==0){
+	if(multiprogramacion_actual==0){
 		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
+
+		int total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+
+		if(total_procesos_memoria>config_SAFA.multiprog){
+
+			//Tengo que pasar los procesos que esten de mas en Ready a la cola de NEW
+
+			int fin_cola, procesos_a_sacar=total_procesos_memoria-config_SAFA.multiprog;
+			int i;
+
+			t_DTB* dtb;
+
+			log_warning(log_SAFA,"Hay mas procesos de lo permitido por el grado de multiprogramacion");
+			log_info(log_SAFA,"Se pasaran los procesos que esten de mas a la cola NEW");
+
+			switch(config_SAFA.algoritmo){
+			case IOBF:
+				fin_cola=list_size(cola_ready)-1;
+
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0;i++){
+
+					dtb=list_remove(cola_ready,fin_cola);
+
+					list_add(cola_new,dtb);
+
+					fin_cola--;
+				}
+
+				total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+
+						list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+
+				procesos_a_sacar=total_procesos_memoria-config_SAFA.multiprog;
+				if(procesos_a_sacar>0){
+
+					fin_cola=list_size(cola_ready_IOBF)-1;
+
+					for(i=0;i<procesos_a_sacar&&list_size(cola_ready_IOBF)>0;i++){
+
+						dtb=list_remove(cola_ready_IOBF,fin_cola);
+
+						list_add(cola_new,dtb);
+
+						fin_cola--;
+
+					}
+				}
+				break;
+			case VRR:
+				fin_cola=list_size(cola_ready)-1;
+
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0;i++){
+
+					dtb=list_remove(cola_ready,fin_cola);
+
+					list_add(cola_new,dtb);
+
+					fin_cola--;
+				}
+
+				total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+
+						list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+
+				procesos_a_sacar=total_procesos_memoria-config_SAFA.multiprog;
+				if(procesos_a_sacar>0){
+
+					fin_cola=list_size(cola_ready_VRR)-1;
+
+					for(i=0;i<procesos_a_sacar&&list_size(cola_ready_VRR)>0;i++){
+
+						dtb=list_remove(cola_ready_VRR,fin_cola);
+
+						list_add(cola_new,dtb);
+
+						fin_cola--;
+
+					}
+				}
+				break;
+			default:
+				fin_cola=list_size(cola_ready)-1;
+
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0;i++){
+
+					dtb=list_remove(cola_ready,fin_cola);
+
+					list_add(cola_new,dtb);
+
+					fin_cola--;
+				}
+				break;
+			}
+
+			if(config_SAFA.algoritmo!=IOBF){
+			}else{
+				fin_cola=list_size(cola_ready_IOBF)-1;
+
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready_IOBF)>0;i++){
+					dtb=list_remove(cola_ready_IOBF,fin_cola);
+
+					list_add(cola_new,dtb);
+
+					fin_cola--;
+
+				}
+			}
+		}
 	}else if(list_size(cola_new)==0){
 		log_warning(log_SAFA,"La cola de new esta vacia");
 	}else{
 		t_DTB* init_dummy;
 
+		//Faltaria implementar un for para que agregue todos los procesos de new a ready que le permita el grado de multiprogramacion
+
 		pthread_mutex_lock(&mx_colas);
 		init_dummy=list_remove(cola_new,0);
 
-		config_SAFA.multiprog = config_SAFA.multiprog - 1;
+		multiprogramacion_actual = multiprogramacion_actual - 1;
 
-		log_info(log_SAFA,"Multiprogramacion actual= %d",config_SAFA.multiprog);
+		log_info(log_SAFA,"Multiprogramacion actual= %d",multiprogramacion_actual);
 
 		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
 
@@ -428,7 +538,10 @@ void ejecutarPLP(){
 void ejecutarPCP(int operacion, t_DTB* dtb){
 
 	t_DTB* dtb_aux;
+	int total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
 
+
+	pthread_mutex_lock(&File_config);
 	pthread_mutex_lock(&mx_metricas);
 	switch(operacion){
 	case EJECUTAR_PROCESO:
@@ -469,6 +582,13 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		else
 			list_add(cola_ready,dtb);
 		pthread_mutex_unlock(&mx_colas);
+
+		if(total_procesos_memoria>config_SAFA.multiprog){
+			pthread_mutex_lock(&mx_PLP);
+			ejecutarPLP();
+			pthread_mutex_unlock(&mx_PLP);
+		}
+
 		break;
 	case DESBLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
@@ -482,19 +602,27 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 			list_add(cola_ready_IOBF,dtb_aux);
 		else
 			list_add(cola_ready,dtb_aux);
-		pthread_mutex_unlock(&mx_colas);
-		if(list_size(CPU_libres)>0){
-			pthread_mutex_lock(&mx_PCP);
-			ejecutarPCP(EJECUTAR_PROCESO,NULL);
-			pthread_mutex_unlock(&mx_PCP);
+
+		if(total_procesos_memoria>config_SAFA.multiprog){
+			pthread_mutex_lock(&mx_PLP);
+			ejecutarPLP();
+			pthread_mutex_unlock(&mx_PLP);
 		}
+
+		pthread_mutex_unlock(&mx_colas);
 		break;
 	case FINALIZAR_PROCESO:
 		log_info(log_SAFA,"El DTB %d finalizo su ejecucion",dtb->id);
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
-		config_SAFA.multiprog+=1;
+
+		if(total_procesos_memoria<config_SAFA.multiprog){
+			multiprogramacion_actual+=1;
+			pthread_mutex_lock(&mx_PLP);
+			ejecutarPLP();
+			pthread_mutex_unlock(&mx_PLP);
+		}
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
@@ -502,10 +630,18 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_ready,dtb);
 		pthread_mutex_unlock(&mx_colas);
+
+		if(total_procesos_memoria>config_SAFA.multiprog){
+			pthread_mutex_lock(&mx_PLP);
+			ejecutarPLP();
+			pthread_mutex_unlock(&mx_PLP);
+		}
+
 		break;
 	}
 
 	pthread_mutex_unlock(&mx_metricas);
+	pthread_mutex_unlock(&File_config);
 	usleep(config_SAFA.retardo*1000);
 
 }

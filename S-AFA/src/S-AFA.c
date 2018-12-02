@@ -24,6 +24,9 @@ int main(){
 
 	load_config();
 
+	multiprogramacion_actual=config_SAFA.multiprog;
+
+
 	//Hilo para actualizar achivo de configuracion del S-AFA
 
 	pthread_t hilo_inotify;
@@ -166,6 +169,10 @@ void atenderDAM(int*fd){
 		pthread_mutex_lock(&mx_PCP);
 		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 		pthread_mutex_unlock(&mx_PCP);
+		pthread_mutex_lock(&mx_PCP);
+		ejecutarPCP(EJECUTAR_PROCESO,NULL);
+		pthread_mutex_unlock(&mx_PCP);
+
 		break;
 	}
 	case FINAL_CREAR:

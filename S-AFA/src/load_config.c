@@ -20,7 +20,7 @@ void iniciar_semaforos(){
 	pthread_mutex_init(&mx_claves,NULL);
 	pthread_mutex_init(&mx_colas,NULL);
 	pthread_mutex_init(&mx_metricas,NULL);
-
+	pthread_mutex_init(&File_config,NULL);
 }
 
 void load_config(void){
@@ -30,6 +30,9 @@ void load_config(void){
 	config_SAFA.port=config_get_int_value(file_SAFA,"PUERTO");
 	config_SAFA.algoritmo=detectarAlgoritmo(config_get_string_value(file_SAFA,"ALGORITMO"));
 	config_SAFA.quantum=config_get_int_value(file_SAFA,"QUANTUM");
+	if(config_SAFA.algoritmo==FIFO){
+		config_SAFA.quantum=0;
+	}
 	config_SAFA.multiprog=config_get_int_value(file_SAFA,"MULTIPROGRAMACION");
 	config_SAFA.retardo=config_get_int_value(file_SAFA,"RETARDO_PLANIF");
 
@@ -56,7 +59,7 @@ t_algoritmo detectarAlgoritmo(char*algoritmo){
 
 void actualizar_file_config()
 {
-	pthread_mutex_init(&File_config,NULL);
+
 	char buffer[BUF_LEN];
 	char* directorio = "src/CONFIG_S-AFA.cfg";
 	while(1){
@@ -90,13 +93,35 @@ void actualizar_file_config()
 		if (event->mask & IN_MODIFY) {
 				//Actualizo el archivo de configuracion
 				pthread_mutex_lock(&File_config);
+
+				int anterior=config_SAFA.algoritmo, grado_anterior=config_SAFA.multiprog, diferencia;
+
 				load_config();
+
+				actualizarColas(anterior);
+
+				if(config_SAFA.multiprog>=grado_anterior){
+					diferencia = config_SAFA.multiprog-grado_anterior;
+					multiprogramacion_actual+=diferencia;
+				}
+				else{
+					diferencia = abs(config_SAFA.multiprog-grado_anterior);
+					if(multiprogramacion_actual>=diferencia){
+						multiprogramacion_actual-=diferencia;
+					}else{
+						multiprogramacion_actual=0;
+					}
+				}
+
 				pthread_mutex_unlock(&File_config);
+
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
 				log_warning(log_SAFA,"Se modifico el archivo de configuracion");
 		}
 		offset += sizeof (struct inotify_event) + event->len;
 		}
-	pthread_mutex_destroy(&File_config);
 	//Quito el reloj del directorio
 	inotify_rm_watch(file_descriptor, watch_descriptor);
 	//Cierro el fd
@@ -104,4 +129,39 @@ void actualizar_file_config()
 	}
 
 }
+
+
+void actualizarColas(int anterior){
+
+	if(anterior!=config_SAFA.algoritmo){
+
+		if(config_SAFA.algoritmo==IOBF){
+
+			list_add_all(cola_ready_IOBF,cola_ready_VRR);
+			list_add_all(cola_ready_IOBF,cola_ready);
+
+			list_clean(cola_ready);
+			list_clean(cola_ready_VRR);
+
+		}else{
+			t_list* aux=list_duplicate(cola_ready);
+			list_clean(cola_ready);
+
+			list_add_all(cola_ready,cola_ready_VRR);
+			list_add_all(cola_ready,cola_ready_IOBF);
+			list_add_all(cola_ready,aux);
+
+			list_clean(cola_ready_VRR);
+			list_clean(cola_ready_IOBF);
+			list_clean(aux);
+			list_destroy(aux);
+		}
+	}
+	return;
+
+}
+
+
+
+
 

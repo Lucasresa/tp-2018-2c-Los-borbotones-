@@ -10,13 +10,12 @@
 #define BUF_LEN     ( 1024 * EVENT_SIZE )
 
 
-pthread_mutex_t File_config;
-
 void crear_colas(void);
 void iniciar_semaforos();
 void load_config(void);
 t_algoritmo detectarAlgoritmo(char*algoritmo);
 
 void actualizar_file_config(void);
+void actualizarColas(int);
 
 #endif /* PROCESS_S_AFA_LOAD_CONFIG_H_ */

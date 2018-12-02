@@ -72,6 +72,8 @@ int main(){
 
 		rafaga_actual=rafaga_recibida;
 
+		for(;;);
+
 		if(dtb.f_inicializacion==0){
 			log_info(log_CPU,"El DTB tiene su flag en 0, comenzando inicializacion...");
 			inicializarDTB(DAM_fd,SAFA_fd,&dtb);
