@@ -128,11 +128,20 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
+		if (existe_archivo(validacion->path)!=0){
+			log_error(log_MDJ,"No existe el archivo:",validacion->path);
+		}
 		break;
 	}
-	case CREAR_ARCHIVO:
-		crearArchivo("ejemplo.txt", 0);
+	case CREAR_ARCHIVO:{
+		peticion_crear* crear = recibirYDeserializar(fd,operacion);
+		if (existe_archivo(crear->path)==0){
+						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
+		 }
+		crearArchivo(crear->path, crear->cant_lineas);
 		break;
+	}
+
 	case OBTENER_DATOS:
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
@@ -164,16 +173,44 @@ void determinarOperacion(int operacion,int fd) {
 }
 
 void crearArchivo(char *path, int numero_lineas) {
-    FILE* fichero;
+    FILE* fichero_metadata;
+    FILE* bloque_crear;
 
-    char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path) );
+    //Creacion Del archivo
+    char * complete_path = (char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Archivos/") + strlen(path)+strlen(".bit") );
     strcpy(complete_path, config_MDJ.mount_point);
     strcat(complete_path, "/Archivos/");
     strcat(complete_path, path);
+    fichero_metadata = fopen(complete_path, "wr");
+    fclose(fichero_metadata);
 
-    fichero = fopen(complete_path, "wr");
+    //Carga de MetaData del archivo
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(complete_path);
+	char *ultimoBloqueChar;
+	char *sizeDelStringArchivoAGuardarChar;
+	int numeroDeBloque=config_MetaData.cantidad_bloques+1;
+	ultimoBloqueChar=string_itoa(numeroDeBloque);
+	sizeDelStringArchivoAGuardarChar=string_itoa(numero_lineas);
+	char *actualizarBloques=malloc(strlen("[")+1);
+	strcpy(actualizarBloques,"[");
+    string_append(&actualizarBloques,ultimoBloqueChar);
+	string_append(&actualizarBloques,"]");
+
+	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
+	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
+
+	config_save(archivo_MetaData);
+	config_destroy(archivo_MetaData);
+	char *pathBloqueCompleto;
+	pathBloqueCompleto = bloque_path(ultimoBloqueChar);
+	fichero_metadata = fopen(pathBloqueCompleto, "wr");
+    for (int i=0;i<numero_lineas;i++){
+    	fprintf(fichero_metadata,"\n");
+    }
+	fclose(fichero_metadata);
     free(complete_path);
-    fclose(fichero);
+    free(pathBloqueCompleto);
 
 }
 
@@ -597,18 +634,15 @@ int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArc
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
     int cantidadDebloques=sizeof(actualizarMetadataARchivo.bloques)+1;
-    puts("Funciono6");
 	for(int i=0;i<cantidadDebloques; i++){
 		puts(actualizarMetadataARchivo.bloques[i]);
 		string_append(&actualizarBloques,actualizarMetadataARchivo.bloques[i]);
 		string_append(&actualizarBloques,",");
 	}
-	puts("Funciono7");
+
 	string_append(&actualizarBloques,ultimoBloqueChar);
-	puts("Funciono8");
 	string_append(&actualizarBloques,"]");
 	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
-	puts("Funciono9");
 	config_save(archivo_MetaData);
 	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	return 0;
