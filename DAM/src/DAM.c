@@ -116,28 +116,32 @@ int guardarArchivoMDJ(char* path, char* buffer) {
 }
 
 char* obtenerArchivoMDJ(char *path) {
-	char *enviar = malloc(sizeof(char) * 21);
+	char *enviar = malloc(sizeof(char) * (config_DAM.transfer_size+1));
 	int offset_enviar;
 	offset_enviar=0;
 	while (1){
-		peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=offset_enviar,.size=10};
+		peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=offset_enviar,.size=config_DAM.transfer_size};
 		log_info(log_DAM,"Enviando peticion al MDJ...");
 		serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
 		log_info(log_DAM,"Peticion envada...");
-		char *buffer = malloc(sizeof(char) * 21);
+		char *buffer = malloc(sizeof(char) * (config_DAM.transfer_size));
 		while(1) {
 			buffer = recibirYDeserializarString(MDJ_fd);
 			printf("Recibi: %s\n",buffer);
 			break;
 		}
 		if(offset_enviar==0){
-			strncpy(enviar,buffer,10);
+			strcpy(enviar,buffer);
 		}
-		if(!strncmp(buffer, "-1", 1)){
+		else{
+			string_append(&enviar,buffer);
+		}
+		int size=strlen(buffer);
+		if(size != config_DAM.transfer_size){
 			break;
 		}
 		offset_enviar++;
-		string_append(&enviar,buffer);
+
 		free(buffer);
 	}
 	puts(enviar);

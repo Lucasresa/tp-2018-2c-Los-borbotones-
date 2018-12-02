@@ -111,4 +111,5 @@ int leerMetaData();
 int inicializar();
 int  conexion_dam();
 int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque);
+char *substring(char *string, int position, int length);
 #endif /* MDJ_H_ */

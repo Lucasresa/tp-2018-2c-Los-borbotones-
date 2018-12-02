@@ -21,6 +21,7 @@
 #include <dirent.h>
 #include "MDJ.h"
 
+
 int main(){
 	//Creo un Log para MDJ (FileSystem)
     log_MDJ = log_create("MDF.log","MDJ",true,LOG_LEVEL_INFO);
@@ -93,8 +94,9 @@ void conexion_DMA(){
 	}
 
 	log_info(log_MDJ,"Conexion establecida con DAM");
-
 	//Espero a que el DAM mande alguna solicitud y espero que me mande el tipo de operacion a realizar
+	//peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=0,.size=20};
+	//crearStringDeArchivoConBloques(&obtener);
 	while(1){
 		if(cerrarMDJ==1)
 			break;
@@ -409,9 +411,6 @@ int string_archivo(char *pathfile,char **contenido_archivo){
 void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	printf("%d\tsize",obtener->size);
 	char *archivoPathCompleto = archivo_path(obtener->path);
-	puts(archivoPathCompleto);
-	char *path;
-	puts(archivoPathCompleto);
 	t_config *archivo_MetaData;
 	archivo_MetaData=config_create(archivoPathCompleto);
 	t_config_MetaArchivo metadataArchivo;
@@ -420,15 +419,11 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
-	int size = 0;
 	struct stat statbuf;
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
-	printf("\n cantidad de bloques%d",cantidadBloques);
 	for(i=0;i<cantidadBloques;i++){
-		puts("numero de bloque:");
-		printf("%d\n",i);
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
 		}
@@ -457,34 +452,34 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 			strcpy(contenidoArchivo,src);
 		}
 		else
-			string_append(&contenidoArchivo,src);
-		puts(contenidoArchivo);
+		string_append(&contenidoArchivo,src);
 		free(pathBloqueCompleto);
 		close(f);
 
 	}
-	int flag;
-	flag=2;
-	char *sub= malloc(obtener->size+1);
+	char *sub;
 	int desplazamiento_archivo;
 	desplazamiento_archivo=obtener->offset*obtener->size;
-	if ( desplazamiento_archivo + obtener->size < metadataArchivo.tamanio ){
-		strncpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
+	int hasta=desplazamiento_archivo + obtener->size;
+	if ( hasta < metadataArchivo.tamanio ){
+		sub=(char*)malloc(obtener->size+1);
+		memcpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
+		sub[obtener->size] = '\0';
+		printf("Enviando: %s\n",sub);
+		serializarYEnviarString(DAM_fd, sub);
+		free(sub);
 	}
 	else{
-		int copiarHasta = desplazamiento_archivo + obtener->size;
-		copiarHasta -= metadataArchivo.tamanio;
-		strncpy(sub, contenidoArchivo+desplazamiento_archivo, copiarHasta);
-		flag=3;
+		int copiarHasta = hasta;
+		copiarHasta = hasta-metadataArchivo.tamanio ;
+		char *sub3 =substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
+		printf("Enviando: %s\n",sub3);
+		serializarYEnviarString(DAM_fd, sub3);
+		free(sub3);
 	}
-	printf("Enviando: %s\n",sub);
-	serializarYEnviarString(DAM_fd, sub);
-	if(flag!=2){
-		char *terminado=malloc(2);
-		terminado="-1";
-		serializarYEnviarString(DAM_fd, terminado);
-	}
-	free(sub);
+
+	free(contenidoArchivo);
+
 }
 char *archivo_path(char *path_archivo){
 
@@ -502,7 +497,7 @@ char *bloque_path(char *numeroBloque){
 	strcat(complete_path, "/Bloques/");
 	strcat(complete_path, numeroBloque);
 	strcat(complete_path, ".bin");
-	puts(complete_path);
+	//puts(complete_path);
 	return complete_path;
 }
 int leerMetaData(){
@@ -617,6 +612,30 @@ int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArc
 	config_save(archivo_MetaData);
 	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	return 0;
+}
+
+char *substring(char *string, int position, int length)
+{
+   char *pointer;
+   int c;
+
+   pointer = malloc(length+1);
+
+   if (pointer == NULL)
+   {
+      printf("Unable to allocate memory.\n");
+      exit(1);
+   }
+
+   for (c = 0 ; c < length ; c++)
+   {
+      *(pointer+c) = *(string+position-1);
+      string++;
+   }
+
+   *(pointer+c) = '\0';
+
+   return pointer;
 }
 
 /*int cmd_md5(char *linea){
