@@ -53,6 +53,9 @@ t_DTB* buscarDTBEnCola(t_list* ,int ,int );
 t_metricas* buscarMetricasDTB(int);
 void actualizarMetricaDTB(int , int );
 void actualizarMetricasDTBNew();
+int getSentenciasDAM();
+int getSentenciasTotales();
+int getSentenciasParaExit();
 
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();

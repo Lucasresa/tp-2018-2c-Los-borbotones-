@@ -125,9 +125,39 @@ void ejecutarComando(int nro_op, char * args){
 				}
 			break;
 			case 4:
-				printf("La operacion es metricas y el parametro es: %s \n",args);
 				if(args==NULL){
-					printf("Sin parametro, sin terminar aun\n");
+
+					float sentencias_DAM, sentencias_Totales, sentencias_Exit, total_Procesos, procesos_Exit;
+					float promedio_sentencias_DAM, promedio_sentencias_Exit;
+					float porcentaje_sentencias_DAM;
+
+					sentencias_DAM = (float)getSentenciasDAM();
+					sentencias_Totales = (float)getSentenciasTotales();
+					sentencias_Exit = (float)getSentenciasParaExit();
+					total_Procesos = (float)list_size(info_metricas);
+					procesos_Exit = (float)list_size(cola_exit);
+
+					if(procesos_Exit!=0)
+						promedio_sentencias_Exit = sentencias_Exit/procesos_Exit;
+					else
+						promedio_sentencias_Exit = 0;
+
+					if(total_Procesos!=0)
+						promedio_sentencias_DAM = sentencias_DAM/total_Procesos;
+					else
+						promedio_sentencias_DAM = 0;
+
+					if(sentencias_Totales!=0)
+						porcentaje_sentencias_DAM = (sentencias_DAM/sentencias_Totales)*100;
+					else
+						porcentaje_sentencias_DAM = 0;
+
+					printf("Cantidad de sentencias ejecutadas promedio del sistema que usaron a 'El diego': %0.2f\n"
+							"Cantidad de sentencias ejecutadas promedio del sistema para que un DTB termine	en la cola EXIT: %0.2f\n"
+							"Porcentaje de las sentencias ejecutadas promedio que fueron a 'El Diego': %0.2f%%\n"
+							"Tiempo de Respuesta promedio del Sistema: ??\n",
+							promedio_sentencias_DAM, promedio_sentencias_Exit,porcentaje_sentencias_DAM);
+
 				}else{
 					//Debo mostrar la cantidad de sentencias que espero el DTB en NEW
 					t_DTB* dtb_new;
@@ -270,6 +300,54 @@ void actualizarMetricasDTBNew(){
 
 	}
 
+}
+
+int getSentenciasDAM(){
+
+	int sumatoria=0,total_procesos=list_size(info_metricas),i;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_procesos;i++){
+		metrica=list_get(info_metricas,i);
+
+		sumatoria+=metrica->sent_DAM;
+
+	}
+
+	return sumatoria;
+}
+
+int getSentenciasTotales(){
+
+	int sumatoria=0,total_procesos=list_size(info_metricas),i;
+
+	t_metricas* metrica;
+
+	for(i=0;i<total_procesos;i++){
+		metrica=list_get(info_metricas,i);
+
+		sumatoria+=metrica->sent_ejecutadas;
+
+	}
+
+	return sumatoria;
+}
+
+int getSentenciasParaExit(){
+
+	int sumatoria=0,total_procesos=list_size(cola_exit),i;
+
+	t_DTB* dtb_aux;
+
+	for(i=0;i<total_procesos;i++){
+		dtb_aux=list_get(cola_exit,i);
+
+		sumatoria+=dtb_aux->pc;
+
+	}
+
+	return sumatoria;
 }
 
 //----------------------------------------------------------------------------------------------------------
