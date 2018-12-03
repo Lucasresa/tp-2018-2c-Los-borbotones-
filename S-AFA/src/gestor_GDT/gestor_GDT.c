@@ -121,7 +121,7 @@ void ejecutarComando(int nro_op, char * args){
 					estado=buscarDTB(&dtb,dtb_id,FINALIZAR);
 
 					if(estado==NULL){
-						printf("No se encontro ningun DTB en el sistema con ese ID\n");
+						printf("No se encontro ningun DTB en el sistema con ese ID o ese DTB ya ha finalizado\n");
 					}else if(string_equals_ignore_case(estado,"EJECUTANDO")){
 						printf("No se puede finalizar este proceso, se encuentra ejecutando\n");
 					}else{
@@ -177,7 +177,7 @@ void ejecutarComando(int nro_op, char * args){
 					//Debo mostrar la cantidad de sentencias que espero el DTB en NEW
 					t_DTB* dtb_new;
 					int dtb_id = (int)strtol(args,(char**)NULL,10);
-					char* estado=buscarDTB(&dtb_new,dtb_id,0);
+					char* estado=buscarDTB(&dtb_new,dtb_id,STATUS);
 					if(estado==NULL){
 						printf("El DTB no existe en el sistema\n");
 					}else if(dtb_new->f_inicializacion==0){
@@ -225,7 +225,7 @@ char* buscarDTB(t_DTB** dtb, int id, int operacion){
 	}else if((*dtb=buscarDTBEnCola(cola_ready_IOBF,id,operacion))!=NULL){
 		estado="READY IOBF";
 		return estado;
-	}else if((*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
+	}else if(operacion==STATUS&&(*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
 		estado="FINALIZADO";
 		return estado;
 	}else if(dictionary_has_key(cola_exec,string_itoa(id))){
