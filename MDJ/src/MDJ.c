@@ -156,7 +156,7 @@ void determinarOperacion(int operacion,int fd) {
 		printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",
 							obtener->path,obtener->offset,obtener->size);
 		crearStringDeArchivoConBloques(obtener);
-
+		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
 	case GUARDAR_DATOS:
@@ -166,6 +166,7 @@ void determinarOperacion(int operacion,int fd) {
 				guardado->path,guardado->offset,guardado->size,guardado->buffer);
 
 		guardarDatos(guardado);
+		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
 	case BORRAR_DATOS:
@@ -173,6 +174,7 @@ void determinarOperacion(int operacion,int fd) {
 		puts(borrar->path);
 		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
 	    borrar_archivo(borrar->path);
+	    usleep(config_MDJ.time_delay*1000);
 	    break;
 	}
 
