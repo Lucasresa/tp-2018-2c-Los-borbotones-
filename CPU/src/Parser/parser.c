@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "parser.h"
 #include <commons/string.h>
+#include <ctype.h>
 
 //Funcion que abre un archivo solo para lectura
 FILE* openFile(char* path){
@@ -40,7 +41,7 @@ t_operacion parseLine(char* line){
 		return op;
 	}
 
-	if(auxLine[0]==OP_EOF){
+	if(isblank(auxLine[0])){
 		op.keyword=FIN;
 		return op;
 	}
