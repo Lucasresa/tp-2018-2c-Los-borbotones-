@@ -104,6 +104,35 @@ void* recibirPeticion(int socket, void* argumentos) {
 	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
 	}
+	case CREAR_ARCHIVO:
+	{
+		peticion_crear* crear_archivo=recibirYDeserializar(socket,header);
+		serializarYEnviar(socket,header,crear_archivo);
+		int respuesta;
+		while(1) {
+			&respuesta = recibirYDeserializarEntero(MDJ_fd);
+			printf("Recibi: %d\n",respuesta);
+			break;
+		}
+		if (respuesta==CREAR_OK){
+			printf("creacion ok");
+			int success=FINAL_CARGA;
+			serializarYEnviarEntero(SAFA_fd,&success);
+			serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+			log_info(log_DAM,"Final carga dummy enviado al safa");
+			return 0;
+		}
+		else{
+			printf("creacion ok");
+			int success=FINAL_CREAR;
+			serializarYEnviarEntero(SAFA_fd,&success);
+			serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+			log_info(log_DAM,"Final carga dummy enviado al safa");
+			return 0;
+			FINALIZAR_PROCESO
+			printf("creacion fallo");
+		}
+	}
 	}
 	return 0;
 }
