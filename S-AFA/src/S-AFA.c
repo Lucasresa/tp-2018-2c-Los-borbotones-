@@ -46,21 +46,21 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
-//	DAM_fd=aceptarConexion(SAFA_fd);
-//
-//	if(DAM_fd==-1){
-//		perror("Error de conexion con DAM");
-//		log_destroy(log_SAFA);
-//		exit(1);
-//	}
-//
-//	log_info(log_SAFA,"Conexion exitosa con DAM");
-//
-//	pthread_t hiloDAM;
-//
-//	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
-//
-//	pthread_detach(hiloDAM);
+	DAM_fd=aceptarConexion(SAFA_fd);
+
+	if(DAM_fd==-1){
+		perror("Error de conexion con DAM");
+		log_destroy(log_SAFA);
+		exit(1);
+	}
+
+	log_info(log_SAFA,"Conexion exitosa con DAM");
+
+	pthread_t hiloDAM;
+
+	pthread_create(&hiloDAM,NULL,(void*)atenderDAM,(void*)&DAM_fd);
+
+	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
 
@@ -131,58 +131,66 @@ void eliminarSocketCPU(int fd){
 void atenderDAM(int*fd){
 	int fd_DAM = *fd;
 	int* protocolo, id_dtb;
-	t_DTB* dtb=malloc(sizeof(t_DTB));
-	dtb->archivos=list_create();
+	t_DTB* dtb;
 
-	protocolo=recibirYDeserializarEntero(fd_DAM);
+	while(1){
 
-	if(protocolo==NULL){
-		log_error(log_SAFA,"Se perdio la conexion con DAM, cierro SAFA");
-		exit(0);
-	}
+		dtb=malloc(sizeof(t_DTB));
+		dtb->archivos=list_create();
 
-	switch(*protocolo){
-	case FINAL_CARGA_DUMMY:
-		dtb->id=*recibirYDeserializarEntero(fd_DAM);
+		protocolo=recibirYDeserializarEntero(fd_DAM);
 
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
-		pthread_mutex_unlock(&mx_PCP);
-		pthread_mutex_lock(&mx_PLP);
-		ejecutarPLP();
-		pthread_mutex_unlock(&mx_PLP);
-		break;
-	case FINAL_ABRIR:
-	{
-		t_archivo* archivo=malloc(sizeof(t_archivo));
-		id_dtb=*recibirYDeserializarEntero(fd_DAM);
+		if(protocolo==NULL){
+			log_error(log_SAFA,"Se perdio la conexion con DAM, cierro SAFA");
+			exit(0);
+		}
 
+		switch(*protocolo){
+		case FINAL_CARGA_DUMMY:
+			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+			pthread_mutex_lock(&mx_PLP);
+			ejecutarPLP();
+			pthread_mutex_unlock(&mx_PLP);
+			break;
+		case FINAL_ABRIR:
+		{
+			t_archivo* archivo=malloc(sizeof(t_archivo));
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+
+			free(dtb);
+
+			pthread_mutex_lock(&mx_colas);
+			dtb=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			archivo->path=recibirYDeserializarString(fd_DAM);
+			archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
+			list_add(dtb->archivos,archivo);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+
+			break;
+		}
+		case FINAL_CREAR:
+			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+			break;
+		}
+		list_clean(dtb->archivos);
+		list_destroy(dtb->archivos);
 		free(dtb);
 
-		pthread_mutex_lock(&mx_colas);
-		dtb=getDTBEnCola(cola_block,id_dtb);
-		pthread_mutex_unlock(&mx_colas);
-
-		archivo->path=recibirYDeserializarString(fd_DAM);
-		archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
-		list_add(dtb->archivos,archivo);
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
-		pthread_mutex_unlock(&mx_PCP);
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(EJECUTAR_PROCESO,NULL);
-		pthread_mutex_unlock(&mx_PCP);
-
-		break;
 	}
-	case FINAL_CREAR:
-		dtb->id=*recibirYDeserializarEntero(fd_DAM);
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
-		pthread_mutex_unlock(&mx_PCP);
-		break;
-	}
-	free(dtb);
 
 }
 
@@ -238,7 +246,7 @@ void atenderCPU(int*fd){
 		t_DTB dtb_modificado;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_EJECUTADA&&protocolo!=SENTENCIA_DAM)
+		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM)
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
 
 		char* clave;
@@ -317,6 +325,13 @@ void atenderCPU(int*fd){
 			log_info(log_SAFA,"Recibido el id del dtb que ejecuta el CPU, %d",dtb_cpu);
 		}else if(protocolo==SENTENCIA_EJECUTADA){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
+
+			pthread_mutex_lock(&mx_colas);
+			dtb=dictionary_get(cola_exec,string_itoa(dtb_cpu));
+			dtb->pc=dtb_modificado.pc;
+			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+			pthread_mutex_unlock(&mx_colas);
+
 			actualizarMetricaDTB(dtb_cpu,protocolo);
 			actualizarMetricasDTBNew();
 		}else if(protocolo==SENTENCIA_DAM){
