@@ -351,9 +351,14 @@ void atenderCPU(int*fd){
 		t_DTB dtb_modificado;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM)
+		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM){
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
-
+			pthread_mutex_lock(&mx_colas);
+			dtb=dictionary_get(cola_exec,string_itoa(dtb_cpu));
+			dtb->pc=dtb_modificado.pc;
+			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+			pthread_mutex_unlock(&mx_colas);
+		}
 		char* clave;
 		int respuesta;
 		//Si recibe un wait de algun recurso
@@ -371,9 +376,6 @@ void atenderCPU(int*fd){
 					pthread_mutex_lock(&mx_colas);
 					dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 					pthread_mutex_unlock(&mx_colas);
-
-					dtb->pc=dtb_modificado.pc;
-					dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
 
 					pthread_mutex_lock(&mx_PCP);
 					ejecutarPCP(BLOQUEAR_PROCESO,dtb);
@@ -431,12 +433,6 @@ void atenderCPU(int*fd){
 		}else if(protocolo==SENTENCIA_EJECUTADA){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
-			pthread_mutex_lock(&mx_colas);
-			dtb=dictionary_get(cola_exec,string_itoa(dtb_cpu));
-			dtb->pc=dtb_modificado.pc;
-			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
-			pthread_mutex_unlock(&mx_colas);
-
 			actualizarMetricaDTB(dtb_cpu,protocolo);
 			actualizarMetricasDTBNew();
 		}else if(protocolo==SENTENCIA_DAM){
@@ -449,9 +445,6 @@ void atenderCPU(int*fd){
 			pthread_mutex_lock(&mx_colas);
 			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 			pthread_mutex_unlock(&mx_colas);
-
-			dtb->pc=dtb_modificado.pc;
-			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
 
 			//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 			pthread_mutex_lock(&mx_PCP);
