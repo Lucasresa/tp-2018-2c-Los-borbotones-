@@ -133,10 +133,6 @@ void ejecutarComando(int nro_op, char * args){
 						ejecutarPLP();
 						pthread_mutex_unlock(&mx_PLP);
 
-						//Aca deberia avisar a DAM, en caso de que sea un proceso inicializado, que el proceso finalizo y que le diga a
-						//Fm9 que libere la memoria que dicho proceso estaba ocupando
-
-
 					}
 				}
 			break;
@@ -751,6 +747,8 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_unlock(&mx_colas);
 
 		//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
+//		serializarYEnviarEntero(DAM,&operacion);
+//		serializarYEnviarEntero(DAM,&dtb->id);
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)
