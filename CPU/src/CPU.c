@@ -200,11 +200,15 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		case CREAR:
 		{
+			log_info(log_CPU,"Se ejecuto la operacion CREAR");
 			peticion_crear* crear_archivo=malloc(sizeof(peticion_crear));
-			serializarYEnviar(DAM,CREAR_ARCHIVO,crear_archivo);
-			crear_archivo->path=linea_parseada.argumentos.crear.path;
+			crear_archivo->path=string_duplicate(linea_parseada.argumentos.crear.path);
 			crear_archivo->cant_lineas=linea_parseada.argumentos.crear.lineas;
 			serializarYEnviar(DAM,CREAR_ARCHIVO,crear_archivo);
+			serializarYEnviarEntero(DAM,&dtb.id);
+
+			log_info(log_CPU,"Informacion enviada a DAM para Crear el archivo");
+
 			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 			uso_DAM=1;
 			actualizarDTB(&dtb);
