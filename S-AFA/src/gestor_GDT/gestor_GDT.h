@@ -112,5 +112,6 @@ t_list* info_metricas;
 
 int multiprogramacion_actual;
 
+int DAM;
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

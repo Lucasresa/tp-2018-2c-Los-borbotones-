@@ -136,15 +136,18 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		switch(linea_parseada.keyword){
 		case ABRIR:
-
-			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path))
-				break;
+			log_info(log_CPU,"Se ejecuto la operacion ABRIR");
+			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path)>-1){
+				log_info(log_CPU,"El archivo ya esta abierto");
+			}
 			else{
 				protocolo=ABRIR_ARCHIVO;
 				serializarYEnviarEntero(DAM,&protocolo);
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
 
 				serializarYEnviarEntero(DAM,&dtb.id);
+
+				log_info(log_CPU,"Informacion enviada a DAM para abrir el archivo");
 
 				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 				uso_DAM=1;

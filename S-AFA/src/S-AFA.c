@@ -56,6 +56,8 @@ int main(){
 		exit(1);
 	}
 
+	DAM=DAM_fd;
+
 	log_info(log_SAFA,"Conexion exitosa con DAM");
 
 	pthread_t hiloDAM;
@@ -186,6 +188,9 @@ void atenderDAM(int*fd){
 			dtb->id=*recibirYDeserializarEntero(fd_DAM);
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
 			break;
 		case FINALIZAR_PROCESO:
