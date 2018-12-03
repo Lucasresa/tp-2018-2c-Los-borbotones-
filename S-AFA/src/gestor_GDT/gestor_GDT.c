@@ -91,9 +91,11 @@ void ejecutarComando(int nro_op, char * args){
 						printf("No se encontro ningun DTB en el sistema con ese ID\n");
 					}else{
 
-						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nQuantum sobrante: %d\nScript: %s\nArchivos abiertos: %d\n",
-							dtb_status->id, estado, dtb_status->pc, dtb_status->quantum_sobrante, dtb_status->escriptorio,
+						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nScript: %s\nArchivos abiertos: %d\n",
+							dtb_status->id, estado, dtb_status->pc, dtb_status->escriptorio,
 								list_size(dtb_status->archivos));
+						if(config_SAFA.algoritmo==VRR)
+							printf("Quantum sobrante: %d\n",dtb_status->quantum_sobrante);
 						if(dtb_status->f_inicializacion==0){
 							printf("Tipo: DTB Dummy\n");
 						}else{
@@ -216,6 +218,9 @@ char* buscarDTB(t_DTB** dtb, int id, int operacion){
 		return estado;
 	}else if((*dtb=buscarDTBEnCola(cola_ready_VRR,id,operacion))!=NULL){
 		estado="READY VIRTUAL";
+		return estado;
+	}else if((*dtb=buscarDTBEnCola(cola_ready_IOBF,id,operacion))!=NULL){
+		estado="READY IOBF";
 		return estado;
 	}else if((*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
 		estado="FINALIZADO";
@@ -645,6 +650,8 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 		pthread_mutex_lock(&mx_colas);
 		dtb_aux=getDTBEnCola(cola_block,dtb->id);
+
+		list_add_all(dtb_aux->archivos,dtb->archivos);
 
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
