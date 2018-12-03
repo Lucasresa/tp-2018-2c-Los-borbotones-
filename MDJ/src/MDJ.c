@@ -128,20 +128,22 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
+		int validar=VALIDAR_OK;
 		if (existe_archivo(validacion->path)!=0){
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
-			serializarYEnviarEntero(DAM_fd, VALIDAR_FALLO);
+			validar=VALIDAR_FALLO;
 		}
-		serializarYEnviarEntero(DAM_fd, VALIDAR_OK);
+		serializarYEnviarEntero(DAM_fd, &validar);
 		break;
 	}
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
+		int creacion = CREAR_OK;
 		if (existe_archivo(crear->path)==0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
-						serializarYEnviarEntero(DAM_fd, CREAR_FALLO);
+						creacion= CREAR_FALLO;
 		}
-		serializarYEnviarEntero(DAM_fd, CREAR_OK);
+		serializarYEnviarEntero(DAM_fd, &creacion);
 		crearArchivo(crear->path, crear->cant_lineas);
 		break;
 	}
