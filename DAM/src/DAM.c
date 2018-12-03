@@ -110,13 +110,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 		serializarYEnviar(socket,header,crear_archivo);
 		int respuesta;
 		while(1) {
-			&respuesta = recibirYDeserializarEntero(MDJ_fd);
+			respuesta = *recibirYDeserializarEntero(MDJ_fd);
 			printf("Recibi: %d\n",respuesta);
 			break;
 		}
 		if (respuesta==CREAR_OK){
 			printf("creacion ok");
-			int success=FINAL_CARGA;
+			int success=FINAL_CREAR;
 			serializarYEnviarEntero(SAFA_fd,&success);
 			serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
 			log_info(log_DAM,"Final carga dummy enviado al safa");
