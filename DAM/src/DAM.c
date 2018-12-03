@@ -120,7 +120,7 @@ char* obtenerArchivoMDJ(char *path) {
 	int offset_enviar;
 	offset_enviar=0;
 	while (1){
-		peticion_obtener obtener = {.path="/scripts/checkpoint.escriptorio",.offset=offset_enviar,.size=config_DAM.transfer_size};
+		peticion_obtener obtener = {.path=path,.offset=offset_enviar,.size=config_DAM.transfer_size};
 		log_info(log_DAM,"Enviando peticion al MDJ...");
 		serializarYEnviar(MDJ_fd,OBTENER_DATOS,&obtener);
 		log_info(log_DAM,"Peticion envada...");
