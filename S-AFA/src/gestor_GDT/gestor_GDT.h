@@ -30,6 +30,7 @@ typedef struct{
 	int sent_NEW;
 	int sent_ejecutadas;
 	int sent_DAM;
+	int tiempo_respuesta;
 
 }t_metricas;
 
@@ -58,6 +59,11 @@ void actualizarMetricasDTBNew();
 int getSentenciasDAM();
 int getSentenciasTotales();
 int getSentenciasParaExit();
+
+void actualizarTiempoDeRespuestaDTB();
+int validarTiempoDeRespuesta(int );
+float getTiempoDeRespuestaPromedioDTB(int );
+float getTiempoDeRespuestaPromedioSistema();
 
 int getCantidadProcesosInicializados(t_list* );
 

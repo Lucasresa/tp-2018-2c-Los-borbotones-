@@ -159,6 +159,9 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		case ASIGNAR:
 			//CPU se comunica directamente con FM9
 
+
+
+
 			break;
 		case WAIT:
 			actualizarDTB(&dtb);

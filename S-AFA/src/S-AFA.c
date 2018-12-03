@@ -434,10 +434,12 @@ void atenderCPU(int*fd){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarTiempoDeRespuestaDTB();
 			actualizarMetricasDTBNew();
 		}else if(protocolo==SENTENCIA_DAM){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarTiempoDeRespuestaDTB();
 			actualizarMetricasDTBNew();
 		}
 		else{
