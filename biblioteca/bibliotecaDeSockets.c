@@ -491,8 +491,6 @@ t_DTB RecibirYDeserializarDTB(int fd){
 	//Recibo el header
 	recv(fd,&tamanio_buffer,sizeof(tamanio_buffer),0);
 
-	printf("tamanio buffer: %d\n",tamanio_buffer);
-
 	buffer=malloc(tamanio_buffer);
 
 	//Recibo el resto de la informacion

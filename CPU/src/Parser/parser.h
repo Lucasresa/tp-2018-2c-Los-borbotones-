@@ -18,6 +18,7 @@
 #define OP_CREAR "crear"
 #define OP_BORRAR "borrar"
 #define COMENTARIO '#'
+#define OP_EOF " "
 
 typedef struct{
 
@@ -31,7 +32,8 @@ typedef struct{
 		CLOSE,
 		CREAR,
 		BORRAR,
-		COMENT
+		COMENT,
+		FIN
 	}keyword;
 	union{
 		struct{

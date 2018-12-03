@@ -40,6 +40,11 @@ t_operacion parseLine(char* line){
 		return op;
 	}
 
+	if(auxLine[0]==OP_EOF){
+		op.keyword=FIN;
+		return op;
+	}
+
 	char**split = string_split(auxLine," ");
 
 	op._free=split;

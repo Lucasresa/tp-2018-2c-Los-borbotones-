@@ -546,8 +546,6 @@ void ejecutarPLP(){
 	}else{
 		t_DTB* init_dummy;
 
-		//Faltaria implementar un for para que agregue todos los procesos de new a ready que le permita el grado de multiprogramacion
-
 		for(;list_size(cola_new)!=0&&multiprogramacion_actual!=0;){
 
 			pthread_mutex_lock(&mx_colas);
@@ -663,6 +661,8 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
+
+		//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 

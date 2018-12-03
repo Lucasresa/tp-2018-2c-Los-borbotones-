@@ -210,7 +210,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		}
 		case BORRAR:
 			break;
-		default:
+		case FIN:
 			log_info(log_CPU,"Se termino de ejecutar el script");
 			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
 			interrupcion=1;
