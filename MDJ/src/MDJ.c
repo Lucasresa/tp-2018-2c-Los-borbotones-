@@ -207,22 +207,27 @@ void crearArchivo(char *path, int numero_lineas) {
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
 	int i=0;
-	while(1){
-		if (i+1*config_MetaData.tamanio_bloques<=numero_lineas){
-			if (i!=0){
-				string_append(&actualizarBloques,",");
-			}
-			config_MetaData.cantidad_bloques++;
-			ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
-			string_append(&actualizarBloques,ultimoBloqueChar);
+	int cantNFaltantes=numero_lineas;
+	int cantNescribir;
+	int flag = 1;
+	while(flag !=0){
+		config_MetaData.cantidad_bloques++;
+		ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
+		string_append(&actualizarBloques,ultimoBloqueChar);
+		if (cantNFaltantes < (i+1)*config_MetaData.tamanio_bloques){
+			cantNescribir = cantNFaltantes;
+			flag =0;
 		}
-		else
-			break;
-		i++;
+		else{
+			cantNFaltantes -= config_MetaData.tamanio_bloques;
+			cantNescribir=config_MetaData.tamanio_bloques;
+			string_append(&actualizarBloques,",");
+
+		}
 		char *pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(ultimoBloqueChar);
 		fichero_metadata = fopen(pathBloqueCompleto, "wr");
-		for (int i=0;i<config_MetaData.tamanio_bloques;i++){
+		for (int i=0;i<cantNescribir;i++){
 		   	fprintf(fichero_metadata,"\n");
 		}
 		fclose(fichero_metadata);
@@ -250,6 +255,7 @@ void actualizar_configuracion_Metadata(int ultimoBloque){
 	archivo_MetaData=config_create(direccionArchivoMedata);
 	char *stringUltimoBloque=string_itoa(ultimoBloque);
 	config_set_value(archivo_MetaData,"CANTIDAD_BLOQUES",stringUltimoBloque);
+	config_save(archivo_MetaData);
 	free(direccionArchivoMedata);
 	config_destroy(archivo_MetaData);
 }
@@ -378,7 +384,7 @@ void consola_MDJ(){
 			else{
 
 				crearDirectorio(path);
-				crearArchivo(path, 1200);
+				crearArchivo(path, 52);
 				log_info(log_MDJ,"Se creo el archivo:",path);
 			}
 
