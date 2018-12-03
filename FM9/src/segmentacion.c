@@ -1,0 +1,176 @@
+#include "segmentacion.h"
+#include "FM9.h"
+
+int recibirPeticionSeg(int socket) {
+	int length;
+	int header;
+	length = recv(socket,&header,sizeof(int),0);
+	if ( length <= 0 ) {
+		close(socket);
+		FD_CLR(socket, &set_fd);
+		log_error(log_FM9, "Se perdió la conexión con un socket.");
+		perror("error");
+		return 0;
+	}
+
+	switch(header){
+	case 4:
+	{
+		return 0;
+	}
+	case INICIAR_MEMORIA_PID:
+	{
+		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
+		int size_scriptorio = datos_script->size_script;
+
+		// Creo una tabla de segmentos
+		list_add(lista_tablas_segmentos, list_create());
+
+		// Obtengo el id de la tabla
+		int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
+		// Relaciono la tabla de segmentos con el PID
+		fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
+		relacion_pid_tabla->id_proceso=datos_script->pid;
+		relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
+		list_add(tabla_segmentos_pid,relacion_pid_tabla);
+
+		// Obtengo la tabla de segmentos recién creada
+		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
+
+		// TODO: Busco en memoria espacio libre
+		int base_vacia = segmentoFirstFit(size_scriptorio);
+
+		// Creo un segmento en la tabla
+		printf("Creo un segmento en posicion %i\n", base_vacia);
+		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,base_vacia));
+
+		free(datos_script);
+
+		int success=MEMORIA_INICIALIZADA;
+		serializarYEnviarEntero(socket,&success);
+		return 0;
+	}
+	case PEDIR_LINEA:
+	{
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		char* linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		serializarYEnviarString(socket,linea);
+		return 0;
+	}
+	case ESCRIBIR_LINEA:
+	{
+		cargar_en_memoria* info_a_cargar;
+		info_a_cargar = recibirYDeserializar(socket,header);
+		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
+			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
+		}
+		free(info_a_cargar);
+		int success=LINEA_CARGADA;
+		serializarYEnviarEntero(socket,&success);
+		return 0;
+	}
+	case CERRAR_ARCHIVO:
+	{
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		int id_segmento = direccion->base;
+
+		// Busco la tabla de segmentos del proceso:
+		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
+
+		// Remuevo el segmento indicado:
+		list_remove(tabla_segmentos, id_segmento);
+
+		//TODO: Registro que dicho espacio ahora está libre en memoria
+		return 0;
+	}
+
+	case ENVIAR_ARCHIVO:
+	{
+		//char* linea_string;
+		//linea_string = recibirYDeserializar(socket,header);
+		//strcpy(memoria[memoria_counter],linea_string);
+		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
+		//memoria_counter++;
+		return 0;
+	}
+	}
+	return 0;
+}
+
+struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento) {
+	   struct fila_tabla_seg *p;
+	   p = (struct fila_tabla_seg *) malloc(sizeof(struct fila_tabla_seg));
+	   p->id_segmento = id_segmento;
+	   p->limite_segmento = limite_segmento;
+	   p->base_segmento = base_segmento;
+	   return p;
+}
+
+struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int tamanio) {
+	   struct fila_memoria_vacia_seg *p;
+	   p = (struct fila_memoria_vacia_seg *) malloc(sizeof(struct fila_memoria_vacia_seg));
+	   p->base = base;
+	   p->cant_lineas = tamanio;
+	   return p;
+}
+
+char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
+
+	t_list *tabla_segmentos = buscarTablaSeg(pid);
+
+	// Obtengo la direccion real/fisica base
+	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	int base_segmento = segmento->base_segmento;
+
+	printf("Leo memoria en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+
+	return memoria[base_segmento+offset];
+
+
+}
+
+int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
+
+	t_list *tabla_segmentos = buscarTablaSeg(pid);
+
+	// Obtengo la direccion real/fisica base
+	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	int base_segmento = segmento->base_segmento;
+
+	if (segmento->limite_segmento < offset) {
+		return -1;
+	}
+
+	memoria[base_segmento+offset] = linea;
+	printf("Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	return 0;
+}
+
+t_list* buscarTablaSeg(int pid) {
+	// Obtengo la tabla de segmentos para ese PID
+	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
+		return (p->id_proceso == pid);
+	}
+	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
+	t_list* tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+	return tabla_segmentos;
+}
+
+
+int segmentoFirstFit(int lineas_segmento) {
+	//Buscamos
+	int tiene_suficiente_tamanio(fila_memoria_vacia_seg *p) {
+		return (p->cant_lineas > lineas_segmento);
+	}
+
+	// Busco el first fit y elimino el hueco ya que va a ser usado por el nuevo segmento
+	fila_memoria_vacia_seg *fila_memoria_vacia = list_remove_by_condition(memoria_vacia_seg, (void*) tiene_suficiente_tamanio);
+
+	// Añado el nuevo hueco reducido
+	fila_memoria_vacia_seg* nueva_fila = crear_fila_mem_vacia_seg(fila_memoria_vacia->base + lineas_segmento, fila_memoria_vacia->cant_lineas - lineas_segmento);
+	list_add(memoria_vacia_seg, nueva_fila);
+
+	return fila_memoria_vacia->base;
+}

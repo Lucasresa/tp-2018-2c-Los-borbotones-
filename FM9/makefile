@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS=src/FM9.c ../biblioteca/bibliotecaDeSockets.c
+CFLAGS=src/FM9.c ../biblioteca/bibliotecaDeSockets.c src/segmentacion.c
 
 install: $(CFLAGS)
 	$(CC) $(CFLAGS) -o FM9 -lcommons -lpthread -lreadline
