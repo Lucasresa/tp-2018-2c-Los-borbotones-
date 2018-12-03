@@ -307,10 +307,9 @@ void consola_MDJ(){
 	dir_actual="/";
 	printf("\n");
 	chdir(dir_actual);
-
-
 	//string_append(&dir_actual,"$");
 	cmd_pwd();
+	strcat(dir_actual,"$");
 	while(1) {
 		linea = readline(dir_actual);
 		if(!strncmp(linea, "cerrar", 6)) {
@@ -319,6 +318,11 @@ void consola_MDJ(){
 		}
 		if(!strncmp(linea, "cd ", 3)){
 			cmd_cd(linea);
+		}
+		if(!strncmp(linea, "pwd ", 3)){
+			cmd_pwd(linea);
+			printf("esta en el directorio:%s\n",dir_actual);
+			strcat(dir_actual,"$");
 		}
 		if (!strncmp(linea, "cat ", 3)){
 			cmd_cat(linea);
@@ -374,7 +378,9 @@ void cmd_ls(char *linea){
 	char **parametros = string_split(linea, " ");
 	puts(parametros[1]);
 	if(parametros[1] == NULL){
-		parametros[1]=".";
+		cmd_pwd();
+		strcat(dir_actual,"$");
+		parametros[1]=dir_actual;
 	}
 	else {
 		 DIR *dp;
@@ -401,8 +407,6 @@ void cmd_pwd(){
 	       perror("getcwd() error");
 	}
 	string_actual=dir_actual;
-	strcat(string_actual,"$");
-	puts(string_actual);
 }
 void cmd_bloque(){
 	char *file1;
