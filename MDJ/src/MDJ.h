@@ -71,6 +71,8 @@ char *bloque_path(char *numeroBloque);
 void conexion_DMA();
 void crearStringDeArchivoConBloques(peticion_obtener *obtener);
 void crearDirectorio(char *path);
+void actualizar_configuracion_Metadata(int ultimoBlque);
+char *string_config_metadata();
 struct addrinfo *server_info;
 
 typedef struct{

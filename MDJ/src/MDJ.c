@@ -201,29 +201,57 @@ void crearArchivo(char *path, int numero_lineas) {
 	archivo_MetaData=config_create(complete_path);
 	char *ultimoBloqueChar;
 	char *sizeDelStringArchivoAGuardarChar;
-	int numeroDeBloque=config_MetaData.cantidad_bloques+1;
+	int numeroDeBloque=config_MetaData.cantidad_bloques;
 	ultimoBloqueChar=string_itoa(numeroDeBloque);
 	sizeDelStringArchivoAGuardarChar=string_itoa(numero_lineas);
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
-    string_append(&actualizarBloques,ultimoBloqueChar);
-	string_append(&actualizarBloques,"]");
-
+	int i=0;
+	while(1){
+		if (i+1*config_MetaData.tamanio_bloques<=numero_lineas){
+			if (i!=0){
+				string_append(&actualizarBloques,",");
+			}
+			config_MetaData.cantidad_bloques++;
+			ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
+			string_append(&actualizarBloques,ultimoBloqueChar);
+		}
+		else
+			break;
+		i++;
+		char *pathBloqueCompleto;
+		pathBloqueCompleto = bloque_path(ultimoBloqueChar);
+		fichero_metadata = fopen(pathBloqueCompleto, "wr");
+		for (int i=0;i<config_MetaData.tamanio_bloques;i++){
+		   	fprintf(fichero_metadata,"\n");
+		}
+		fclose(fichero_metadata);
+		free(pathBloqueCompleto);
+	}
+    string_append(&actualizarBloques,"]");
 	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
 	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
-
 	config_save(archivo_MetaData);
 	config_destroy(archivo_MetaData);
-	char *pathBloqueCompleto;
-	pathBloqueCompleto = bloque_path(ultimoBloqueChar);
-	fichero_metadata = fopen(pathBloqueCompleto, "wr");
-    for (int i=0;i<numero_lineas;i++){
-    	fprintf(fichero_metadata,"\n");
-    }
-	fclose(fichero_metadata);
+    actualizar_configuracion_Metadata(config_MetaData.cantidad_bloques);
     free(complete_path);
-    free(pathBloqueCompleto);
+}
 
+char *string_config_metadata(){
+	char *direccionArchivoMedata=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Metadata.bin"));;
+	strcpy(direccionArchivoMedata,config_MDJ.mount_point);
+	string_append(&direccionArchivoMedata,"/Metadata/Metadata.bin");
+	return direccionArchivoMedata;
+}
+
+void actualizar_configuracion_Metadata(int ultimoBloque){
+	t_config *archivo_MetaData;
+	char *direccionArchivoMedata = string_config_metadata();
+	archivo_MetaData=config_create(direccionArchivoMedata);
+	char *stringUltimoBloque=string_itoa(ultimoBloque);
+	config_set_value(archivo_MetaData,"CANTIDAD_BLOQUES",stringUltimoBloque);
+	free(direccionArchivoMedata);
+	config_destroy(archivo_MetaData);
 }
 
 int guardarDatos(peticion_guardar *guardado) {
@@ -338,8 +366,8 @@ void consola_MDJ(){
 		}
 		if (!strncmp(linea, "bloque", 6)){
 			char * path = "/equipo/test";
-			crearDirectorio(path);
-			//crearArchivo(path,10);
+			//crearDirectorio(path);
+			//crearArchivo(path,10000);
 			//borrar_archivo(path);
 			int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
@@ -348,8 +376,10 @@ void consola_MDJ(){
 				creacion= CREAR_FALLO;
 			}
 			else{
+
+				crearDirectorio(path);
+				crearArchivo(path, 1200);
 				log_info(log_MDJ,"Se creo el archivo:",path);
-				crearArchivo(path, 10);
 			}
 
 		}
