@@ -140,13 +140,16 @@ void determinarOperacion(int operacion,int fd) {
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
-		if (existe_archivo(crear->path)==0){
+		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
+		if (existe_archivo(crear->path)!=0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
 						creacion= CREAR_FALLO;
 		}
+		else{
+			crearDirectorio(crear->path);
+			crearArchivo(crear->path, crear->cant_lineas);
+		}
 		serializarYEnviarEntero(DAM_fd, &creacion);
-		log_info(log_MDJ,"peticion de creacion",crear->path);
-		crearArchivo(crear->path, crear->cant_lineas);
 		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
@@ -334,9 +337,21 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-			char * path = "/scripts/test";
-			crearArchivo(path,10);
-			borrar_archivo(path);
+			char * path = "/equipo/test";
+			crearDirectorio(path);
+			//crearArchivo(path,10);
+			//borrar_archivo(path);
+			int creacion = CREAR_OK;
+			log_info(log_MDJ,"peticion de creacion de archivo:",path);
+			if (existe_archivo(path)!=0){
+				log_error(log_MDJ,"No se puede crear por q existe el archivo:",path);
+				creacion= CREAR_FALLO;
+			}
+			else{
+				log_info(log_MDJ,"Se creo el archivo:",path);
+				crearArchivo(path, 10);
+			}
+
 		}
 
 	}
@@ -732,6 +747,40 @@ void crearBitmap(){
 	}
 
 	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
+
+}
+void crearDirectorio(char *path){
+	int i;
+	char **arr = NULL;
+	arr = string_split(path, "/");
+	int c=sizeof(arr)+1;
+	printf("cantidad de parametros:%d\n", c);
+    if (c==1){
+    	printf( "no hay directorio para crear %s\n",arr[0] );
+    }
+    else{
+    	for (i = 0; i < c; i++){
+    	    	struct stat info;
+    	    	if( stat( arr[i], &info ) != 0 ){
+    	    		char* full_directorio= archivo_path(arr[i]);
+    	    	    if (arr[i+1]==NULL){
+    	    	    	break;
+    	    	    }
+    	    	    printf( "el directorio no esta creado %s\n",arr[i] );
+    	    		if (mkdir(full_directorio, S_IRWXU) != 0) {
+    	    	        if (errno != EEXIST)
+    	    	        	printf( "no se pudo crear el directorio %s\n",full_directorio);
+    	    	    }
+    	    	}
+    	    	else if( info.st_mode & S_IFDIR )
+    	    	    printf( "%s is a directory\n", arr[i] );
+    	    	else
+    	    	    printf( "%s es un archivo \n", arr[i] );
+   	    }
+
+    }
+
+
 
 }
 
