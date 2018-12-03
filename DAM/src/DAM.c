@@ -117,21 +117,29 @@ void* recibirPeticion(int socket, void* argumentos) {
 		respuesta = *recibirYDeserializarEntero(MDJ_fd);
 		printf("Recibi: %d\n",respuesta);
 
-		if (respuesta==CREAR_OK){
-			printf("creacion ok");
-			int success=FINAL_CREAR;
-			serializarYEnviarEntero(SAFA_fd,&success);
-			serializarYEnviarEntero(SAFA_fd,&dtb_id);
-			log_info(log_DAM,"El archivo se creo con exito");
-			return 0;
-		}
-		else{
-			printf("creacion fallida\n");
-			int success=FINALIZAR_PROCESO;
-			serializarYEnviarEntero(SAFA_fd,&success);
-			serializarYEnviarEntero(SAFA_fd,&dtb_id);
-			log_info(log_DAM,"Hubo un error al crear el archivo");
-			return 0;
+		switch(respuesta){
+
+			case CREAR_OK:{
+
+				printf("creacion ok");
+				int success=FINAL_CREAR;
+				serializarYEnviarEntero(SAFA_fd,&success);
+				serializarYEnviarEntero(SAFA_fd,&dtb_id);
+				log_info(log_DAM,"El archivo se creo con exito");
+				return 0;
+			}
+			case CREAR_FALLO:{
+				printf("creacion fallida\n");
+			    int success=FINALIZAR_PROCESO;
+				serializarYEnviarEntero(SAFA_fd,&success);
+				serializarYEnviarEntero(SAFA_fd,&dtb_id);
+				log_info(log_DAM,"Hubo un error al crear el archivo");
+				return 0;
+			}
+			default:
+				printf("fallo el enum crear");
+
+
 		}
 	}
 	}

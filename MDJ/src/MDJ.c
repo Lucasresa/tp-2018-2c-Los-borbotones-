@@ -141,7 +141,7 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
-		if (existe_archivo(crear->path)!=0){
+		if (existe_archivo(crear->path)==0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
 						creacion= CREAR_FALLO;
 		}
