@@ -132,6 +132,7 @@ void atenderDAM(int*fd){
 	int fd_DAM = *fd;
 	int* protocolo, id_dtb;
 	t_DTB* dtb;
+	t_DTB* aux;
 
 	while(1){
 
@@ -161,17 +162,15 @@ void atenderDAM(int*fd){
 			t_archivo* archivo=malloc(sizeof(t_archivo));
 			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 
-			free(dtb);
-
 			pthread_mutex_lock(&mx_colas);
-			dtb=getDTBEnCola(cola_block,id_dtb);
+			aux=getDTBEnCola(cola_block,id_dtb);
 			pthread_mutex_unlock(&mx_colas);
 
 			archivo->path=recibirYDeserializarString(fd_DAM);
 			archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
-			list_add(dtb->archivos,archivo);
+			list_add(aux->archivos,archivo);
 			pthread_mutex_lock(&mx_PCP);
-			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			ejecutarPCP(DESBLOQUEAR_PROCESO,aux);
 			pthread_mutex_unlock(&mx_PCP);
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
@@ -184,6 +183,23 @@ void atenderDAM(int*fd){
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
+			break;
+		case FINALIZAR_PROCESO:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+
 			break;
 		}
 		list_clean(dtb->archivos);
@@ -352,6 +368,12 @@ void atenderCPU(int*fd){
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(protocolo,dtb);
 			pthread_mutex_unlock(&mx_PCP);
+
+			if(protocolo==FINALIZAR_PROCESO&&dtb->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
 
 			//El CPU queda libre para ejecutar otro proceso
 			pthread_mutex_lock(&mx_CPUs);

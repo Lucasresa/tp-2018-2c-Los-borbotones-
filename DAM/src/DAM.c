@@ -106,13 +106,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 	}
 	case CREAR_ARCHIVO:
 	{
+		log_info(log_DAM,"Peticion de crear archivo recibida");
 		peticion_crear* crear_archivo=recibirYDeserializar(socket,header);
 		int dtb_id = *recibirYDeserializarEntero(socket);
-		serializarYEnviar(socket,header,crear_archivo);
-		int respuesta;
 
-		respuesta = *recibirYDeserializarEntero(MDJ_fd);
-		printf("Recibi: %d\n",respuesta);
+		log_info(log_DAM,"Enviando peticion de crear archivo a MDJ");
+		serializarYEnviar(MDJ_fd,header,crear_archivo);
+		int respuesta;
 
 		respuesta = *recibirYDeserializarEntero(MDJ_fd);
 		printf("Recibi: %d\n",respuesta);
@@ -126,7 +126,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			return 0;
 		}
 		else{
-			printf("creacion ok");
+			printf("creacion fallida\n");
 			int success=FINALIZAR_PROCESO;
 			serializarYEnviarEntero(SAFA_fd,&success);
 			serializarYEnviarEntero(SAFA_fd,&dtb_id);
