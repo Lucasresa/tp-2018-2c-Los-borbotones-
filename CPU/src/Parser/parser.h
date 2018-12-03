@@ -18,7 +18,6 @@
 #define OP_CREAR "crear"
 #define OP_BORRAR "borrar"
 #define COMENTARIO '#'
-#define OP_EOF " "
 
 typedef struct{
 
