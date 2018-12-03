@@ -46,6 +46,8 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
+	log_info(log_SAFA,"Esperando que se conecte el DAM");
+
 	DAM_fd=aceptarConexion(SAFA_fd);
 
 	if(DAM_fd==-1){
@@ -63,6 +65,8 @@ int main(){
 	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
+
+	log_info(log_SAFA,"Esperando que se conecte algun CPU para que comience a funcionar SAFA");
 
 	while(1){
 
@@ -199,7 +203,92 @@ void atenderDAM(int*fd){
 				ejecutarPLP();
 				pthread_mutex_unlock(&mx_PLP);
 			}
+			break;
+		case ERROR_ARCHIVO_EXISTENTE:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"El dtb %d intento crear un archivo ya existente",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
 
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_ARCHIVO_INEXISTENTE:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"El dtb %d intento operar sobre un archivo que no existe",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_FM9_SIN_ESPACIO:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"No hay suficiente espacio en FM9 para cargar el archivo pedido por el DTB %d",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_MDJ_SIN_ESPACIO:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"No hay suficiente espacio en MDJ para cargar lo que hay en FM9",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+
+		case ERROR_SEG_MEM:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"Segmentation Fault en memoria provocado por el DTB %d",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
 			break;
 		}
 		list_clean(dtb->archivos);
