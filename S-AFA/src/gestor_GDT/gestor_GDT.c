@@ -66,14 +66,17 @@ void ejecutarComando(int nro_op, char * args){
 			case 2:
 				if(args==NULL){
 				pthread_mutex_lock(&File_config);
+				int total_procesos=getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+getCantidadProcesosInicializados(cola_ready)+
+								getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR);
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
-						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),dictionary_size(cola_block),
+						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),list_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
 					if(config_SAFA.algoritmo==VRR){
 						printf("Virtual: %d\n",list_size(cola_ready_VRR));
 					}else if(config_SAFA.algoritmo==IOBF){
 						printf("IOBF: %d\n",list_size(cola_ready_IOBF));
 					}
+				printf("Total de procesos Inicializados: %d\n",total_procesos);
 				printf("Grado de Multiprogramacion General: %d\n",config_SAFA.multiprog);
 				printf("Grado de Multiprogramacion Actual: %d\n",multiprogramacion_actual);
 				printf("Retardo de planificacion: %d\n",config_SAFA.retardo);
@@ -123,6 +126,9 @@ void ejecutarComando(int nro_op, char * args){
 						pthread_mutex_lock(&mx_PCP);
 						ejecutarPCP(FINALIZAR_PROCESO,dtb);
 						pthread_mutex_unlock(&mx_PCP);
+						//Aca deberia avisar a DAM, en caso de que sea un proceso inicializado, que el proceso finalizo y que le diga a
+						//Fm9 que libere la memoria que dicho proceso estaba ocupando
+
 
 					}
 				}
@@ -169,7 +175,10 @@ void ejecutarComando(int nro_op, char * args){
 					char* estado=buscarDTB(&dtb_new,dtb_id,0);
 					if(estado==NULL){
 						printf("El DTB no existe en el sistema\n");
-					}else{
+					}else if(dtb_new->f_inicializacion==0){
+						printf("DTB dummy, no tiene metricas\n");
+					}
+					else{
 						t_metricas* metrica_dtb=buscarMetricasDTB(dtb_new->id);
 						printf("DTB %d\nCantidad de sentencias ejecutadas: %d\nCantidad de sentencias en NEW: %d\nCantidad de sentencias a DAM: %d\n",
 								metrica_dtb->id_dtb,metrica_dtb->sent_ejecutadas,metrica_dtb->sent_NEW,metrica_dtb->sent_DAM);
@@ -210,14 +219,8 @@ char* buscarDTB(t_DTB** dtb, int id, int operacion){
 		*dtb=dictionary_get(cola_exec,string_itoa(id));
 		estado="EJECUTANDO";
 		return estado;
-	}else if(dictionary_has_key(cola_block,string_itoa(id))){
-		*dtb=dictionary_get(cola_block,string_itoa(id));
+	}else if((*dtb=buscarDTBEnCola(cola_block,id,operacion))!=NULL){
 		estado="BLOQUEADO";
-		if(operacion==FINALIZAR){
-			pthread_mutex_lock(&mx_colas);
-			dictionary_remove(cola_block,string_itoa(id));
-			pthread_mutex_unlock(&mx_colas);
-		}
 		return estado;
 	}else{
 		return NULL;
@@ -249,6 +252,24 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 	}
 	list_clean(cola_copy);
 	list_destroy(cola_copy);
+	return NULL;
+}
+
+t_DTB* getDTBEnCola(t_list* cola,int id){
+
+	int i;
+	t_DTB* dtb;
+
+	for(i=0;i<list_size(cola);i++){
+
+		dtb=list_get(cola,i);
+
+		if(dtb->id==id){
+			dtb=list_remove(cola,i);
+
+			return dtb;
+		}
+	}
 	return NULL;
 }
 
@@ -355,6 +376,24 @@ int getSentenciasParaExit(){
 	return sumatoria;
 }
 
+int getCantidadProcesosInicializados(t_list* cola){
+
+	int i, contador=0;
+
+	t_DTB* aux;
+
+	for(i=0;i<list_size(cola);i++){
+
+		aux=list_get(cola,i);
+
+		if(aux->f_inicializacion==1){
+			contador++;
+		}
+	}
+	return contador;
+}
+
+
 //----------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 //Funciones planificador.
@@ -369,15 +408,6 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->id=cont_id;
 	dtb->archivos=list_create();
 	cont_id++;
-
-	//Cargo informacion necesaria del DTB para el manejo de metricas
-	t_metricas* metrica_dtb=malloc(sizeof(t_metricas));
-	metrica_dtb->id_dtb=dtb->id;
-	metrica_dtb->sent_DAM=0;
-	metrica_dtb->sent_ejecutadas=0;
-	metrica_dtb->sent_NEW=0;
-	//Agrego esa informacion a esta lista auxiliar
-	list_add(info_metricas,metrica_dtb);
 
 	pthread_mutex_lock(&mx_colas);
 	list_add(cola_new,dtb);
@@ -398,7 +428,8 @@ void ejecutarPLP(){
 	if(multiprogramacion_actual==0){
 		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
 
-		int total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+		int total_procesos_memoria = getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+getCantidadProcesosInicializados(cola_ready)+
+				getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR);
 
 		if(total_procesos_memoria>config_SAFA.multiprog){
 
@@ -425,21 +456,27 @@ void ejecutarPLP(){
 					fin_cola--;
 				}
 
-				total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+
-						list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+				total_procesos_memoria = getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+
+						getCantidadProcesosInicializados(cola_ready)+getCantidadProcesosInicializados(cola_ready_IOBF)+
+							getCantidadProcesosInicializados(cola_ready_VRR);
 
 				procesos_a_sacar=total_procesos_memoria-config_SAFA.multiprog;
 				if(procesos_a_sacar>0){
 
 					fin_cola=list_size(cola_ready_IOBF)-1;
 
-					for(i=0;i<procesos_a_sacar&&list_size(cola_ready_IOBF)>0;i++){
+					for(i=0;i<procesos_a_sacar&&list_size(cola_ready_IOBF)>0&&fin_cola>-1;fin_cola--){
 
-						dtb=list_remove(cola_ready_IOBF,fin_cola);
+						dtb=list_get(cola_ready_IOBF,fin_cola);
 
-						list_add(cola_new,dtb);
+						if(dtb->f_inicializacion==1){
 
-						fin_cola--;
+							dtb=list_remove(cola_ready_IOBF,fin_cola);
+
+							list_add(cola_new,dtb);
+
+							i++;
+						}
 
 					}
 				}
@@ -447,17 +484,24 @@ void ejecutarPLP(){
 			case VRR:
 				fin_cola=list_size(cola_ready)-1;
 
-				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0;i++){
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0&&fin_cola>-1;fin_cola--){
 
-					dtb=list_remove(cola_ready,fin_cola);
+					dtb=list_get(cola_ready,fin_cola);
 
-					list_add(cola_new,dtb);
+					if(dtb->f_inicializacion==1){
 
-					fin_cola--;
+						dtb=list_remove(cola_ready,fin_cola);
+
+						list_add(cola_new,dtb);
+
+						i++;
+
+					}
 				}
 
-				total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+
-						list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+				total_procesos_memoria = getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+
+						getCantidadProcesosInicializados(cola_ready)+getCantidadProcesosInicializados(cola_ready_IOBF)+
+							getCantidadProcesosInicializados(cola_ready_VRR);
 
 				procesos_a_sacar=total_procesos_memoria-config_SAFA.multiprog;
 				if(procesos_a_sacar>0){
@@ -467,6 +511,8 @@ void ejecutarPLP(){
 					for(i=0;i<procesos_a_sacar&&list_size(cola_ready_VRR)>0;i++){
 
 						dtb=list_remove(cola_ready_VRR,fin_cola);
+
+						dtb->quantum_sobrante=0;
 
 						list_add(cola_new,dtb);
 
@@ -478,29 +524,21 @@ void ejecutarPLP(){
 			default:
 				fin_cola=list_size(cola_ready)-1;
 
-				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0;i++){
+				for(i=0;i<procesos_a_sacar&&list_size(cola_ready)>0&&fin_cola>-1;fin_cola--){
 
-					dtb=list_remove(cola_ready,fin_cola);
+					dtb=list_get(cola_ready,fin_cola);
 
-					list_add(cola_new,dtb);
+					if(dtb->f_inicializacion==1){
 
-					fin_cola--;
+						dtb=list_remove(cola_ready,fin_cola);
+
+						list_add(cola_new,dtb);
+
+						i++;
+					}
+
 				}
 				break;
-			}
-
-			if(config_SAFA.algoritmo!=IOBF){
-			}else{
-				fin_cola=list_size(cola_ready_IOBF)-1;
-
-				for(i=0;i<procesos_a_sacar&&list_size(cola_ready_IOBF)>0;i++){
-					dtb=list_remove(cola_ready_IOBF,fin_cola);
-
-					list_add(cola_new,dtb);
-
-					fin_cola--;
-
-				}
 			}
 		}
 	}else if(list_size(cola_new)==0){
@@ -510,26 +548,33 @@ void ejecutarPLP(){
 
 		//Faltaria implementar un for para que agregue todos los procesos de new a ready que le permita el grado de multiprogramacion
 
-		pthread_mutex_lock(&mx_colas);
-		init_dummy=list_remove(cola_new,0);
+		for(;list_size(cola_new)!=0&&multiprogramacion_actual!=0;){
 
-		multiprogramacion_actual = multiprogramacion_actual - 1;
+			pthread_mutex_lock(&mx_colas);
+			init_dummy=list_remove(cola_new,0);
 
-		log_info(log_SAFA,"Multiprogramacion actual= %d",multiprogramacion_actual);
+			if(init_dummy->f_inicializacion!=0){
+				multiprogramacion_actual = multiprogramacion_actual - 1;
+				log_info(log_SAFA,"Multiprogramacion actual= %d",multiprogramacion_actual);
+				log_info(log_SAFA,"Se ejecutara el PCP para enviar el proceso %d a ready",init_dummy->id);
+			}
+			else{
+				log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
+				log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
+			}
 
-		log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
+			if(config_SAFA.algoritmo==IOBF)
+				list_add(cola_ready_IOBF,init_dummy);
+			else
+				list_add(cola_ready,init_dummy);
 
-		if(config_SAFA.algoritmo==IOBF)
-			list_add(cola_ready_IOBF,init_dummy);
-		else
-			list_add(cola_ready,init_dummy);
+			pthread_mutex_unlock(&mx_colas);
 
-		log_info(log_SAFA,"Se ejecutara el PCP para desbloquear el dummy");
-		pthread_mutex_unlock(&mx_colas);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+		}
 
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(EJECUTAR_PROCESO,NULL);
-		pthread_mutex_unlock(&mx_PCP);
 	}
 	usleep(config_SAFA.retardo*1000);
 }
@@ -538,7 +583,9 @@ void ejecutarPLP(){
 void ejecutarPCP(int operacion, t_DTB* dtb){
 
 	t_DTB* dtb_aux;
-	int total_procesos_memoria = dictionary_size(cola_block)+dictionary_size(cola_exec)+list_size(cola_ready)+list_size(cola_ready_IOBF)+list_size(cola_ready_VRR);
+	int total_procesos_memoria = getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+
+			getCantidadProcesosInicializados(cola_ready)+getCantidadProcesosInicializados(cola_ready_IOBF)+
+				getCantidadProcesosInicializados(cola_ready_VRR);
 
 
 	pthread_mutex_lock(&File_config);
@@ -569,32 +616,32 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 			dtb->quantum_sobrante=0;
 		}
 		pthread_mutex_lock(&mx_colas);
-		dictionary_put(cola_block,string_itoa(dtb->id),dtb);
+		list_add(cola_block,dtb);
 		pthread_mutex_unlock(&mx_colas);
 		break;
 	case DESBLOQUEAR_DUMMY:
 		log_info(log_SAFA,"Desbloqueando el DTB Dummy %d",dtb->id);
 		pthread_mutex_lock(&mx_colas);
-		dtb=dictionary_remove(cola_block,string_itoa(dtb->id));
+		dtb=getDTBEnCola(cola_block,dtb->id);
 		dtb->f_inicializacion=1;
-		if(config_SAFA.algoritmo==IOBF)
-			list_add(cola_ready_IOBF,dtb);
-		else
-			list_add(cola_ready,dtb);
+
+		//Cargo informacion necesaria del DTB para el manejo de metricas
+		t_metricas* metrica_dtb=malloc(sizeof(t_metricas));
+		metrica_dtb->id_dtb=dtb->id;
+		metrica_dtb->sent_DAM=0;
+		metrica_dtb->sent_ejecutadas=0;
+		metrica_dtb->sent_NEW=0;
+		//Agrego esa informacion a esta lista auxiliar
+		list_add(info_metricas,metrica_dtb);
+
+		list_add(cola_new,dtb);
 		pthread_mutex_unlock(&mx_colas);
-
-		if(total_procesos_memoria>config_SAFA.multiprog){
-			pthread_mutex_lock(&mx_PLP);
-			ejecutarPLP();
-			pthread_mutex_unlock(&mx_PLP);
-		}
-
 		break;
 	case DESBLOQUEAR_PROCESO:
 		log_info(log_SAFA,"Desbloqueando el DTB %d",dtb->id);
 
 		pthread_mutex_lock(&mx_colas);
-		dtb_aux=dictionary_remove(cola_block,string_itoa(dtb->id));
+		dtb_aux=getDTBEnCola(cola_block,dtb->id);
 
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
@@ -618,7 +665,9 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_unlock(&mx_colas);
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
-			multiprogramacion_actual+=1;
+
+			if(dtb->f_inicializacion!=0)
+				multiprogramacion_actual+=1;
 			pthread_mutex_lock(&mx_PLP);
 			ejecutarPLP();
 			pthread_mutex_unlock(&mx_PLP);

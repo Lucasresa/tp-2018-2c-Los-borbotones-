@@ -50,12 +50,16 @@ void ejecutarComando(int nro_op , char * args);
 
 char* buscarDTB(t_DTB** ,int ,int );
 t_DTB* buscarDTBEnCola(t_list* ,int ,int );
+t_DTB* getDTBEnCola(t_list* ,int );
+
 t_metricas* buscarMetricasDTB(int);
 void actualizarMetricaDTB(int , int );
 void actualizarMetricasDTBNew();
 int getSentenciasDAM();
 int getSentenciasTotales();
 int getSentenciasParaExit();
+
+int getCantidadProcesosInicializados(t_list* );
 
 void agregarDTBDummyANew(char*,t_DTB*);
 void ejecutarPLP();
@@ -75,7 +79,7 @@ t_list* cola_ready;
 t_list* cola_ready_VRR;
 t_list* cola_ready_IOBF;
 
-t_dictionary* cola_block;
+t_list* cola_block;
 t_dictionary* cola_exec;
 
 t_list* cola_exit;
@@ -101,5 +105,6 @@ pthread_mutex_t File_config;
 t_list* info_metricas;
 
 int multiprogramacion_actual;
+
 
 #endif /* PROCESS_S_AFA_GESTOR_G_DT_GESTOR_G_DT_H_ */

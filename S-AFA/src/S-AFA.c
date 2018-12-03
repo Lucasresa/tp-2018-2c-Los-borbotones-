@@ -148,9 +148,9 @@ void atenderDAM(int*fd){
 		pthread_mutex_lock(&mx_PCP);
 		ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
 		pthread_mutex_unlock(&mx_PCP);
-		pthread_mutex_lock(&mx_PCP);
-		ejecutarPCP(EJECUTAR_PROCESO,NULL);
-		pthread_mutex_unlock(&mx_PCP);
+		pthread_mutex_lock(&mx_PLP);
+		ejecutarPLP();
+		pthread_mutex_unlock(&mx_PLP);
 		break;
 	case FINAL_ABRIR:
 	{
@@ -160,7 +160,7 @@ void atenderDAM(int*fd){
 		free(dtb);
 
 		pthread_mutex_lock(&mx_colas);
-		dtb=dictionary_get(cola_block,string_itoa(id_dtb));
+		dtb=getDTBEnCola(cola_block,id_dtb);
 		pthread_mutex_unlock(&mx_colas);
 
 		archivo->path=recibirYDeserializarString(fd_DAM);
