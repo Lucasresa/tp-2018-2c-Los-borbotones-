@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h> /* mmap() is defined in this header */
 #include <fcntl.h>
+#include <commons/bitarray.h>
 
 char* server_ip;
 int server_puerto;
@@ -46,6 +47,7 @@ t_config *mdj_config;
 in_port_t get_in_port(struct sockaddr *sa);
 
 int iniciar_recibirDatos();
+void crearBitmap();
 void consola_MDJ();
 void configure_logger();
 void exit_gracefully(int return_nr);
@@ -102,6 +104,8 @@ typedef struct{
 t_config_archivo_a_guardar archivo_a_guardar;
 t_config_MDJ config_MDJ;
 t_config_MetaData  config_MetaData;
+
+t_bitarray *bitarray;
 int crear_carpetas();
 int mkdir_p(const char *path);
 int guardarDatos(peticion_guardar *guardado) ;

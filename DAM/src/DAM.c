@@ -95,7 +95,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		char bufferTesteo[60] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
 		log_info(log_DAM,"Cargo archivo al FM9");
-		cargarArchivoFM9(dummy->id_dtb, bufferTesteo);
+		cargarArchivoFM9(dummy->id_dtb, buffer);
 		log_info(log_DAM,"Enviando final carga dummy");
 
 		int success=FINAL_CARGA_DUMMY;

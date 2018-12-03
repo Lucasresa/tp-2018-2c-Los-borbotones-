@@ -51,7 +51,12 @@ typedef enum{
 	CERRAR_ARCHIVO,      // Para el CPU al FM9
 	PEDIR_DATOS,
 	ABRIR_ARCHIVO,
-	BORRAR_DATOS
+	BORRAR_DATOS,
+	VALIDAR_OK,
+	VALIDAR_FALLO,
+	CREAR_FALLO,
+	CREAR_OK
+
 }t_protocolo;
 
 enum paquete {

@@ -50,6 +50,7 @@ int main(){
 	pthread_t hilo_conexion;
 
 	leerMetaData();
+	crearBitmap();
 	cerrarMDJ=0;
 	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
 	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
@@ -129,14 +130,18 @@ void determinarOperacion(int operacion,int fd) {
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		if (existe_archivo(validacion->path)!=0){
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
+			serializarYEnviarEntero(DAM_fd, VALIDAR_FALLO);
 		}
+		serializarYEnviarEntero(DAM_fd, VALIDAR_OK);
 		break;
 	}
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		if (existe_archivo(crear->path)==0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
-		 }
+						serializarYEnviarEntero(DAM_fd, CREAR_FALLO);
+		}
+		serializarYEnviarEntero(DAM_fd, CREAR_OK);
 		crearArchivo(crear->path, crear->cant_lineas);
 		break;
 	}
@@ -319,7 +324,7 @@ void consola_MDJ(){
 		}
 		if (!strncmp(linea, "bloque", 6)){
 			char * path = "/scripts/test";
-			//crearArchivo(path,10);
+			crearArchivo(path,10);
 			borrar_archivo(path);
 		}
 
@@ -561,6 +566,37 @@ int existe_archivo(char *path_archivo){
         return (stat (archivo_path(path_archivo), &buffer) == 0);
 }
 
+int todos_bloques_libre(char *path_archivo){
+	char *path_completo = archivo_path(path_archivo);
+	t_config *archivo_MetaData=config_create(path_completo);
+	t_config_MetaArchivo metadataArchivo;
+	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	int i=0;
+	while(i<= cantidadBloques){
+		char * pathBloqueCompleto;
+		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
+		if (existe_archivo(pathBloqueCompleto)!=0) {
+			return -1;
+		}
+		int numeroBloque;
+		sscanf(metadataArchivo.bloques[i], "%d", &numeroBloque);
+		printf("\nThe value of x : %d", numeroBloque);
+		if (bitarray_test_bit(bitarray, numeroBloque)==1){
+			printf("bloque ocupado: %d",numeroBloque);
+			return -1;
+		}
+		else {
+			printf("bloque libre: %d",numeroBloque);
+		}
+
+	}
+	return 0;
+
+}
+
+
 
 void guardarEnArchivo(){
 	//archivo_a_guardar;
@@ -663,6 +699,30 @@ char *substring(char *string, int position, int length)
    return pointer;
 }
 
+
+void crearBitmap(){
+
+	//FILE* bloque_crear;
+	//bloque_crear->_IO_buf_base
+	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));;
+	int bitmap = open(direccionArchivoBitMap, O_RDWR);
+	struct stat mystat;
+	if (fstat(bitmap, &mystat) < 0) {
+	    printf("Error al establecer fstat\n");
+	    close(bitmap);
+	}
+    char *bmap ;
+	bmap = mmap(NULL, mystat.st_size, PROT_WRITE | PROT_READ, MAP_SHARED, bitmap, 0);
+
+	if (bmap == MAP_FAILED) {
+			printf("Error al mapear a memoria: %s\n", strerror(errno));
+
+	}
+
+	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
+
+}
+
 /*int cmd_md5(char *linea){
         char **parametros = string_split(linea, " ");
         puts(parametros[1]);
@@ -684,3 +744,5 @@ char *substring(char *string, int position, int length)
         return 0;
 }
 */
+
+
