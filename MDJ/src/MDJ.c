@@ -134,6 +134,7 @@ void determinarOperacion(int operacion,int fd) {
 			validar=VALIDAR_FALLO;
 		}
 		serializarYEnviarEntero(DAM_fd, &validar);
+		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
 	case CREAR_ARCHIVO:{
@@ -145,13 +146,14 @@ void determinarOperacion(int operacion,int fd) {
 		}
 		serializarYEnviarEntero(DAM_fd, &creacion);
 		crearArchivo(crear->path, crear->cant_lineas);
+		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
 
 	case OBTENER_DATOS:
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
-		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\n",
+		printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",
 							obtener->path,obtener->offset,obtener->size);
 		crearStringDeArchivoConBloques(obtener);
 
@@ -372,7 +374,7 @@ void cmd_ls(char *linea){
 	char **parametros = string_split(linea, " ");
 	puts(parametros[1]);
 	if(parametros[1] == NULL){
-		printf("El Comando cat debe recibir un parametro.\n");
+		parametros[1]=".";
 	}
 	else {
 		 DIR *dp;
@@ -387,7 +389,6 @@ void cmd_ls(char *linea){
 		 else{
 			  perror ("Couldn't open the directory");
 		 }
-
 	}
 }
 void cmd_pwd(){
@@ -401,6 +402,7 @@ void cmd_pwd(){
 	}
 	string_actual=dir_actual;
 	strcat(string_actual,"$");
+	puts(string_actual);
 }
 void cmd_bloque(){
 	char *file1;
@@ -508,6 +510,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		char *sub3 =substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
 		printf("Enviando: %s\n",sub3);
 		serializarYEnviarString(DAM_fd, sub3);
+		usleep(config_MDJ.time_delay*1000);
 		free(sub3);
 	}
 
