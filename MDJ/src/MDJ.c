@@ -145,6 +145,7 @@ void determinarOperacion(int operacion,int fd) {
 						creacion= CREAR_FALLO;
 		}
 		serializarYEnviarEntero(DAM_fd, &creacion);
+		log_info(log_MDJ,"peticion de creacion",crear->path);
 		crearArchivo(crear->path, crear->cant_lineas);
 		usleep(config_MDJ.time_delay*1000);
 		break;
