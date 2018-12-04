@@ -50,11 +50,39 @@ int recibirPeticionSeg(int socket) {
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
+	case ABRIR_ARCHIVO:
+	{
+		// Me llega PID y tamaño del archivo (en lineas)
+		iniciar_scriptorio_memoria* datos_archivo = recibirYDeserializar(socket,header);
+
+		// Busco la tabla de segmentos del proceso
+		t_list* tabla_segmentos = buscarTablaSeg(datos_archivo->pid);
+
+		// Busco una dirección con suficiente memoria libre
+		int memoria_libre = segmentoFirstFit(datos_archivo->size_script);
+		// Defino el ID de segmento que voy a usar para este archivo
+		int id_nuevo_segmento = siguiente_id_segmento(tabla_segmentos);
+
+		// Agrego la nueva entrada en la tabla de segmentos
+		list_add(tabla_segmentos, crear_fila_tabla_seg(id_nuevo_segmento,datos_archivo->pid,memoria_libre));
+
+		// Envio la info para acceder al archivo al DAM
+		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
+
+		serializarYEnviar(socket,ARCHIVO_CARGADO,&info_acceso_archivo);
+
+		free(datos_archivo);
+
+		// Luego el DAM va a enviar las líneas del archivo una a una usando el header ESCRIBIR_LINEA
+
+		return 0;
+	}
 	case PEDIR_LINEA:
 	{
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
 		char* linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		free(direccion);
 		serializarYEnviarString(socket,linea);
 		return 0;
 	}
@@ -80,19 +108,30 @@ int recibirPeticionSeg(int socket) {
 		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
 
 		// Remuevo el segmento indicado:
-		list_remove(tabla_segmentos, id_segmento);
+		fila_tabla_seg* segmento_borrado = list_remove(tabla_segmentos, id_segmento);
 
-		//TODO: Registro que dicho espacio ahora está libre en memoria
+		// Registro el nuevo espacio libre en memoria
+		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
+		free(direccion);
 		return 0;
 	}
 
-	case ENVIAR_ARCHIVO:
+	case LEER_ARCHIVO:
 	{
-		//char* linea_string;
-		//linea_string = recibirYDeserializar(socket,header);
+		// Recibo PID y base logica (id de segmento)
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		int id_segmento = direccion->base;
+
+		// Obtengo la direccion real
+		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
+		fila_tabla_seg* segmento_archivo = list_get(tabla_segmentos, direccion->base);
+
 		//strcpy(memoria[memoria_counter],linea_string);
 		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
 		//memoria_counter++;
+		free(direccion);
+
 		return 0;
 	}
 	}
@@ -143,8 +182,9 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 		return -1;
 	}
 
-	memoria[base_segmento+offset] = linea;
+	strcpy(memoria[base_segmento+offset],linea);
 	printf("Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+
 	return 0;
 }
 
@@ -173,4 +213,16 @@ int segmentoFirstFit(int lineas_segmento) {
 	list_add(memoria_vacia_seg, nueva_fila);
 
 	return fila_memoria_vacia->base;
+}
+
+int siguiente_id_segmento(t_list* tabla_segmentos) {
+	int max_id = 0;
+    void _iterate_elements(fila_tabla_seg *p) {
+        if (p->id_segmento > max_id) {
+        	max_id = p->id_segmento;
+        }
+    }
+
+    list_iterate(tabla_segmentos, (void*) _iterate_elements);
+    return max_id++;
 }
