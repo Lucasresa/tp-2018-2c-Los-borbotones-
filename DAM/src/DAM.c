@@ -138,10 +138,30 @@ void* recibirPeticion(int socket, void* argumentos) {
 			}
 			default:
 				printf("fallo el enum crear");
-
-
 		}
 	}
+	case ABRIR_ARCHIVO:
+	{
+		log_info(log_DAM,"Peticion de abrir archivo recibida");
+
+		char*path = recibirYDeserializarString(socket);
+		int dtb_id = *recibirYDeserializarEntero(socket);
+
+		char* buffer = obtenerArchivoMDJ(path);
+
+		log_info(log_DAM,"Cargo archivo al FM9");
+		cargarArchivoFM9(dtb_id, buffer);
+		log_info(log_DAM,"Enviando Final abrir archivo");
+
+		int success=FINAL_ABRIR;
+		serializarYEnviarEntero(SAFA_fd,&success);
+	    serializarYEnviarEntero(SAFA_fd,&dtb_id);
+	    serializarYEnviarString(SAFA_fd,path);
+	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
+	    log_info(log_DAM,"Final carga dummy enviado al safa");
+		return 0;
+	}
+
 	}
 	return 0;
 }
