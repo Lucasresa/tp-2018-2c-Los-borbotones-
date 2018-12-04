@@ -22,6 +22,8 @@
 #include <sys/mman.h> /* mmap() is defined in this header */
 #include <fcntl.h>
 #include <commons/bitarray.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 char* server_ip;
 int server_puerto;
@@ -68,6 +70,9 @@ char *archivo_path(char *path_archivo);
 char *bloque_path(char *numeroBloque);
 void conexion_DMA();
 void crearStringDeArchivoConBloques(peticion_obtener *obtener);
+void crearDirectorio(char *path);
+void actualizar_configuracion_Metadata(int ultimoBlque);
+char *string_config_metadata();
 struct addrinfo *server_info;
 
 typedef struct{

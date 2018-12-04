@@ -60,6 +60,7 @@ typedef enum{
 	CERRAR_ARCHIVO,      		// Para el CPU al FM9
 	PEDIR_DATOS,
 	ABRIR_ARCHIVO,              // CPU/SAFA a DAM, DAM a FM9
+	FLUSH_ARCHIVO,
 	BORRAR_DATOS,
 	VALIDAR_OK,
 	VALIDAR_FALLO,

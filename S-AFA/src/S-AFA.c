@@ -46,6 +46,8 @@ int main(){
 
 	log_info(log_SAFA,"Escuchando nuevas conexiones....");
 
+	log_info(log_SAFA,"Esperando que se conecte el DAM");
+
 	DAM_fd=aceptarConexion(SAFA_fd);
 
 	if(DAM_fd==-1){
@@ -53,6 +55,8 @@ int main(){
 		log_destroy(log_SAFA);
 		exit(1);
 	}
+
+	DAM=DAM_fd;
 
 	log_info(log_SAFA,"Conexion exitosa con DAM");
 
@@ -63,6 +67,8 @@ int main(){
 	pthread_detach(hiloDAM);
 
 	//El hilo main se queda esperando que se conecten nuevas CPU
+
+	log_info(log_SAFA,"Esperando que se conecte algun CPU para que comience a funcionar SAFA");
 
 	while(1){
 
@@ -183,6 +189,9 @@ void atenderDAM(int*fd){
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
 			break;
 		case FINALIZAR_PROCESO:
 			id_dtb=*recibirYDeserializarEntero(fd_DAM);
@@ -199,7 +208,92 @@ void atenderDAM(int*fd){
 				ejecutarPLP();
 				pthread_mutex_unlock(&mx_PLP);
 			}
+			break;
+		case ERROR_ARCHIVO_EXISTENTE:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"El dtb %d intento crear un archivo ya existente",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
 
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_ARCHIVO_INEXISTENTE:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"El dtb %d intento operar sobre un archivo que no existe",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_FM9_SIN_ESPACIO:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"No hay suficiente espacio en FM9 para cargar el archivo pedido por el DTB %d",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+		case ERROR_MDJ_SIN_ESPACIO:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"No hay suficiente espacio en MDJ para cargar lo que hay en FM9",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
+			break;
+
+		case ERROR_SEG_MEM:
+			id_dtb=*recibirYDeserializarEntero(fd_DAM);
+			log_error(log_SAFA,"Segmentation Fault en memoria provocado por el DTB %d",id_dtb);
+			pthread_mutex_lock(&mx_colas);
+			aux=getDTBEnCola(cola_block,id_dtb);
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,aux);
+			pthread_mutex_unlock(&mx_PCP);
+
+			if(aux->f_inicializacion==1){
+				pthread_mutex_lock(&mx_PLP);
+				ejecutarPLP();
+				pthread_mutex_unlock(&mx_PLP);
+			}
 			break;
 		}
 		list_clean(dtb->archivos);
@@ -262,9 +356,14 @@ void atenderCPU(int*fd){
 		t_DTB dtb_modificado;
 		log_info(log_SAFA,"protocolo: %d",protocolo);
 
-		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM)
+		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM){
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
-
+			pthread_mutex_lock(&mx_colas);
+			dtb=dictionary_get(cola_exec,string_itoa(dtb_cpu));
+			dtb->pc=dtb_modificado.pc;
+			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
+			pthread_mutex_unlock(&mx_colas);
+		}
 		char* clave;
 		int respuesta;
 		//Si recibe un wait de algun recurso
@@ -282,9 +381,6 @@ void atenderCPU(int*fd){
 					pthread_mutex_lock(&mx_colas);
 					dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 					pthread_mutex_unlock(&mx_colas);
-
-					dtb->pc=dtb_modificado.pc;
-					dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
 
 					pthread_mutex_lock(&mx_PCP);
 					ejecutarPCP(BLOQUEAR_PROCESO,dtb);
@@ -342,17 +438,13 @@ void atenderCPU(int*fd){
 		}else if(protocolo==SENTENCIA_EJECUTADA){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
-			pthread_mutex_lock(&mx_colas);
-			dtb=dictionary_get(cola_exec,string_itoa(dtb_cpu));
-			dtb->pc=dtb_modificado.pc;
-			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
-			pthread_mutex_unlock(&mx_colas);
-
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarTiempoDeRespuestaDTB();
 			actualizarMetricasDTBNew();
 		}else if(protocolo==SENTENCIA_DAM){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			actualizarTiempoDeRespuestaDTB();
 			actualizarMetricasDTBNew();
 		}
 		else{
@@ -360,9 +452,6 @@ void atenderCPU(int*fd){
 			pthread_mutex_lock(&mx_colas);
 			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 			pthread_mutex_unlock(&mx_colas);
-
-			dtb->pc=dtb_modificado.pc;
-			dtb->quantum_sobrante=dtb_modificado.quantum_sobrante;
 
 			//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 			pthread_mutex_lock(&mx_PCP);

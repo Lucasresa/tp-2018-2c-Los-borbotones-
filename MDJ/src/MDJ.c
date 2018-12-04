@@ -140,13 +140,16 @@ void determinarOperacion(int operacion,int fd) {
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
-		if (existe_archivo(crear->path)==0){
+		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
+		if (existe_archivo(crear->path)!=0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
 						creacion= CREAR_FALLO;
 		}
+		else{
+			crearDirectorio(crear->path);
+			crearArchivo(crear->path, crear->cant_lineas);
+		}
 		serializarYEnviarEntero(DAM_fd, &creacion);
-		log_info(log_MDJ,"peticion de creacion",crear->path);
-		crearArchivo(crear->path, crear->cant_lineas);
 		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
@@ -198,29 +201,63 @@ void crearArchivo(char *path, int numero_lineas) {
 	archivo_MetaData=config_create(complete_path);
 	char *ultimoBloqueChar;
 	char *sizeDelStringArchivoAGuardarChar;
-	int numeroDeBloque=config_MetaData.cantidad_bloques+1;
+	int numeroDeBloque=config_MetaData.cantidad_bloques;
 	ultimoBloqueChar=string_itoa(numeroDeBloque);
 	sizeDelStringArchivoAGuardarChar=string_itoa(numero_lineas);
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
-    string_append(&actualizarBloques,ultimoBloqueChar);
-	string_append(&actualizarBloques,"]");
+	int i=0;
+	int cantNFaltantes=numero_lineas;
+	int cantNescribir;
+	int flag = 1;
+	while(flag !=0){
+		config_MetaData.cantidad_bloques++;
+		ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
+		string_append(&actualizarBloques,ultimoBloqueChar);
+		if (cantNFaltantes < (i+1)*config_MetaData.tamanio_bloques){
+			cantNescribir = cantNFaltantes;
+			flag =0;
+		}
+		else{
+			cantNFaltantes -= config_MetaData.tamanio_bloques;
+			cantNescribir=config_MetaData.tamanio_bloques;
+			string_append(&actualizarBloques,",");
 
+		}
+		char *pathBloqueCompleto;
+		pathBloqueCompleto = bloque_path(ultimoBloqueChar);
+		fichero_metadata = fopen(pathBloqueCompleto, "wr");
+		for (int i=0;i<cantNescribir;i++){
+		   	fprintf(fichero_metadata,"\n");
+		}
+		fclose(fichero_metadata);
+		free(pathBloqueCompleto);
+	}
+    string_append(&actualizarBloques,"]");
 	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
 	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
-
 	config_save(archivo_MetaData);
 	config_destroy(archivo_MetaData);
-	char *pathBloqueCompleto;
-	pathBloqueCompleto = bloque_path(ultimoBloqueChar);
-	fichero_metadata = fopen(pathBloqueCompleto, "wr");
-    for (int i=0;i<numero_lineas;i++){
-    	fprintf(fichero_metadata,"\n");
-    }
-	fclose(fichero_metadata);
+    actualizar_configuracion_Metadata(config_MetaData.cantidad_bloques);
     free(complete_path);
-    free(pathBloqueCompleto);
+}
 
+char *string_config_metadata(){
+	char *direccionArchivoMedata=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Metadata.bin"));;
+	strcpy(direccionArchivoMedata,config_MDJ.mount_point);
+	string_append(&direccionArchivoMedata,"/Metadata/Metadata.bin");
+	return direccionArchivoMedata;
+}
+
+void actualizar_configuracion_Metadata(int ultimoBloque){
+	t_config *archivo_MetaData;
+	char *direccionArchivoMedata = string_config_metadata();
+	archivo_MetaData=config_create(direccionArchivoMedata);
+	char *stringUltimoBloque=string_itoa(ultimoBloque);
+	config_set_value(archivo_MetaData,"CANTIDAD_BLOQUES",stringUltimoBloque);
+	config_save(archivo_MetaData);
+	free(direccionArchivoMedata);
+	config_destroy(archivo_MetaData);
 }
 
 int guardarDatos(peticion_guardar *guardado) {
@@ -334,9 +371,23 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-			char * path = "/scripts/test";
-			crearArchivo(path,10);
-			borrar_archivo(path);
+			char * path = "/equipo/test";
+			//crearDirectorio(path);
+			//crearArchivo(path,10000);
+			//borrar_archivo(path);
+			int creacion = CREAR_OK;
+			log_info(log_MDJ,"peticion de creacion de archivo:",path);
+			if (existe_archivo(path)!=0){
+				log_error(log_MDJ,"No se puede crear por q existe el archivo:",path);
+				creacion= CREAR_FALLO;
+			}
+			else{
+
+				crearDirectorio(path);
+				crearArchivo(path, 52);
+				log_info(log_MDJ,"Se creo el archivo:",path);
+			}
+
 		}
 
 	}
@@ -732,6 +783,40 @@ void crearBitmap(){
 	}
 
 	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
+
+}
+void crearDirectorio(char *path){
+	int i;
+	char **arr = NULL;
+	arr = string_split(path, "/");
+	int c=sizeof(arr)+1;
+	printf("cantidad de parametros:%d\n", c);
+    if (c==1){
+    	printf( "no hay directorio para crear %s\n",arr[0] );
+    }
+    else{
+    	for (i = 0; i < c; i++){
+    	    	struct stat info;
+    	    	if( stat( arr[i], &info ) != 0 ){
+    	    		char* full_directorio= archivo_path(arr[i]);
+    	    	    if (arr[i+1]==NULL){
+    	    	    	break;
+    	    	    }
+    	    	    printf( "el directorio no esta creado %s\n",arr[i] );
+    	    		if (mkdir(full_directorio, S_IRWXU) != 0) {
+    	    	        if (errno != EEXIST)
+    	    	        	printf( "no se pudo crear el directorio %s\n",full_directorio);
+    	    	    }
+    	    	}
+    	    	else if( info.st_mode & S_IFDIR )
+    	    	    printf( "%s is a directory\n", arr[i] );
+    	    	else
+    	    	    printf( "%s es un archivo \n", arr[i] );
+   	    }
+
+    }
+
+
 
 }
 

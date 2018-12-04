@@ -117,23 +117,51 @@ void* recibirPeticion(int socket, void* argumentos) {
 		respuesta = *recibirYDeserializarEntero(MDJ_fd);
 		printf("Recibi: %d\n",respuesta);
 
-		if (respuesta==CREAR_OK){
-			printf("creacion ok");
-			int success=FINAL_CREAR;
-			serializarYEnviarEntero(SAFA_fd,&success);
-			serializarYEnviarEntero(SAFA_fd,&dtb_id);
-			log_info(log_DAM,"El archivo se creo con exito");
-			return 0;
-		}
-		else{
-			printf("creacion fallida\n");
-			int success=FINALIZAR_PROCESO;
-			serializarYEnviarEntero(SAFA_fd,&success);
-			serializarYEnviarEntero(SAFA_fd,&dtb_id);
-			log_info(log_DAM,"Hubo un error al crear el archivo");
-			return 0;
+		switch(respuesta){
+
+			case CREAR_OK:{
+
+				printf("creacion ok");
+				int success=FINAL_CREAR;
+				serializarYEnviarEntero(SAFA_fd,&success);
+				serializarYEnviarEntero(SAFA_fd,&dtb_id);
+				log_info(log_DAM,"El archivo se creo con exito");
+				return 0;
+			}
+			case CREAR_FALLO:{
+				printf("creacion fallida\n");
+			    int success=FINALIZAR_PROCESO;
+				serializarYEnviarEntero(SAFA_fd,&success);
+				serializarYEnviarEntero(SAFA_fd,&dtb_id);
+				log_info(log_DAM,"Hubo un error al crear el archivo");
+				return 0;
+			}
+			default:
+				printf("fallo el enum crear");
 		}
 	}
+	case ABRIR_ARCHIVO:
+	{
+		log_info(log_DAM,"Peticion de abrir archivo recibida");
+
+		char*path = recibirYDeserializarString(socket);
+		int dtb_id = *recibirYDeserializarEntero(socket);
+
+		char* buffer = obtenerArchivoMDJ(path);
+
+		log_info(log_DAM,"Cargo archivo al FM9");
+		cargarArchivoFM9(dtb_id, buffer);
+		log_info(log_DAM,"Enviando Final abrir archivo");
+
+		int success=FINAL_ABRIR;
+		serializarYEnviarEntero(SAFA_fd,&success);
+	    serializarYEnviarEntero(SAFA_fd,&dtb_id);
+	    serializarYEnviarString(SAFA_fd,path);
+	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
+	    log_info(log_DAM,"Final carga dummy enviado al safa");
+		return 0;
+	}
+
 	}
 	return 0;
 }

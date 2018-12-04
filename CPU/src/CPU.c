@@ -136,13 +136,19 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		switch(linea_parseada.keyword){
 		case ABRIR:
-
-			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path))
-				break;
+			log_info(log_CPU,"Se ejecuto la operacion ABRIR");
+			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path)>-1){
+				log_info(log_CPU,"El archivo ya esta abierto");
+			}
 			else{
 				protocolo=ABRIR_ARCHIVO;
 				serializarYEnviarEntero(DAM,&protocolo);
 				serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
+
+				serializarYEnviarEntero(DAM,&dtb.id);
+
+				log_info(log_CPU,"Informacion enviada a DAM para abrir el archivo");
+
 				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 				uso_DAM=1;
 				actualizarDTB(&dtb);
@@ -154,6 +160,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			actualizarDTB(&dtb);
 			break;
 		case ASIGNAR:
+			//CPU se comunica directamente con FM9
+
+
+
+
 			break;
 		case WAIT:
 			actualizarDTB(&dtb);
@@ -174,6 +185,22 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}
 			break;
 		case FLUSH:
+			//CPU envia una peticion de FLUSH a DAM (envio el protocolo - path - id_dtb)
+
+			log_info(log_CPU,"Se ejecuto la operacion FLUSH");
+			protocolo=FLUSH_ARCHIVO;
+			serializarYEnviarEntero(DAM,&protocolo);
+			serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
+
+			serializarYEnviarEntero(DAM,&dtb.id);
+
+			log_info(log_CPU,"Informacion enviada a DAM para persistir el archivo en MDJ");
+
+			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
+			uso_DAM=1;
+			actualizarDTB(&dtb);
+			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			interrupcion=1;
 			break;
 		case CLOSE:
 			actualizarDTB(&dtb);
@@ -217,6 +244,24 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		}
 		case BORRAR:
+			//CPU envia peticion de borrar un archivo a DAM (protocolo - path - id_dtb)
+			log_info(log_CPU,"Se ejecuto la operacion BORRAR");
+
+			peticion_borrar* borrar_archivo=malloc(sizeof(peticion_crear));
+			borrar_archivo->path=string_duplicate(linea_parseada.argumentos.borrar.path);
+			serializarYEnviar(DAM,BORRAR_ARCHIVO,borrar_archivo);
+
+			serializarYEnviarEntero(DAM,&dtb.id);
+
+			log_info(log_CPU,"Informacion enviada a DAM para Borrar el archivo");
+
+			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
+			uso_DAM=1;
+			actualizarDTB(&dtb);
+
+			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			interrupcion=1;
+
 			break;
 		case FIN:
 			log_info(log_CPU,"Se termino de ejecutar el script");
