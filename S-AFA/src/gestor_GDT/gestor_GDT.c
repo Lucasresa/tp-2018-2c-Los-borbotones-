@@ -129,9 +129,16 @@ void ejecutarComando(int nro_op, char * args){
 						ejecutarPCP(FINALIZAR_PROCESO,dtb);
 						pthread_mutex_unlock(&mx_PCP);
 						//Ejecuto PLP para ver si puedo agregar algun proceso a ready
+
+						//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
+						//serializarYEnviarEntero(DAM,&operacion);
+						//serializarYEnviarEntero(DAM,&dtb->id);
+
 						pthread_mutex_lock(&mx_PLP);
 						ejecutarPLP();
 						pthread_mutex_unlock(&mx_PLP);
+
+
 
 					}
 				}
@@ -745,10 +752,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
-
-		//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
-//		serializarYEnviarEntero(DAM,&operacion);
-//		serializarYEnviarEntero(DAM,&dtb->id);
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)

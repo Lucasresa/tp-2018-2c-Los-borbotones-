@@ -121,7 +121,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 			case CREAR_OK:{
 
-				printf("creacion ok");
+				printf("creacion ok\n");
 				int success=FINAL_CREAR;
 				serializarYEnviarEntero(SAFA_fd,&success);
 				serializarYEnviarEntero(SAFA_fd,&dtb_id);
@@ -130,7 +130,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			}
 			case CREAR_FALLO:{
 				printf("creacion fallida\n");
-			    int success=FINALIZAR_PROCESO;
+			    int success=ERROR_ARCHIVO_EXISTENTE;
 				serializarYEnviarEntero(SAFA_fd,&success);
 				serializarYEnviarEntero(SAFA_fd,&dtb_id);
 				log_info(log_DAM,"Hubo un error al crear el archivo");
@@ -161,7 +161,6 @@ void* recibirPeticion(int socket, void* argumentos) {
 	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
 	}
-
 	}
 	return 0;
 }
