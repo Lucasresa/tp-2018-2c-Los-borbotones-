@@ -65,7 +65,8 @@ typedef enum{
 	VALIDAR_OK,
 	VALIDAR_FALLO,
 	CREAR_FALLO,
-	CREAR_OK
+	CREAR_OK,
+	CERRAR_PID                 // Al FM9, para que finalice un proceso
 
 }t_protocolo;
 
@@ -124,8 +125,6 @@ struct peticionLineaTLB{
 struct paqContenido{
 	char* contenido;
 };
-
-
 
 struct respuesta{
 	enum resultado res;

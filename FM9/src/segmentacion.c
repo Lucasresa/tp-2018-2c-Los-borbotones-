@@ -50,6 +50,25 @@ int recibirPeticionSeg(int socket) {
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
+	case CERRAR_PID:
+	{
+		int pid = *recibirYDeserializarEntero(socket);
+
+		// Busco la tabla de segmentos del proceso
+		t_list* tabla_segmentos = buscarYBorrarTablaSeg(pid);
+
+		// Recorro la tabla de segmentos, liberando la memoria
+	    void _iterate_elements(fila_tabla_seg *p) {
+	    	list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(p->base_segmento, p->limite_segmento));
+	    	free(p);
+	    }
+	    list_iterate(tabla_segmentos, (void*) _iterate_elements);
+	    list_destroy(tabla_segmentos);
+
+		int success=CERRAR_PID;
+		serializarYEnviarEntero(socket,&success);
+		return 0;
+	}
 	case ABRIR_ARCHIVO:
 	{
 		// Me llega PID y tamaño del archivo (en lineas)
@@ -64,7 +83,7 @@ int recibirPeticionSeg(int socket) {
 		int id_nuevo_segmento = siguiente_id_segmento(tabla_segmentos);
 
 		// Agrego la nueva entrada en la tabla de segmentos
-		list_add(tabla_segmentos, crear_fila_tabla_seg(id_nuevo_segmento,datos_archivo->pid,memoria_libre));
+		list_add(tabla_segmentos, crear_fila_tabla_seg(id_nuevo_segmento,datos_archivo->size_script,memoria_libre));
 
 		// Envio la info para acceder al archivo al DAM
 		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
@@ -121,15 +140,18 @@ int recibirPeticionSeg(int socket) {
 		// Recibo PID y base logica (id de segmento)
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
-		int id_segmento = direccion->base;
 
 		// Obtengo la direccion real
 		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
 		fila_tabla_seg* segmento_archivo = list_get(tabla_segmentos, direccion->base);
 
-		//strcpy(memoria[memoria_counter],linea_string);
-		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
-		//memoria_counter++;
+		char* linea;
+
+		// Envío línea a línea el archivo
+		for (int count = segmento_archivo->base_segmento; count <= segmento_archivo->limite_segmento; ++count) {
+			linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+			serializarYEnviarString(socket,linea);
+		}
 		free(direccion);
 
 		return 0;
@@ -162,8 +184,6 @@ char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
 	// Obtengo la direccion real/fisica base
 	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
 	int base_segmento = segmento->base_segmento;
-
-	printf("Leo memoria en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
 
 	return memoria[base_segmento+offset];
 
@@ -198,6 +218,16 @@ t_list* buscarTablaSeg(int pid) {
 	return tabla_segmentos;
 }
 
+t_list* buscarYBorrarTablaSeg(int pid) {
+	// Obtengo la tabla de segmentos para ese PID
+	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
+		return (p->id_proceso == pid);
+	}
+	fila_tabla_segmentos_pid *relacion_pid_tabla = list_remove_by_condition(tabla_segmentos_pid, (void*) es_pid_buscado);
+	t_list* tabla_segmentos = list_remove(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+	return tabla_segmentos;
+}
+
 
 int segmentoFirstFit(int lineas_segmento) {
 	//Buscamos
@@ -225,4 +255,35 @@ int siguiente_id_segmento(t_list* tabla_segmentos) {
 
     list_iterate(tabla_segmentos, (void*) _iterate_elements);
     return max_id++;
+}
+
+void *consolaThreadSeg(void *vargp)
+{
+	while(true) {
+		char *line = readline("$ ");
+
+		if (*line==(int)NULL) continue;
+
+		char *command = strtok(line, " ");
+
+		if (strcmp(command, "dump")==0) {
+			char *pid = strtok(0, " ");
+			if (pid==NULL) {
+				puts("Por favor inserte un id");
+				continue;
+			}
+			// Busco la tabla de segmentos del proceso
+			t_list* tabla_segmentos = buscarTablaSeg(pid);
+			log_info(log_FM9, "Estructuras del process id: %i", pid);
+			log_info(log_FM9, "N° Segmento, Base, Límite", pid);
+
+			// Recorro la tabla de segmentos, imprimiendo cada segmento
+		    void _iterate_elements(fila_tabla_seg *p) {
+		    	log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento);
+		    }
+		    list_iterate(tabla_segmentos, (void*) _iterate_elements);
+		} else {
+			puts("Comando no reconozido.");
+		}
+	}
 }

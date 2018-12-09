@@ -23,7 +23,11 @@ int main(){
 	// Memoria es un array de strings, con el tamaño de cada string igual a MAX_LINEA.
 	memoria = iniciar_memoria();
 
+	pthread_t thread_id;
+
 	if (config_FM9.modo == SEG) {
+		// Abro la consola
+		pthread_create(&thread_id, NULL, consolaThreadSeg, NULL);
 		// Creo estructuras de segmentación
 		lista_tablas_segmentos = list_create();
 		tabla_segmentos_pid = list_create();
@@ -33,12 +37,6 @@ int main(){
 		// Creo estructuras de paginación invertida
 		crearTablaPagInv();
 	}
-
-	/*
-	// Creo el thread para la consola
-	pthread_t thread_id;
-	pthread_create(&thread_id, NULL, consolaThread, NULL);
-	*/
 
 	int listener_socket;
 	crearSocket(&listener_socket);
