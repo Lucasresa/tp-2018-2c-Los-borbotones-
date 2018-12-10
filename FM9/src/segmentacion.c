@@ -209,12 +209,18 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 }
 
 t_list* buscarTablaSeg(int pid) {
+	t_list* tabla_segmentos;
 	// Obtengo la tabla de segmentos para ese PID
 	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
 		return (p->id_proceso == pid);
 	}
 	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
-	t_list* tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
+	if(relacion_pid_tabla == NULL) {
+		puts("devuelvo null");
+		return NULL;
+	}
+	puts("no devuelvo null");
+	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
 }
 
@@ -265,23 +271,36 @@ void *consolaThreadSeg(void *vargp)
 		if (*line==(int)NULL) continue;
 
 		char *command = strtok(line, " ");
-
+		
 		if (strcmp(command, "dump")==0) {
-			char *pid = strtok(0, " ");
-			if (pid==NULL) {
+			char *buffer = strtok(0, " ");
+			if (buffer==NULL) {
 				puts("Por favor inserte un id");
 				continue;
 			}
+			int pid = atoi(buffer);
+			if (pid == NULL) {
+			    printf("PID invalid\n");
+			    continue;
+			}
 			// Busco la tabla de segmentos del proceso
 			t_list* tabla_segmentos = buscarTablaSeg(pid);
-			log_info(log_FM9, "Estructuras del process id: %i", pid);
-			log_info(log_FM9, "N° Segmento, Base, Límite", pid);
-
-			// Recorro la tabla de segmentos, imprimiendo cada segmento
-		    void _iterate_elements(fila_tabla_seg *p) {
-		    	log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento);
-		    }
-		    list_iterate(tabla_segmentos, (void*) _iterate_elements);
+			log_info(log_FM9, "asd");
+			if (tabla_segmentos == NULL) {
+				log_info(log_FM9, "dsa");
+				log_info(log_FM9, "PID %i no está cargado en memoria", pid);
+				continue;
+			} else {
+				log_info(log_FM9, "asd");
+				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
+				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
+				log_info(log_FM9, "=========================", pid);
+				// Recorro la tabla de segmentos, imprimiendo cada segmento
+				void _iterate_elements(fila_tabla_seg *p) {
+					log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
+				}
+				list_iterate(tabla_segmentos, (void*) _iterate_elements);
+			}
 		} else {
 			puts("Comando no reconozido.");
 		}
