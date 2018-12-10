@@ -1,4 +1,6 @@
 #include "FM9.h"
+#include <math.h>
+
 
 int main(){
 	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
@@ -161,21 +163,19 @@ int recibirPeticionPagInv(int socket) {
 		int pid = datos_script->pid;
 		int tamanio_script = datos_script->size_script;
 
+		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+
+		int cantidad_frames = tamanio_script/cant_lineas_pag;
+
+		int frames_redondeados = ceil(cantidad_frames);
+
 		int i = 0;
-
-		int cantidad_frames = tamanio_script/config_FM9.tam_pagina;
-
-		// Creo una tabla de paginas
-		list_add(lista_tabla_pag_inv, list_create());
 
 		// TODO: Busco en memoria espacio libre
 
-		// Creo una entrada en la tabla de paginacion invertida en un marco que tenga libre
-
-		for( i = 0; i < cantidad_frames; i = i + 1 ){
-			printf("Creo una entrada en el marco %i\n", ultimo_indice);
-			//list_add(lista_tabla_pag_inv, crear_fila_tabla_pag_inv(ultimo_indice,pid,i,0)) ;
-			ultimo_indice = ultimo_indice+1;
+		for( i = 0; i < frames_redondeados; i = i + 1 ){
+			fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
+			unaFilaDisponible->pid = pid;
 		}
 
 		free(datos_script);
@@ -218,7 +218,6 @@ int recibirPeticionPagInv(int socket) {
 		return 0;
 	}
 	}
-	return 0;
 }
 
 char* leerMemoriaPagInv(int pid, int pagina, int offset) {
@@ -282,8 +281,7 @@ int traducirOffset(int offset){
 	}
 }
 
-
-int crearTablaPagInv(){
+void crearTablaPagInv(){
 
 	int tamanio_memoria = config_FM9.tamanio;
 	int tamanio_pagina = config_FM9.tam_pagina;
@@ -292,13 +290,19 @@ int crearTablaPagInv(){
 	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
 
 	for( i = 0; i < cantidad_marcos; i = i + 1 ){
-		crear_fila_tabla_pag_inv(i,0,0,0);
+		list_add(lista_tabla_pag_inv,crear_fila_tabla_pag_inv(i,0,0,0));
 	}
+}
 
+fila_pag_invertida* encontrarFilaVacia() {
+
+	//Creamos la condicion de que el flag esté seteado en 0 (sin usar)
+	int estaVacio(fila_pag_invertida *p){
+		return (p->flag == 0);
+	}
+	//Que fila está sin usar?
+	return list_find(lista_tabla_pag_inv, (void*) estaVacio);
 
 }
 
-int estaVacio(fila_pag_invertida *p){
-	return (p->flag == 0);
-}
 

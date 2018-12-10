@@ -4,6 +4,7 @@
 #include "../../biblioteca/bibliotecaDeSockets.h"
 #include "segmentacion.h"
 
+
 typedef enum{
 	SEG,
 	TPI,
@@ -55,9 +56,11 @@ void *funcionHandshake(int, void*);
 void *recibirPeticion(int, void*);
 
 t_modo detectarModo(char*);
-int crearTablaPagInv();
+void crearTablaPagInv();
 
 int traducirOffset(int offset);
 int traducirPagina(int pagina,int offset);
+
+fila_pag_invertida* encontrarFilaVacia();
 
 #endif /* FM9_H_ */
