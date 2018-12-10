@@ -121,7 +121,7 @@ void ejecutarComando(int nro_op, char * args){
 					estado=buscarDTB(&dtb,dtb_id,FINALIZAR);
 
 					if(estado==NULL){
-						printf("No se encontro ningun DTB en el sistema con ese ID\n");
+						printf("No se encontro ningun DTB en el sistema con ese ID o ese DTB ya ha finalizado\n");
 					}else if(string_equals_ignore_case(estado,"EJECUTANDO")){
 						printf("No se puede finalizar este proceso, se encuentra ejecutando\n");
 					}else{
@@ -129,12 +129,15 @@ void ejecutarComando(int nro_op, char * args){
 						ejecutarPCP(FINALIZAR_PROCESO,dtb);
 						pthread_mutex_unlock(&mx_PCP);
 						//Ejecuto PLP para ver si puedo agregar algun proceso a ready
+
+						//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
+						//serializarYEnviarEntero(DAM,&operacion);
+						//serializarYEnviarEntero(DAM,&dtb->id);
+
 						pthread_mutex_lock(&mx_PLP);
 						ejecutarPLP();
 						pthread_mutex_unlock(&mx_PLP);
 
-						//Aca deberia avisar a DAM, en caso de que sea un proceso inicializado, que el proceso finalizo y que le diga a
-						//Fm9 que libere la memoria que dicho proceso estaba ocupando
 
 
 					}
@@ -146,13 +149,15 @@ void ejecutarComando(int nro_op, char * args){
 
 					float sentencias_DAM, sentencias_Totales, sentencias_Exit, total_Procesos, procesos_Exit;
 					float promedio_sentencias_DAM, promedio_sentencias_Exit;
-					float porcentaje_sentencias_DAM;
+					float porcentaje_sentencias_DAM, tiempo_respuesta_promedio;
 
 					sentencias_DAM = (float)getSentenciasDAM();
 					sentencias_Totales = (float)getSentenciasTotales();
 					sentencias_Exit = (float)getSentenciasParaExit();
 					total_Procesos = (float)list_size(info_metricas);
 					procesos_Exit = (float)list_size(cola_exit);
+
+					tiempo_respuesta_promedio = getTiempoDeRespuestaPromedioSistema();
 
 					if(procesos_Exit!=0)
 						promedio_sentencias_Exit = sentencias_Exit/procesos_Exit;
@@ -172,14 +177,14 @@ void ejecutarComando(int nro_op, char * args){
 					printf("Cantidad de sentencias ejecutadas promedio del sistema que usaron a 'El diego': %0.2f\n"
 							"Cantidad de sentencias ejecutadas promedio del sistema para que un DTB termine	en la cola EXIT: %0.2f\n"
 							"Porcentaje de las sentencias ejecutadas promedio que fueron a 'El Diego': %0.2f%%\n"
-							"Tiempo de Respuesta promedio del Sistema: ??\n",
-							promedio_sentencias_DAM, promedio_sentencias_Exit,porcentaje_sentencias_DAM);
+							"Tiempo de Respuesta promedio del Sistema: %0.2f\n",
+							promedio_sentencias_DAM, promedio_sentencias_Exit,porcentaje_sentencias_DAM,tiempo_respuesta_promedio);
 
 				}else{
 					//Debo mostrar la cantidad de sentencias que espero el DTB en NEW
 					t_DTB* dtb_new;
 					int dtb_id = (int)strtol(args,(char**)NULL,10);
-					char* estado=buscarDTB(&dtb_new,dtb_id,0);
+					char* estado=buscarDTB(&dtb_new,dtb_id,STATUS);
 					if(estado==NULL){
 						printf("El DTB no existe en el sistema\n");
 					}else if(dtb_new->f_inicializacion==0){
@@ -189,6 +194,11 @@ void ejecutarComando(int nro_op, char * args){
 						t_metricas* metrica_dtb=buscarMetricasDTB(dtb_new->id);
 						printf("DTB %d\nCantidad de sentencias ejecutadas: %d\nCantidad de sentencias en NEW: %d\nCantidad de sentencias a DAM: %d\n",
 								metrica_dtb->id_dtb,metrica_dtb->sent_ejecutadas,metrica_dtb->sent_NEW,metrica_dtb->sent_DAM);
+
+						if(metrica_dtb->tiempo_respuesta>0){
+							printf("Tiempo de respuesta: %0.2f\n",getTiempoDeRespuestaPromedioDTB(metrica_dtb->id_dtb));
+						}
+
 					}
 				}
 			pthread_mutex_unlock(&mx_metricas);
@@ -222,7 +232,7 @@ char* buscarDTB(t_DTB** dtb, int id, int operacion){
 	}else if((*dtb=buscarDTBEnCola(cola_ready_IOBF,id,operacion))!=NULL){
 		estado="READY IOBF";
 		return estado;
-	}else if((*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
+	}else if(operacion==STATUS&&(*dtb=buscarDTBEnCola(cola_exit,id,operacion))!=NULL){
 		estado="FINALIZADO";
 		return estado;
 	}else if(dictionary_has_key(cola_exec,string_itoa(id))){
@@ -316,6 +326,74 @@ void actualizarMetricaDTB(int id, int protocolo){
 			break;
 		}
 	}
+}
+
+void actualizarTiempoDeRespuestaDTB(){
+
+	int i, dtb_totales=list_size(info_metricas);
+
+	t_metricas* metrica;
+	t_DTB* dtb;
+
+	char* estado;
+
+	for(i=0;i<dtb_totales;i++){
+		metrica=list_get(info_metricas,i);
+
+		estado = buscarDTB(&dtb,metrica->id_dtb,STATUS);
+
+		if(!string_equals_ignore_case(estado,"new")&&!string_equals_ignore_case(estado,"finalizado")){
+			metrica->tiempo_respuesta++;
+		}
+	}
+}
+
+int validarTiempoDeRespuesta(int id_dtb){
+
+	t_metricas* metrica_dtb=buscarMetricasDTB(id_dtb);
+	int retorno=0;
+	//Si el proceso estuvo en ready
+	if(metrica_dtb->tiempo_respuesta>0)
+		retorno=1;
+
+	return retorno;
+}
+
+float getTiempoDeRespuestaPromedioDTB(int id_dtb){
+
+	t_metricas* metrica_dtb=buscarMetricasDTB(id_dtb);
+	float promedio;
+
+	if(metrica_dtb->sent_DAM==0){
+		promedio = metrica_dtb->tiempo_respuesta;
+	}else{
+		promedio = (float)metrica_dtb->tiempo_respuesta/metrica_dtb->sent_DAM;
+	}
+
+	return promedio;
+
+}
+
+float getTiempoDeRespuestaPromedioSistema(){
+
+	float sumatoria=0, parcial, procesos_validos=0, promedio_total;
+	int i, total_procesos=list_size(info_metricas);
+
+	for(i=0;i<total_procesos;i++){
+
+		if(validarTiempoDeRespuesta(i)){
+			parcial=getTiempoDeRespuestaPromedioDTB(i);
+			sumatoria+=parcial;
+			procesos_validos++;
+		}
+	}
+
+	if(procesos_validos==0)
+		promedio_total=0;
+	else
+		promedio_total=sumatoria/procesos_validos;
+
+	return promedio_total;
 }
 
 void actualizarMetricasDTBNew(){
@@ -639,6 +717,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		metrica_dtb->sent_DAM=0;
 		metrica_dtb->sent_ejecutadas=0;
 		metrica_dtb->sent_NEW=0;
+		metrica_dtb->tiempo_respuesta=0;
 		//Agrego esa informacion a esta lista auxiliar
 		list_add(info_metricas,metrica_dtb);
 
@@ -673,8 +752,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
-
-		//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)

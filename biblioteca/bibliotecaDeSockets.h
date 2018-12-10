@@ -25,6 +25,7 @@ typedef enum{
 	CREAR_ARCHIVO,       		//PARA EL MDJ
 	OBTENER_DATOS,       		//PARA EL MDJ
 	GUARDAR_DATOS,       		//PARA EL MDJ
+	DO_NOT_USE,                 //Header temporal para evitar ciertos errores
 	BORRAR_ARCHIVO,      		//PARA EL MDJ
 	EJECUTAR_PROCESO,    		//PARA EL SAFA
 	FINALIZAR_PROCESO,   		//PARA CPU Y SAFA
@@ -40,6 +41,7 @@ typedef enum{
 	SENTENCIA_EJECUTADA, 		//PARA CPU Y SAFA
 	SENTENCIA_DAM,		 		//PARA CPU Y SAFA
 	ENVIAR_ARCHIVO,      		//PARA DAM Y MDJ/FM9
+	LEER_ARCHIVO,               //PARA DAM A FM9
 	FINAL_CARGA_DUMMY,   		//PARA SAFA Y DAM
 	FINAL_ABRIR,         		//PARA SAFA Y DAM
 	FINAL_CREAR,         		//PARA SAFA Y DAM
@@ -53,15 +55,18 @@ typedef enum{
 	ESCRIBIR_LINEA,      		// Para el DAM al FM9
 	MEMORIA_INICIALIZADA,		// Para el FM9 al DAM
 	LINEA_CARGADA,       		// Para el FM9 al DAM
+	ARCHIVO_CARGADO,
 	PEDIR_LINEA,         		// Para el CPU al FM9
 	CERRAR_ARCHIVO,      		// Para el CPU al FM9
 	PEDIR_DATOS,
-	ABRIR_ARCHIVO,
+	ABRIR_ARCHIVO,              // CPU/SAFA a DAM, DAM a FM9
+	FLUSH_ARCHIVO,
 	BORRAR_DATOS,
 	VALIDAR_OK,
 	VALIDAR_FALLO,
 	CREAR_FALLO,
-	CREAR_OK
+	CREAR_OK,
+	CERRAR_PID                 // Al FM9, para que finalice un proceso
 
 }t_protocolo;
 
@@ -120,8 +125,6 @@ struct peticionLineaTLB{
 struct paqContenido{
 	char* contenido;
 };
-
-
 
 struct respuesta{
 	enum resultado res;

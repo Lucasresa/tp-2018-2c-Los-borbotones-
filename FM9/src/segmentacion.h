@@ -47,12 +47,16 @@ typedef struct fila_tabla_segmentos_pid{
 
 int recibirPeticionSeg(int);
 
+void *consolaThreadSeg(void *vargp);
+
 // Utils
 int cargarEnMemoriaSeg(int, int, int, char*);
 char* leerMemoriaSeg(int, int, int);
 t_list* buscarTablaSeg(int pid);
+t_list* buscarYBorrarTablaSeg(int pid);
 struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int cant_lineas);
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 int segmentoFirstFit(int tamanio);
+int siguiente_id_segmento(t_list* tabla_segmentos);
 
 #endif /* SEGMENTACION_H_ */
