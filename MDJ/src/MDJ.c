@@ -133,10 +133,10 @@ void determinarOperacion(int operacion,int fd) {
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			validar=VALIDAR_FALLO;
 		}
-		if(verificar_bloques(validacion->path)!=0){
+		/*if(verificar_bloques(validacion->path)!=0){
 			log_error(log_MDJ,"Error de bloques:",validacion->path);
 		    validar=VALIDAR_FALLO;
-		}
+		}*/
 		serializarYEnviarEntero(DAM_fd, &validar);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -374,11 +374,17 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-			char * path = "/equipo/test";
+			char * path = "/scripts/checkpoint.escriptorio";
 			//crearDirectorio(path);
 			//crearArchivo(path,10000);
 			//borrar_archivo(path);
-			int creacion = CREAR_OK;
+			peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
+			obtener->offset=0;
+			obtener->path="/scripts/checkpoint.escriptorio";
+			obtener->size=10;
+			crearStringDeArchivoConBloques(obtener);
+
+			/*int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
 			if (existe_archivo(path)!=0){
 				log_error(log_MDJ,"No se puede crear por q existe el archivo:",path);
@@ -390,7 +396,7 @@ void consola_MDJ(){
 				crearArchivo(path, 52);
 				log_info(log_MDJ,"Se creo el archivo:",path);
 			}
-
+			*/
 		}
 
 	}
@@ -512,13 +518,14 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	t_config_MetaArchivo metadataArchivo;
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques)+1;
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
 	struct stat statbuf;
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
+
 	for(i=0;i<cantidadBloques;i++){
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
@@ -821,11 +828,7 @@ void crearDirectorio(char *path){
     	    	else
     	    	    printf( "%s es un archivo \n", arr[i] );
    	    }
-
     }
-
-
-
 }
 
 int verificar_bloques(char *path){
@@ -840,6 +843,15 @@ int verificar_bloques(char *path){
 	struct stat statbuf;
 
 
+}
+
+
+int cantidadDeBloques (char **bloque){
+	int i=0;
+	while (bloque[i]!=0){
+		i++;
+	}
+	return i;
 }
 
 /*int cmd_md5(char *linea){

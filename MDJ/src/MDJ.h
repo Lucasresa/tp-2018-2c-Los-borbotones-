@@ -73,6 +73,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener);
 void crearDirectorio(char *path);
 void actualizar_configuracion_Metadata(int ultimoBlque);
 char *string_config_metadata();
+int cantidadDeBloques (char **bloque);
 struct addrinfo *server_info;
 
 typedef struct{
