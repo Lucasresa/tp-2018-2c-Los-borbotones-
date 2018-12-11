@@ -308,3 +308,21 @@ int recibirHeader(int socket, int headerEsperado) {
 	}
 	return 0;
 }
+
+void testeoFM9() {
+	char bufferTesteo[200] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
+	log_info(log_DAM,"Cargo archivo al FM9");
+	cargarScriptFM9(0, bufferTesteo);
+	log_info(log_DAM,"Enviando final carga dummy");
+
+	char bufferTesteoDos[60] = "\n\n\n\n\n";
+	cargarArchivoFM9(0, bufferTesteoDos);
+
+	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
+	log_info(log_DAM,"Cargo archivo al FM9");
+	cargarScriptFM9(1, bufferTesteoTres);
+	log_info(log_DAM,"Enviando final carga dummy");
+
+	char bufferTesteoCuatro[60] = "\n\n\n\n\n";
+	cargarArchivoFM9(1, bufferTesteoCuatro);
+}

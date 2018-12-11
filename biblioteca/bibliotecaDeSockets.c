@@ -148,6 +148,7 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarString(socket,((cargar_en_memoria*)package)->linea);
 		return;
 	case INICIAR_MEMORIA_PID:
+	case ABRIR_ARCHIVO:
 		serializarYEnviarEntero(socket, &((iniciar_scriptorio_memoria*)package)->pid);
 		serializarYEnviarEntero(socket, &((iniciar_scriptorio_memoria*)package)->size_script);
 		break;
@@ -236,6 +237,7 @@ void serializarYEnviarEntero(int socket, int* entero){
 void* recibirYDeserializar(int socket,int tipo){
 	switch(tipo){
 	case INICIAR_MEMORIA_PID:
+	case ABRIR_ARCHIVO:
 	{
 		iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 		datos_script->pid = *recibirYDeserializarEntero(socket);

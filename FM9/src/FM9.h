@@ -3,6 +3,7 @@
 
 #include "../../biblioteca/bibliotecaDeSockets.h"
 #include "segmentacion.h"
+#include <math.h>
 
 
 typedef enum{
