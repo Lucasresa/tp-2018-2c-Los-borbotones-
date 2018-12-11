@@ -29,6 +29,7 @@ void* funcionHandshake(int, void*);
 void* recibirPeticion(int socket, void* argumentos);
 
 int cargarArchivoFM9(int pid, char* buffer);
+int cargarScriptFM9(int pid, char* buffer);
 
 int guardarArchivoMDJ(char* path, char* buffer);
 char* obtenerArchivoMDJ(char *path);

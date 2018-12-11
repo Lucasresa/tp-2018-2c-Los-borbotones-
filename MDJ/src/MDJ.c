@@ -157,8 +157,7 @@ void determinarOperacion(int operacion,int fd) {
 	case OBTENER_DATOS:
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
-		printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",
-							obtener->path,obtener->offset,obtener->size);
+		printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",obtener->path,obtener->offset,obtener->size);
 		crearStringDeArchivoConBloques(obtener);
 		usleep(config_MDJ.time_delay*1000);
 		break;

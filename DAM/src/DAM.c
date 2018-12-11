@@ -93,9 +93,8 @@ void* recibirPeticion(int socket, void* argumentos) {
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
 		char* buffer = obtenerArchivoMDJ(dummy->path);
 
-		char bufferTesteo[60] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
 		log_info(log_DAM,"Cargo archivo al FM9");
-		cargarArchivoFM9(dummy->id_dtb, buffer);
+		cargarScriptFM9(dummy->id_dtb, buffer);
 		log_info(log_DAM,"Enviando final carga dummy");
 
 		int success=FINAL_CARGA_DUMMY;
@@ -138,6 +137,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			}
 			default:
 				printf("fallo el enum crear");
+				return -1;
 		}
 	}
 	case ABRIR_ARCHIVO:
@@ -206,6 +206,49 @@ char* obtenerArchivoMDJ(char *path) {
 }
 
 int cargarArchivoFM9(int pid, char* buffer) {
+	//int contador_offset;
+	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
+
+	datos_script->pid = pid;
+    int count = 0;
+    char *ptr = buffer;
+    while((ptr = strchr(ptr, '\n')) != NULL) {
+        count++;
+        ptr++;
+    }
+	datos_script->size_script = count;
+	serializarYEnviar(FM9_fd,ABRIR_ARCHIVO,datos_script);
+	free(datos_script);
+
+	if (recibirHeader(FM9_fd, ESTRUCTURAS_CARGADAS) != 0) {
+		return -1;
+	}
+
+	direccion_logica* direccion = recibirYDeserializar(FM9_fd,ESTRUCTURAS_CARGADAS);
+
+    char* linea = NULL;
+	linea = strtok(buffer, "\n");
+	cargar_en_memoria paquete = {.pid=pid,.id_segmento=direccion->base,.offset=0,.linea=NULL};
+
+	log_info(log_DAM,"Enviando archivo al FM9...\n");
+
+    while (linea != NULL)
+    {
+    	paquete.linea=linea;
+    	serializarYEnviar(FM9_fd,ESCRIBIR_LINEA,&paquete);
+        //printf("%i: %s\n", paquete.offset, paquete.linea);
+        paquete.offset++;
+        linea = strtok(NULL, "\n");
+    	if (recibirHeader(FM9_fd, LINEA_CARGADA) != 0) {
+    		return -1;
+    		log_error(log_DAM,"Error cargando linea %s", linea);
+    	}
+    }
+
+    return 1;
+}
+
+int cargarScriptFM9(int pid, char* buffer) {
 
 	//int contador_offset;
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));

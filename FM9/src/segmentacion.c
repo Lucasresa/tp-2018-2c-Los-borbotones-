@@ -37,7 +37,7 @@ int recibirPeticionSeg(int socket) {
 		// Obtengo la tabla de segmentos recién creada
 		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
 
-		// TODO: Busco en memoria espacio libre
+		// Busco en memoria espacio libre
 		int base_vacia = segmentoFirstFit(size_scriptorio);
 
 		// Creo un segmento en la tabla
@@ -88,7 +88,7 @@ int recibirPeticionSeg(int socket) {
 		// Envio la info para acceder al archivo al DAM
 		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
 
-		serializarYEnviar(socket,ARCHIVO_CARGADO,&info_acceso_archivo);
+		serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
 
 		free(datos_archivo);
 
@@ -107,14 +107,18 @@ int recibirPeticionSeg(int socket) {
 	}
 	case ESCRIBIR_LINEA:
 	{
+		int message;
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
 		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
 			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
+			message=ERROR_ESCRIBIR_LINEA;
+		} else {
+			message=LINEA_CARGADA;
 		}
 		free(info_a_cargar);
-		int success=LINEA_CARGADA;
-		serializarYEnviarEntero(socket,&success);
+
+		serializarYEnviarEntero(socket,&message);
 		return 0;
 	}
 	case CERRAR_ARCHIVO:
@@ -279,15 +283,14 @@ void *consolaThreadSeg(void *vargp)
 				continue;
 			}
 			int pid = atoi(buffer);
+			/*
 			if (pid == NULL) {
 			    printf("PID invalid\n");
 			    continue;
-			}
+			}*/
 			// Busco la tabla de segmentos del proceso
 			t_list* tabla_segmentos = buscarTablaSeg(pid);
-			log_info(log_FM9, "asd");
 			if (tabla_segmentos == NULL) {
-				log_info(log_FM9, "dsa");
 				log_info(log_FM9, "PID %i no está cargado en memoria", pid);
 				continue;
 			} else {
