@@ -150,13 +150,12 @@ void* recibirPeticion(int socket, void* argumentos) {
 		char* buffer = obtenerArchivoMDJ(path);
 
 		log_info(log_DAM,"Cargo archivo al FM9");
-		cargarArchivoFM9(dtb_id, buffer);
+		int base = cargarArchivoFM9(dtb_id, buffer);
 		log_info(log_DAM,"Enviando Final abrir archivo");
 
 		int success=FINAL_ABRIR;
-		serializarYEnviarEntero(SAFA_fd,&success);
-	    serializarYEnviarEntero(SAFA_fd,&dtb_id);
-	    serializarYEnviarString(SAFA_fd,path);
+		info_archivo* info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
+		serializarYEnviar(SAFA_fd,FINAL_ABRIR,info_archivo);
 	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
 	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
@@ -245,7 +244,7 @@ int cargarArchivoFM9(int pid, char* buffer) {
     	}
     }
 
-    return 1;
+    return direccion->base;
 }
 
 int cargarScriptFM9(int pid, char* buffer) {

@@ -185,6 +185,12 @@ typedef struct{
 }t_archivo;
 
 typedef struct{
+	char* path;
+	int pid;
+	int acceso;
+}info_archivo;
+
+typedef struct{
 
 	int id;
 	int pc;

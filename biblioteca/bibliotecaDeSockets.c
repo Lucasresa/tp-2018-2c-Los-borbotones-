@@ -167,6 +167,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->offset);
 		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->size);
 		break;
+	case FINAL_ABRIR:
+		serializarYEnviarString(socket,((info_archivo*)package)->path);
+		serializarYEnviarEntero(socket,&((info_archivo*)package)->pid);
+		serializarYEnviarEntero(socket,&((info_archivo*)package)->acceso);
+		break;
 	case GUARDAR_DATOS:
 		serializarYEnviarString(socket,((peticion_guardar*)package)->path);
 		serializarYEnviarEntero(socket,&((peticion_guardar*)package)->offset);
@@ -278,6 +283,14 @@ void* recibirYDeserializar(int socket,int tipo){
 		obtener->offset = *recibirYDeserializarEntero(socket);
 		obtener->size = *recibirYDeserializarEntero(socket);
 		return obtener;
+	}
+	case FINAL_ABRIR:
+	{
+		info_archivo* info = malloc(sizeof(info_archivo));
+		info->path = recibirYDeserializarString(socket);
+		info->pid = *recibirYDeserializarEntero(socket);
+		info->acceso = *recibirYDeserializarEntero(socket);
+		return info;
 	}
 	case GUARDAR_DATOS:
 	{
