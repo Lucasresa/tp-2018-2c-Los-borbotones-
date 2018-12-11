@@ -133,6 +133,10 @@ void determinarOperacion(int operacion,int fd) {
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			validar=VALIDAR_FALLO;
 		}
+		if(verificar_bloques(validacion->path)!=0){
+			log_error(log_MDJ,"Error de bloques:",validacion->path);
+		    validar=VALIDAR_FALLO;
+		}
 		serializarYEnviarEntero(DAM_fd, &validar);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -821,6 +825,20 @@ void crearDirectorio(char *path){
 
     }
 
+
+
+}
+
+int verificar_bloques(char *path){
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(path);
+	t_config_MetaArchivo metadataArchivo;
+	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
+	int sizeArchivoBloque;
+	struct stat statbuf;
 
 
 }
