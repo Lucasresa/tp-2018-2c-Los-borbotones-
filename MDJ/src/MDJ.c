@@ -767,9 +767,14 @@ void crearBitmap(){
 
 	//FILE* bloque_crear;
 	//bloque_crear->_IO_buf_base
-	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));;
+	puts(config_MDJ.mount_point);
+	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));
+	strcpy(direccionArchivoBitMap,config_MDJ.mount_point);
+	string_append(&direccionArchivoBitMap,"/Metadata/Bitmap.bin");
+	puts(direccionArchivoBitMap);
 	int bitmap = open(direccionArchivoBitMap, O_RDWR);
 	struct stat mystat;
+	//puts(bitmap);
 	if (fstat(bitmap, &mystat) < 0) {
 	    printf("Error al establecer fstat\n");
 	    close(bitmap);
