@@ -223,7 +223,6 @@ t_list* buscarTablaSeg(int pid) {
 		puts("devuelvo null");
 		return NULL;
 	}
-	puts("no devuelvo null");
 	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
 }
@@ -264,7 +263,7 @@ int siguiente_id_segmento(t_list* tabla_segmentos) {
     }
 
     list_iterate(tabla_segmentos, (void*) _iterate_elements);
-    return max_id++;
+    return ++max_id;
 }
 
 void *consolaThreadSeg(void *vargp)
@@ -294,7 +293,6 @@ void *consolaThreadSeg(void *vargp)
 				log_info(log_FM9, "PID %i no está cargado en memoria", pid);
 				continue;
 			} else {
-				log_info(log_FM9, "asd");
 				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
 				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
 				log_info(log_FM9, "=========================", pid);

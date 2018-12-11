@@ -1,6 +1,4 @@
 #include "FM9.h"
-#include <math.h>
-
 
 int main(){
 	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);

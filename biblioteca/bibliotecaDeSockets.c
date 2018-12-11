@@ -148,6 +148,7 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarString(socket,((cargar_en_memoria*)package)->linea);
 		return;
 	case INICIAR_MEMORIA_PID:
+	case ABRIR_ARCHIVO:
 		serializarYEnviarEntero(socket, &((iniciar_scriptorio_memoria*)package)->pid);
 		serializarYEnviarEntero(socket, &((iniciar_scriptorio_memoria*)package)->size_script);
 		break;
@@ -165,6 +166,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarString(socket,((peticion_obtener*)package)->path);
 		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->offset);
 		serializarYEnviarEntero(socket,&((peticion_obtener*)package)->size);
+		break;
+	case FINAL_ABRIR:
+		serializarYEnviarString(socket,((info_archivo*)package)->path);
+		serializarYEnviarEntero(socket,&((info_archivo*)package)->pid);
+		serializarYEnviarEntero(socket,&((info_archivo*)package)->acceso);
 		break;
 	case GUARDAR_DATOS:
 		serializarYEnviarString(socket,((peticion_guardar*)package)->path);
@@ -236,6 +242,7 @@ void serializarYEnviarEntero(int socket, int* entero){
 void* recibirYDeserializar(int socket,int tipo){
 	switch(tipo){
 	case INICIAR_MEMORIA_PID:
+	case ABRIR_ARCHIVO:
 	{
 		iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 		datos_script->pid = *recibirYDeserializarEntero(socket);
@@ -276,6 +283,14 @@ void* recibirYDeserializar(int socket,int tipo){
 		obtener->offset = *recibirYDeserializarEntero(socket);
 		obtener->size = *recibirYDeserializarEntero(socket);
 		return obtener;
+	}
+	case FINAL_ABRIR:
+	{
+		info_archivo* info = malloc(sizeof(info_archivo));
+		info->path = recibirYDeserializarString(socket);
+		info->pid = *recibirYDeserializarEntero(socket);
+		info->acceso = *recibirYDeserializarEntero(socket);
+		return info;
 	}
 	case GUARDAR_DATOS:
 	{
