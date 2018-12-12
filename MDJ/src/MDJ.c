@@ -54,13 +54,6 @@ int main(){
 	cerrarMDJ=0;
 	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
 	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
-	//conexion_DMA();
-	//if (crear_carpetas() != 0) {
-	//	log_error(log_MDJ,"Error al crear los directorios para el MDJ");
-	//	return -1;
-	//}
-
-	//log_info(log_MDJ,"Directorios creados");
 
 	//-----------------------------------------------------------------------------------------------
     //Espero que el DAM se conecte y logueo cuando esto ocurra
@@ -133,10 +126,7 @@ void determinarOperacion(int operacion,int fd) {
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			validar=VALIDAR_FALLO;
 		}
-		/*if(verificar_bloques(validacion->path)!=0){
-			log_error(log_MDJ,"Error de bloques:",validacion->path);
-		    validar=VALIDAR_FALLO;
-		}*/
+
 		serializarYEnviarEntero(DAM_fd, &validar);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -145,6 +135,10 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
+		if (hayEspacio(crear)!=0){
+								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
+								creacion= CREAR_FALLO;
+		}
 		if (existe_archivo(crear->path)!=0){
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
 						creacion= CREAR_FALLO;
@@ -192,11 +186,12 @@ void determinarOperacion(int operacion,int fd) {
 
 void crearArchivo(char *path, int numero_lineas) {
     FILE* fichero_metadata;
-    FILE* bloque_crear;
+    //FILE* bloque_crear;
     //Creacion Del archivo
 
     char *complete_path =archivo_path(path);
     fichero_metadata = fopen(complete_path, "wr");
+    //fichero_metadata->
     fclose(fichero_metadata);
 
     //Carga de MetaData del archivo
@@ -204,8 +199,8 @@ void crearArchivo(char *path, int numero_lineas) {
 	archivo_MetaData=config_create(complete_path);
 	char *ultimoBloqueChar;
 	char *sizeDelStringArchivoAGuardarChar;
-	int numeroDeBloque=config_MetaData.cantidad_bloques;
-	ultimoBloqueChar=string_itoa(numeroDeBloque);
+	int numeroDeBloqueLibre=proximobloqueLibre();
+	//ultimoBloqueChar=string_itoa(numeroDeBloque);
 	sizeDelStringArchivoAGuardarChar=string_itoa(numero_lineas);
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
@@ -214,8 +209,9 @@ void crearArchivo(char *path, int numero_lineas) {
 	int cantNescribir;
 	int flag = 1;
 	while(flag !=0){
-		config_MetaData.cantidad_bloques++;
-		ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
+		ultimoBloqueChar=string_itoa(numeroDeBloqueLibre);
+		bitarray_set_bit(bitarray, numeroDeBloqueLibre);
+		actualizarBitarray();
 		string_append(&actualizarBloques,ultimoBloqueChar);
 		if (cantNFaltantes < (i+1)*config_MetaData.tamanio_bloques){
 			cantNescribir = cantNFaltantes;
@@ -225,7 +221,7 @@ void crearArchivo(char *path, int numero_lineas) {
 			cantNFaltantes -= config_MetaData.tamanio_bloques;
 			cantNescribir=config_MetaData.tamanio_bloques;
 			string_append(&actualizarBloques,",");
-
+			numeroDeBloqueLibre=proximobloqueLibre();
 		}
 		char *pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(ultimoBloqueChar);
@@ -374,15 +370,16 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-			char * path = "/scripts/checkpoint.escriptorio";
-			//crearDirectorio(path);
-			//crearArchivo(path,10000);
+			//char * path = "/scripts/checkpoint.escriptorio";
+			char * path = "fer/2.txt";
+			crearDirectorio(path);
+			crearArchivo(path,70);
 			//borrar_archivo(path);
 			peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
-			obtener->offset=0;
-			obtener->path="/scripts/checkpoint.escriptorio";
-			obtener->size=10;
-			crearStringDeArchivoConBloques(obtener);
+			//obtener->offset=0;
+			//obtener->path="scripts/checkpoint.escriptorio";
+			//obtener->size=10;
+			//crearStringDeArchivoConBloques(obtener);
 
 			/*int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
@@ -771,16 +768,20 @@ char *substring(char *string, int position, int length)
    return pointer;
 }
 
-
-void crearBitmap(){
-
-	//FILE* bloque_crear;
-	//bloque_crear->_IO_buf_base
+char * path_bitmap(){
 	puts(config_MDJ.mount_point);
 	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));
 	strcpy(direccionArchivoBitMap,config_MDJ.mount_point);
 	string_append(&direccionArchivoBitMap,"/Metadata/Bitmap.bin");
 	puts(direccionArchivoBitMap);
+	return direccionArchivoBitMap;
+
+}
+
+void crearBitmap(){
+	//FILE* bloque_crear;
+	//bloque_crear->_IO_buf_base
+	char *direccionArchivoBitMap = path_bitmap();
 	int bitmap = open(direccionArchivoBitMap, O_RDWR);
 	struct stat mystat;
 	//puts(bitmap);
@@ -797,6 +798,12 @@ void crearBitmap(){
 	}
 
 	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	for (int i=0;i<cantidadDebits;i++){
+		printf("posicion %d valor %d:\n",i,bitarray_test_bit(bitarray,i));
+	}
+
+
 
 }
 void crearDirectorio(char *path){
@@ -839,7 +846,6 @@ int verificar_bloques(char *path){
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
 	struct stat statbuf;
-
 }
 
 
@@ -849,6 +855,44 @@ int cantidadDeBloques (char **bloque){
 		i++;
 	}
 	return i;
+}
+
+int cantidadDeBloquesLibres (){
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	int libre =0;
+	int i;
+	for (i=0;i<cantidadDebits;i++){
+		if (bitarray_test_bit(bitarray,i)==0){
+			libre++;
+		}
+	}
+	return libre;
+}
+int proximobloqueLibre (){
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	int i;
+	int libre=0;
+	for (i=0;i<cantidadDebits;i++){
+		if(bitarray_test_bit(bitarray,i)==0){
+			libre=i;
+			break;
+		}
+	}
+	return libre;
+}
+
+int hayEspacio(peticion_crear *crear){
+	int espaciolibre = cantidadDeBloquesLibres()*config_MetaData.tamanio_bloques;
+	int espacioNecesario = crear->cant_lineas;
+	if(espaciolibre>espacioNecesario){
+		return 0;
+	}
+	return -1;
+}
+
+
+void actualizarBitarray(){
+	char * direccionBitmap = path_bitmap();
 }
 
 /*int cmd_md5(char *linea){
