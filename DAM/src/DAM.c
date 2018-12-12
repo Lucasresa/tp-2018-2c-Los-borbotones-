@@ -75,61 +75,73 @@ void* funcionHandshake(int socket, void* argumentos) {
 
 void* recibirPeticion(int socket, void* argumentos) {
 	int length;
-	int header;
-	length = recv(socket,&header,sizeof(int),0);
-	if ( length <= 0 ) {
+	int* header;
+
+	header = recibirYDeserializarEntero(socket);
+
+	if(header==NULL){
+		log_info(log_DAM,"Se perdio la conexion con el socket %d",socket);
 		close(socket);
-		FD_CLR(socket, &set_fd);
-		log_error(log_DAM, "Se perdió la conexión con un socket.");
-		perror("error");
-		return 0;
 	}
 
-	switch(header){
+
+	switch(*header){
 	case DESBLOQUEAR_DUMMY:
 	{
 		desbloqueo_dummy* dummy;
-		dummy = recibirYDeserializar(socket,header);
+		dummy = recibirYDeserializar(socket,*header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
-		char* buffer = obtenerArchivoMDJ(dummy->path);
 
-		peticion_validar* validacion;
-		validacion->path = dummy->path;
+		peticion_validar* validacion = malloc(sizeof(peticion_validar));
+		validacion->path = string_duplicate(dummy->path);
 		int headerEnviar = VALIDAR_ARCHIVO;
 
 		serializarYEnviar(MDJ_fd,headerEnviar,validacion);
 		int respuesta = *recibirYDeserializarEntero(MDJ_fd);
 		printf("Recibi: %d\n",respuesta);
+		free(validacion);
 		switch(respuesta){
-			case VALIDAR_OK:{
+			case VALIDAR_OK:
+			{
 				printf("El archivo/script existe \n");
+
 				//Cargar en fm9 y devolver el dummy
+
+				char* buffer = obtenerArchivoMDJ(dummy->path);
+
+				log_info(log_DAM,"Cargo archivo al FM9");
+				cargarScriptFM9(dummy->id_dtb, buffer);
+				log_info(log_DAM,"Enviando final carga dummy");
+				int success=FINAL_CARGA_DUMMY;
+				serializarYEnviarEntero(SAFA_fd,&success);
+			    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+			    log_info(log_DAM,"Final carga dummy enviado al safa");
 			}
-			case VALIDAR_FALLO:{
-				printf("El archivo/script no existe");
+			case VALIDAR_FALLO:
+			{
+				int success=ERROR_ARCHIVO_INEXISTENTE;
+
+				log_warning(log_DAM,"El escriptorio no existe en MDJ");
+				serializarYEnviarEntero(SAFA_fd,&success);
+				serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+				log_info(log_DAM,"Se envio un error a SAFA para que aborte el DTB dummy");
+
 				///Devolver el dtb para q lo ponga en la cola de fin
 				return 0;
 			}
 			default:
 				printf("fallo el enum validacion");
 		}
-		log_info(log_DAM,"Cargo archivo al FM9");
-		cargarScriptFM9(dummy->id_dtb, buffer);
-		log_info(log_DAM,"Enviando final carga dummy");
-		int success=FINAL_CARGA_DUMMY;
-		serializarYEnviarEntero(SAFA_fd,&success);
-	    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
-	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
 	}
 	case CREAR_ARCHIVO:
 	{
 		log_info(log_DAM,"Peticion de crear archivo recibida");
-		peticion_crear* crear_archivo=recibirYDeserializar(socket,header);
+		peticion_crear* crear_archivo=recibirYDeserializar(socket,*header);
 		int dtb_id = *recibirYDeserializarEntero(socket);
 
 		log_info(log_DAM,"Enviando peticion de crear archivo a MDJ");
-		serializarYEnviar(MDJ_fd,header,crear_archivo);
+		serializarYEnviar(MDJ_fd,*header,crear_archivo);
 		int respuesta;
 
 		respuesta = *recibirYDeserializarEntero(MDJ_fd);

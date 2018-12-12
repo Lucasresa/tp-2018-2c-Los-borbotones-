@@ -122,7 +122,7 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		int validar=VALIDAR_OK;
-		if (existe_archivo(validacion->path)!=0){
+		if (existe_archivo(validacion->path)==0){
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			validar=VALIDAR_FALLO;
 		}
