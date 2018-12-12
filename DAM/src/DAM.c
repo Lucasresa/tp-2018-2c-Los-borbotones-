@@ -154,8 +154,8 @@ void* recibirPeticion(int socket, void* argumentos) {
 		log_info(log_DAM,"Enviando Final abrir archivo");
 
 		int success=FINAL_ABRIR;
-		info_archivo* info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
-		serializarYEnviar(SAFA_fd,FINAL_ABRIR,info_archivo);
+		info_archivo info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
+		serializarYEnviar(SAFA_fd,FINAL_ABRIR,&info_archivo);
 	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
 	    log_info(log_DAM,"Final carga dummy enviado al safa");
 		return 0;
