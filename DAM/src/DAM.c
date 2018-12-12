@@ -93,10 +93,29 @@ void* recibirPeticion(int socket, void* argumentos) {
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
 		char* buffer = obtenerArchivoMDJ(dummy->path);
 
+		peticion_validar* validacion;
+		validacion->path = dummy->path;
+		int headerEnviar = VALIDAR_ARCHIVO;
+
+		serializarYEnviar(MDJ_fd,headerEnviar,validacion);
+		int respuesta = *recibirYDeserializarEntero(MDJ_fd);
+		printf("Recibi: %d\n",respuesta);
+		switch(respuesta){
+			case VALIDAR_OK:{
+				printf("El archivo/script existe \n");
+				//Cargar en fm9 y devolver el dummy
+			}
+			case VALIDAR_FALLO:{
+				printf("El archivo/script no existe");
+				///Devolver el dtb para q lo ponga en la cola de fin
+				return 0;
+			}
+			default:
+				printf("fallo el enum validacion");
+		}
 		log_info(log_DAM,"Cargo archivo al FM9");
 		cargarScriptFM9(dummy->id_dtb, buffer);
 		log_info(log_DAM,"Enviando final carga dummy");
-
 		int success=FINAL_CARGA_DUMMY;
 		serializarYEnviarEntero(SAFA_fd,&success);
 	    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
