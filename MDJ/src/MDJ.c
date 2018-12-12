@@ -518,7 +518,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	t_config_MetaArchivo metadataArchivo;
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques)+1;
+	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques);
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
 	struct stat statbuf;
@@ -668,7 +668,6 @@ int todos_bloques_libre(char *path_archivo){
 	return 0;
 
 }
-
 
 
 void guardarEnArchivo(){
@@ -830,7 +829,6 @@ void crearDirectorio(char *path){
    	    }
     }
 }
-
 int verificar_bloques(char *path){
 	t_config *archivo_MetaData;
 	archivo_MetaData=config_create(path);
@@ -841,7 +839,6 @@ int verificar_bloques(char *path){
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
 	struct stat statbuf;
-
 
 }
 
