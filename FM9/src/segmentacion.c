@@ -126,6 +126,7 @@ int recibirPeticionSeg(int socket) {
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
 		int id_segmento = direccion->base;
+		int success;
 
 		// Busco la tabla de segmentos del proceso:
 		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
@@ -133,9 +134,17 @@ int recibirPeticionSeg(int socket) {
 		// Remuevo el segmento indicado:
 		fila_tabla_seg* segmento_borrado = list_remove(tabla_segmentos, id_segmento);
 
+		if (segmento_borrado == NULL) {
+			success=ERROR_SEG_MEM;
+		} else {
+			success=FINAL_CERRAR;
+		}
+
 		// Registro el nuevo espacio libre en memoria
 		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
 		free(direccion);
+
+		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 
@@ -297,10 +306,16 @@ void *consolaThreadSeg(void *vargp)
 				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
 				log_info(log_FM9, "=========================", pid);
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
-				void _iterate_elements(fila_tabla_seg *p) {
+				void print_segmento(fila_tabla_seg *p) {
 					log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
 				}
-				list_iterate(tabla_segmentos, (void*) _iterate_elements);
+				list_iterate(tabla_segmentos, (void*) print_segmento);
+				log_info(log_FM9, "Memoria del process id: %i\n", pid);
+				void _print_memoria_segmento(fila_tabla_seg *segmento_archivo) {
+					for (int count = segmento_archivo->base_segmento; count <= segmento_archivo->limite_segmento; ++count) {
+						log_info(log_FM9, "Posición %i: %s\n", count, memoria[count]);
+					}
+				}
 			}
 		} else {
 			puts("Comando no reconozido.");
