@@ -109,6 +109,8 @@ pthread_mutex_t mx_metricas;
 
 pthread_mutex_t File_config;
 
+pthread_mutex_t mx_semaforos;
+
 t_dictionary* semaforos_dtb;
 
 t_list* info_metricas;

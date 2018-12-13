@@ -142,6 +142,9 @@ void atenderDAM(int*fd){
 	int* protocolo, id_dtb;
 	t_DTB* dtb;
 	t_DTB* aux;
+	pthread_mutex_t* sem_dtb;
+
+	info_archivo* archivo_nuevo;
 
 	while(1){
 
@@ -155,10 +158,17 @@ void atenderDAM(int*fd){
 			exit(0);
 		}
 
+		if(*protocolo!=FINAL_ABRIR){
 		id_dtb=*recibirYDeserializarEntero(fd_DAM);
 
-		pthread_mutex_t* sem_dtb = dictionary_get(semaforos_dtb,string_itoa(id_dtb));
+		}else{
+		archivo_nuevo=recibirYDeserializar(fd_DAM,*protocolo);
+		id_dtb=archivo_nuevo->pid;
+		}
 
+		pthread_mutex_lock(&mx_semaforos);
+		sem_dtb = dictionary_get(semaforos_dtb,string_itoa(id_dtb));
+		pthread_mutex_unlock(&mx_semaforos);
 		pthread_mutex_lock(sem_dtb);
 
 		switch(*protocolo){
@@ -174,14 +184,15 @@ void atenderDAM(int*fd){
 			break;
 		case FINAL_ABRIR:
 		{
+
 			t_archivo* archivo=malloc(sizeof(t_archivo));
 
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
 			pthread_mutex_unlock(&mx_colas);
 
-			archivo->path=recibirYDeserializarString(fd_DAM);
-			archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
+			archivo->path=string_duplicate(archivo_nuevo->path);
+			archivo->acceso=archivo_nuevo->acceso;
 			list_add(aux->archivos,archivo);
 
 			pthread_mutex_lock(&mx_PCP);
@@ -192,6 +203,8 @@ void atenderDAM(int*fd){
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
 
+			free(archivo_nuevo->path);
+			free(archivo_nuevo);
 			break;
 		}
 		case FINAL_CREAR:
@@ -480,8 +493,12 @@ void atenderCPU(int*fd){
 			pthread_mutex_unlock(&mx_PCP);
 
 			if(protocolo==BLOQUEAR_PROCESO){
+				pthread_mutex_lock(&mx_semaforos);
 				pthread_mutex_t* sem_dtb = dictionary_get(semaforos_dtb,string_itoa(dtb_cpu));
 				pthread_mutex_unlock(sem_dtb);
+
+				pthread_mutex_unlock(&mx_semaforos);
+
 			}
 
 			if(protocolo==FINALIZAR_PROCESO&&dtb->f_inicializacion==1){
