@@ -794,14 +794,8 @@ void guardarEnArchivo(){
 	int bloquesCantidad=cantidadDeBloques (metadataArchivo.bloques);
 	int sizeDelStringArchivoAGuardar;
 	sizeDelStringArchivoAGuardar=strlen(archivo_a_guardar->strig_archivo);
-	/*
-	if (config_MetaData.tamanio_bloques*bloquesCantidad<sizeDelStringArchivoAGuardar){
-		config_MetaData.cantidad_bloques++;
-		actualizarARchivo(&metadataArchivo,sizeDelStringArchivoAGuardar,config_MetaData.cantidad_bloques);
-		seCreoBloque=TRUE;
-	}
-
-	for(int i=0;i<cantidadBloques;i++){
+	int sizeGuardar;
+	for(int i=0;i<bloquesCantidad;i++){
 		char *pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
 	    char *map;
@@ -821,12 +815,12 @@ void guardarEnArchivo(){
 	    	sizeGuardar = (i+1)*config_MetaData.tamanio_bloques - sizeDelStringArchivoAGuardar;
 
 	    }
-	    memcpy(map, archivo_a_guardar.strig_archivo+offset, sizeGuardar);
+	    memcpy(map, archivo_a_guardar->strig_archivo+offset, sizeGuardar);
 	    msync(map, sizeGuardar, MS_SYNC);
 	    munmap(map, sizeGuardar);
 	    close(fd);
 	}
-	*/
+
 }
 
 
