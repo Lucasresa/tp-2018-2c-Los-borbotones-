@@ -81,6 +81,7 @@ void* funcionHandshake(int socket, void* argumentos) {
 
 void* recibirPeticion(int socket, void* argumentos) {
 	int* header,success;
+	int error_holder = 0;
 
 	header = recibirYDeserializarEntero(socket);
 
@@ -104,7 +105,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 			char* buffer = obtenerArchivoMDJ(dummy->path);
 
 			log_info(log_DAM,"Cargo archivo al FM9");
-			cargarScriptFM9(dummy->id_dtb, buffer);
+			cargarScriptFM9(dummy->id_dtb, buffer, &error_holder);
+			if (error_holder != 0) {
+				pthread_mutex_lock(&mutex_SAFA);
+				serializarYEnviarEntero(SAFA_fd,&error_holder);
+				pthread_mutex_unlock(&mutex_SAFA);
+				return (void*)-1;
+			}
 			log_info(log_DAM,"Enviando final carga dummy");
 			success=FINAL_CARGA_DUMMY;
 
@@ -168,7 +175,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 			char* buffer = obtenerArchivoMDJ(path);
 
 			log_info(log_DAM,"Cargo archivo al FM9");
-			int base = cargarArchivoFM9(dtb_id, buffer);
+			int base = cargarArchivoFM9(dtb_id, buffer, &error_holder);
+			if (error_holder != 0) {
+				pthread_mutex_lock(&mutex_SAFA);
+				serializarYEnviarEntero(SAFA_fd,&error_holder);
+				pthread_mutex_unlock(&mutex_SAFA);
+				return (void*)-1;
+			}
 
 			success=FINAL_ABRIR;
 
@@ -274,7 +287,7 @@ char* obtenerArchivoMDJ(char *path) {
 	return enviar;
 }
 
-int cargarArchivoFM9(int pid, char* buffer) {
+int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
 	//int contador_offset;
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 
@@ -289,7 +302,10 @@ int cargarArchivoFM9(int pid, char* buffer) {
 	serializarYEnviar(FM9_fd,ABRIR_ARCHIVO,datos_script);
 	free(datos_script);
 
-	if (recibirHeader(FM9_fd, ESTRUCTURAS_CARGADAS) != 0) {
+	int header = *recibirYDeserializarEntero(FM9_fd);
+	if (header == ERROR_FM9_SIN_ESPACIO) {
+		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+		*error_holder = ERROR_FM9_SIN_ESPACIO;
 		return -1;
 	}
 
@@ -308,16 +324,18 @@ int cargarArchivoFM9(int pid, char* buffer) {
         //printf("%i: %s\n", paquete.offset, paquete.linea);
         paquete.offset++;
         linea = strtok(NULL, "\n");
-    	if (recibirHeader(FM9_fd, LINEA_CARGADA) != 0) {
+    	int header = *recibirYDeserializarEntero(FM9_fd);
+    	if (header == ERROR_FM9_SIN_ESPACIO) {
+    		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+    		*error_holder = ERROR_FM9_SIN_ESPACIO;
     		return -1;
-    		log_error(log_DAM,"Error cargando linea %s", linea);
     	}
     }
 
     return direccion->base;
 }
 
-int cargarScriptFM9(int pid, char* buffer) {
+int cargarScriptFM9(int pid, char* buffer, int* error_holder) {
 
 	//int contador_offset;
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
@@ -333,15 +351,16 @@ int cargarScriptFM9(int pid, char* buffer) {
 	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
 	free(datos_script);
 
-	if (recibirHeader(FM9_fd, MEMORIA_INICIALIZADA) != 0) {
+	int header = *recibirYDeserializarEntero(FM9_fd);
+	if (header == ERROR_FM9_SIN_ESPACIO) {
+		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+		*error_holder = ERROR_FM9_SIN_ESPACIO;
 		return -1;
 	}
 
     char* linea = NULL;
 	linea = strtok(buffer, "\n");
 	cargar_en_memoria paquete = {.pid=pid,.id_segmento=0,.offset=0,.linea=NULL};
-
-	log_info(log_DAM,"Enviando archivo al FM9...\n");
 
     while (linea != NULL)
     {
@@ -350,9 +369,12 @@ int cargarScriptFM9(int pid, char* buffer) {
         //printf("%i: %s\n", paquete.offset, paquete.linea);
         paquete.offset++;
         linea = strtok(NULL, "\n");
-    	if (recibirHeader(FM9_fd, LINEA_CARGADA) != 0) {
-    		return -1;
-    	}
+		int header = *recibirYDeserializarEntero(FM9_fd);
+		if (header == ERROR_FM9_SIN_ESPACIO) {
+			log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+			*error_holder = ERROR_FM9_SIN_ESPACIO;
+			return -1;
+		}
     }
 
     return 1;
@@ -371,7 +393,7 @@ int recibirHeader(int socket, int headerEsperado) {
 	if (headerRecibido != headerEsperado) {
 		length = recv(socket,&headerRecibido,sizeof(int),0);
 		if (headerRecibido != headerEsperado) {
-			log_error(log_DAM, "No recibí el header que esperaba. Esperaba %s y recibí %s", headerEsperado, headerRecibido);
+			log_error(log_DAM, "No recibí el header que esperaba. Esperaba %i y recibí %i", headerEsperado, headerRecibido);
 			return -1;
 		}
 	}
@@ -379,21 +401,30 @@ int recibirHeader(int socket, int headerEsperado) {
 }
 
 void testeoFM9() {
+	int error_holder;
 	char bufferTesteo[200] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
-	log_info(log_DAM,"Cargo archivo al FM9");
-	cargarScriptFM9(0, bufferTesteo);
-	log_info(log_DAM,"Enviando final carga dummy");
+	cargarScriptFM9(0, bufferTesteo, &error_holder);
+	if (error_holder != 0) {
+		return;
+	}
 
-	char bufferTesteoDos[60] = "\n\n\n\n\n";
-	cargarArchivoFM9(0, bufferTesteoDos);
+	char bufferTesteoDos[60] = "asd\ndsa\nddd\nfff\nggg\n";
+	cargarArchivoFM9(0, bufferTesteoDos, &error_holder);
+	if (error_holder != 0) {
+		return;
+	}
 
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
-	log_info(log_DAM,"Cargo archivo al FM9");
-	cargarScriptFM9(1, bufferTesteoTres);
-	log_info(log_DAM,"Enviando final carga dummy");
+	cargarScriptFM9(1, bufferTesteoTres, &error_holder);
+	if (error_holder != 0) {
+		return;
+	}
 
 	char bufferTesteoCuatro[60] = "\n\n\n\n\n";
-	cargarArchivoFM9(1, bufferTesteoCuatro);
+	cargarArchivoFM9(1, bufferTesteoCuatro, &error_holder);
+	if (error_holder != 0) {
+		return;
+	}
 }
 
 int validarArchivoMDJ(int MDJ, char* path){

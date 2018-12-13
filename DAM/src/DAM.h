@@ -28,8 +28,8 @@ int SAFA_fd, MDJ_fd, FM9_fd; //rafaga;
 void* funcionHandshake(int, void*);
 void* recibirPeticion(int socket, void* argumentos);
 
-int cargarArchivoFM9(int pid, char* buffer);
-int cargarScriptFM9(int pid, char* buffer);
+int cargarArchivoFM9(int pid, char* buffer, int* error_holder);
+int cargarScriptFM9(int pid, char* buffer, int* error_holder);
 
 int guardarArchivoMDJ(char* path, char* buffer);
 char* obtenerArchivoMDJ(char *path);
@@ -42,4 +42,5 @@ void escucharSAFA(int* );
 
 pthread_mutex_t mutex_SAFA;
 
+void testeoFM9();
 #endif /* DAM_H_ */

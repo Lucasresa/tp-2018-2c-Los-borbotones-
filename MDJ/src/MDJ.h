@@ -79,6 +79,7 @@ int cantidadDeBloquesLibres ();
 int cantidadDeBloques (char **bloque);
 int hayEspacio(peticion_crear  *crear);
 void actualizarBitarray();
+
 struct addrinfo *server_info;
 
 typedef struct{
@@ -112,7 +113,7 @@ typedef struct{
 
 
 
-t_config_archivo_a_guardar archivo_a_guardar;
+t_config_archivo_a_guardar *archivo_a_guardar ;
 t_config_MDJ config_MDJ;
 t_config_MetaData  config_MetaData;
 
@@ -125,6 +126,9 @@ void crearArchivo(char *path, int numero_lineas) ;
 int leerMetaData();
 int inicializar();
 int  conexion_dam();
+int hayEspacioParaGuardar();
 int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque);
 char *substring(char *string, int position, int length);
+int cantidadDeBloquesNecesario(int espacioNecesario);
+void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int bloquesNecesario);
 #endif /* MDJ_H_ */

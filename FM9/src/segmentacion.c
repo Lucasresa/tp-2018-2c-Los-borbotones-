@@ -20,34 +20,41 @@ int recibirPeticionSeg(int socket) {
 	}
 	case INICIAR_MEMORIA_PID:
 	{
+		int mensaje;
+
 		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
 		int size_scriptorio = datos_script->size_script;
-
-		// Creo una tabla de segmentos
-		list_add(lista_tablas_segmentos, list_create());
-
-		// Obtengo el id de la tabla
-		int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
-		// Relaciono la tabla de segmentos con el PID
-		fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
-		relacion_pid_tabla->id_proceso=datos_script->pid;
-		relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
-		list_add(tabla_segmentos_pid,relacion_pid_tabla);
-
-		// Obtengo la tabla de segmentos recién creada
-		t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
 
 		// Busco en memoria espacio libre
 		int base_vacia = segmentoFirstFit(size_scriptorio);
 
-		// Creo un segmento en la tabla
-		printf("Creo un segmento en posicion %i\n", base_vacia);
-		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,base_vacia));
+		if (base_vacia==-1) {
+			log_error(log_FM9, "Espacio insuficiente");
+			mensaje=ERROR_FM9_SIN_ESPACIO;
+		} else {
+			// Creo una tabla de segmentos
+			list_add(lista_tablas_segmentos, list_create());
+
+			// Obtengo el id de la tabla
+			int id_tabla_segmentos = list_size(lista_tablas_segmentos)-1;
+			// Relaciono la tabla de segmentos con el PID
+			fila_tabla_segmentos_pid* relacion_pid_tabla = malloc(sizeof(fila_tabla_segmentos_pid));
+			relacion_pid_tabla->id_proceso=datos_script->pid;
+			relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
+			list_add(tabla_segmentos_pid,relacion_pid_tabla);
+
+			// Obtengo la tabla de segmentos recién creada
+			t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
+
+			// Creo un segmento en la tabla
+			log_info(log_FM9, "Creo un segmento en posicion %i", base_vacia);
+			list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,base_vacia));
+
+			mensaje=MEMORIA_INICIALIZADA;
+		}
 
 		free(datos_script);
-
-		int success=MEMORIA_INICIALIZADA;
-		serializarYEnviarEntero(socket,&success);
+		serializarYEnviarEntero(socket,&mensaje);
 		return 0;
 	}
 	case CERRAR_PID:
@@ -79,21 +86,24 @@ int recibirPeticionSeg(int socket) {
 
 		// Busco una dirección con suficiente memoria libre
 		int memoria_libre = segmentoFirstFit(datos_archivo->size_script);
-		// Defino el ID de segmento que voy a usar para este archivo
-		int id_nuevo_segmento = siguiente_id_segmento(tabla_segmentos);
 
-		// Agrego la nueva entrada en la tabla de segmentos
-		list_add(tabla_segmentos, crear_fila_tabla_seg(id_nuevo_segmento,datos_archivo->size_script,memoria_libre));
+		if (memoria_libre == -1) {
+			int mensaje = ERROR_FM9_SIN_ESPACIO;
+			serializarYEnviarEntero(socket,&mensaje);
+		} else {
+			// Defino el ID de segmento que voy a usar para este archivo
+			int id_nuevo_segmento = siguiente_id_segmento(tabla_segmentos);
 
-		// Envio la info para acceder al archivo al DAM
-		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
+			// Agrego la nueva entrada en la tabla de segmentos
+			list_add(tabla_segmentos, crear_fila_tabla_seg(id_nuevo_segmento,datos_archivo->size_script,memoria_libre));
 
-		serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
+			// Envio la info para acceder al archivo al DAM
+			direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
+
+			serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
+		}
 
 		free(datos_archivo);
-
-		// Luego el DAM va a enviar las líneas del archivo una a una usando el header ESCRIBIR_LINEA
-
 		return 0;
 	}
 	case PEDIR_LINEA:
@@ -126,6 +136,7 @@ int recibirPeticionSeg(int socket) {
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
 		int id_segmento = direccion->base;
+		int success;
 
 		// Busco la tabla de segmentos del proceso:
 		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
@@ -133,9 +144,17 @@ int recibirPeticionSeg(int socket) {
 		// Remuevo el segmento indicado:
 		fila_tabla_seg* segmento_borrado = list_remove(tabla_segmentos, id_segmento);
 
+		if (segmento_borrado == NULL) {
+			success=ERROR_SEG_MEM;
+		} else {
+			success=FINAL_CERRAR;
+		}
+
 		// Registro el nuevo espacio libre en memoria
 		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
 		free(direccion);
+
+		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 
@@ -152,7 +171,7 @@ int recibirPeticionSeg(int socket) {
 		char* linea;
 
 		// Envío línea a línea el archivo
-		for (int count = segmento_archivo->base_segmento; count <= segmento_archivo->limite_segmento; ++count) {
+		for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
 			linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
 			serializarYEnviarString(socket,linea);
 		}
@@ -170,6 +189,11 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   p->id_segmento = id_segmento;
 	   p->limite_segmento = limite_segmento;
 	   p->base_segmento = base_segmento;
+
+	   // Limpio la memoria que acabo de reservar para que no contenga basura
+		for (int count = p->base_segmento; count < (p->base_segmento+p->limite_segmento); ++count) {
+			strcpy(memoria[count],"");
+		}
 	   return p;
 }
 
@@ -207,7 +231,7 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 	}
 
 	strcpy(memoria[base_segmento+offset],linea);
-	printf("Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	log_info(log_FM9,"Escribí en posición %i: '%s'", base_segmento+offset, memoria[base_segmento+offset]);
 
 	return 0;
 }
@@ -220,7 +244,6 @@ t_list* buscarTablaSeg(int pid) {
 	}
 	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
 	if(relacion_pid_tabla == NULL) {
-		puts("devuelvo null");
 		return NULL;
 	}
 	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
@@ -246,6 +269,10 @@ int segmentoFirstFit(int lineas_segmento) {
 
 	// Busco el first fit y elimino el hueco ya que va a ser usado por el nuevo segmento
 	fila_memoria_vacia_seg *fila_memoria_vacia = list_remove_by_condition(memoria_vacia_seg, (void*) tiene_suficiente_tamanio);
+
+	if (fila_memoria_vacia == NULL) {
+		return -1;
+	}
 
 	// Añado el nuevo hueco reducido
 	fila_memoria_vacia_seg* nueva_fila = crear_fila_mem_vacia_seg(fila_memoria_vacia->base + lineas_segmento, fila_memoria_vacia->cant_lineas - lineas_segmento);
@@ -297,10 +324,19 @@ void *consolaThreadSeg(void *vargp)
 				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
 				log_info(log_FM9, "=========================", pid);
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
-				void _iterate_elements(fila_tabla_seg *p) {
-					log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
+				void print_segmento(fila_tabla_seg *p) {
+					log_info(log_FM9, "%i, %i, %i", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
 				}
-				list_iterate(tabla_segmentos, (void*) _iterate_elements);
+				list_iterate(tabla_segmentos, (void*) print_segmento);
+				log_info(log_FM9, "=========================", pid);
+				log_info(log_FM9, "Memoria del process id: %i", pid);
+				void _print_memoria_segmento(fila_tabla_seg *segmento_archivo) {
+					log_info(log_FM9, "=");
+					for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
+						log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
+					}
+				}
+				list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);
 			}
 		} else {
 			puts("Comando no reconozido.");
