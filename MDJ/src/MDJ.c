@@ -130,8 +130,8 @@ void determinarOperacion(int operacion,int fd) {
 			validar=VALIDAR_FALLO;
 		}
 		log_info(log_MDJ,"Se envia validacion a DAM::");
-		serializarYEnviarEntero(DAM_fd, &validar);
 		usleep(config_MDJ.time_delay*1000);
+		serializarYEnviarEntero(DAM_fd, &validar);
 		break;
 	}
 	case CREAR_ARCHIVO:{
