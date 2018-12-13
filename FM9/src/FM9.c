@@ -157,6 +157,7 @@ int recibirPeticionPagInv(int socket) {
 	{
 		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
 		int pid = datos_script->pid;
+
 		int tamanio_script = datos_script->size_script;
 
 		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
@@ -170,9 +171,16 @@ int recibirPeticionPagInv(int socket) {
 		// TODO: Busco en memoria espacio libre
 
 		for( i = 0; i < frames_redondeados; i = i + 1 ){
+			//Encontramos un marco disponible
 			fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
+			//El PID ya me viene como parametro
 			unaFilaDisponible->pid = pid;
-		}
+			//Encuentro la minima pagina que puedo asignar
+			unaFilaDisponible->pagina = minPagina();
+			//Seteamos el flag a 1 para que sepa que está ocupado
+			unaFilaDisponible->flag = 1;
+		  }
+
 
 		free(datos_script);
 
@@ -301,4 +309,21 @@ fila_pag_invertida* encontrarFilaVacia() {
 
 }
 
+//Compara las posiciones para saber cual es la primer pagina que falta, solo sirve si está ordenado
+int minPagina(pid) {
+	int i = 0;
+	fila_pag_invertida* fila;
+	int coincideConLaBusqueda(fila_pag_invertida *p) {
+	  return (p->pid == pid)&&(p->pagina == i);
+	}
+	while (true) {
+	fila = list_find(lista_tabla_pag_inv, (void*) coincideConLaBusqueda);
+		if (fila == NULL){
+			return i;
+		}
+		else {
+			i++;
+		}
+	}
+}
 

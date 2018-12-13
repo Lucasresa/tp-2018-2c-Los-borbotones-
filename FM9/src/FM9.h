@@ -64,4 +64,6 @@ int traducirPagina(int pagina,int offset);
 
 fila_pag_invertida* encontrarFilaVacia();
 
+int arrayDePaginas[1];
+
 #endif /* FM9_H_ */
