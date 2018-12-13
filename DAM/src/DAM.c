@@ -91,7 +91,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		dummy = recibirYDeserializar(socket,*header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
 
-		if(validarArchivoMDJ(MDJ_fd,dummy->path)){
+		if(validarArchivoMDJ(MDJ_fd,dummy->path)>0){
 
 			log_info(log_DAM,"Validacion exitosa en MDJ");
 
@@ -127,7 +127,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		log_info(log_DAM,"Validando que el archivo %s no exista",crear_archivo->path);
 
-		if(!validarArchivoMDJ(MDJ_fd,crear_archivo->path)){
+		if(validarArchivoMDJ(MDJ_fd,crear_archivo->path)<0){
 			log_info(log_DAM,"El archivo no existe, sigo con la creacion");
 
 			if(crearArchivoMDJ(MDJ_fd,*header,crear_archivo)){
@@ -156,7 +156,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		char*path = recibirYDeserializarString(socket);
 		int dtb_id = *recibirYDeserializarEntero(socket);
 
-		if(validarArchivoMDJ(MDJ_fd,path)){
+		if(validarArchivoMDJ(MDJ_fd,path)>0){
 			char* buffer = obtenerArchivoMDJ(path);
 
 			log_info(log_DAM,"Cargo archivo al FM9");
@@ -190,7 +190,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		log_info(log_DAM,"Validando que el archivo %s exista",borrar_archivo->path);
 
-		if(validarArchivoMDJ(MDJ_fd,borrar_archivo->path)){
+		if(validarArchivoMDJ(MDJ_fd,borrar_archivo->path)>0){
 			log_info(log_DAM,"El archivo existe, procedo a borrarlo");
 
 			serializarYEnviar(MDJ_fd,*header,borrar_archivo);
@@ -392,7 +392,7 @@ int validarArchivoMDJ(int MDJ, char* path){
 	if(respuesta==VALIDAR_OK){
 		retorno= 1;
 	}else{
-		retorno= 0;
+		retorno= -1;
 	}
 
 	return retorno;

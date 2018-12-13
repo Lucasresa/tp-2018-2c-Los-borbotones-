@@ -122,7 +122,8 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		int validar=VALIDAR_OK;
-		if (existe_archivo(validacion->path)==0){
+		char *pathCompleto = archivo_path(validacion->path);
+		if (validarArchivoConfig(pathCompleto)<0){
 			log_info(log_MDJ,"No existe el archivo:",validacion->path);
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			log_error(log_MDJ,"Se va a enviar una validacion de fallo a DAM:");
@@ -138,15 +139,11 @@ void determinarOperacion(int operacion,int fd) {
 		int creacion = CREAR_OK;
 		log_info(log_MDJ,"Se recibio una peticion de creacion de archivo:");
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
+		char *pathCompleto = archivo_path(crear->path);
 		if (hayEspacio(crear)!=0){
 								log_info(log_MDJ,"No se puede crear archivo: por q no hay espacio",crear->path);
 								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
 								creacion= CREAR_FALLO;
-		}
-		if (existe_archivo(crear->path)!=0){
-						log_info(log_MDJ,"No se puede crear archivo por q existe:",crear->path);
-						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
-						creacion= CREAR_FALLO;
 		}
 		else{
 			log_info(log_MDJ,"Creacion de direcctorios si fuera necesario para archivo:",crear->path);
@@ -642,10 +639,13 @@ int borrar_archivo(char *path_archivo){
 }
 
 int existe_archivo(char *path_archivo){
-        struct stat   buffer;
-        char *archivo = archivo_path(path_archivo);
-        puts(archivo);
-        return (stat (archivo, &buffer) == 0);
+        FILE *file;
+        char *path =archivo_path(path_archivo);
+		if (file=fopen(path,"r")){
+			free(path);
+			return 1;
+		}
+        return -1;
 }
 
 int todos_bloques_libre(char *path_archivo){
