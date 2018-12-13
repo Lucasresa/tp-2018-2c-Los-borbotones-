@@ -574,7 +574,7 @@ t_DTB RecibirYDeserializarDTB(int fd){
 int validarArchivoConfig(char *archivo){
 	int f = open(archivo, O_RDONLY);
 	if (f < 0){
-		printf("no se encontro el archivo %s.\n",archivo);
+		printf("no se encontro el archivo Configuracion %s.\n",archivo);
 		return -1;
 	}
 	close(f);

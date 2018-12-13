@@ -171,6 +171,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			int base = cargarArchivoFM9(dtb_id, buffer);
 
 			success=FINAL_ABRIR;
+
 			info_archivo info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
 
 			pthread_mutex_lock(&mutex_SAFA);
