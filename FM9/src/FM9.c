@@ -154,6 +154,7 @@ int recibirPeticionPagInv(int socket) {
 		return 0;
 	}
 	case INICIAR_MEMORIA_PID:
+	case ABRIR_ARCHIVO:
 	{
 		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
 		int pid = datos_script->pid;
@@ -221,6 +222,8 @@ int recibirPeticionPagInv(int socket) {
 		//memoria_counter++;
 		return 0;
 	}
+
+
 	}
 }
 
