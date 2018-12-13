@@ -341,7 +341,7 @@ int cargarScriptFM9(int pid, char* buffer) {
 	linea = strtok(buffer, "\n");
 	cargar_en_memoria paquete = {.pid=pid,.id_segmento=0,.offset=0,.linea=NULL};
 
-	log_info(log_DAM,"Enviando archivo al FM9...\n");
+	log_info(log_DAM,"Enviando script al FM9...\n");
 
     while (linea != NULL)
     {
@@ -380,17 +380,13 @@ int recibirHeader(int socket, int headerEsperado) {
 
 void testeoFM9() {
 	char bufferTesteo[200] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
-	log_info(log_DAM,"Cargo archivo al FM9");
 	cargarScriptFM9(0, bufferTesteo);
-	log_info(log_DAM,"Enviando final carga dummy");
 
-	char bufferTesteoDos[60] = "\n\n\n\n\n";
+	char bufferTesteoDos[60] = "asd\ndsa\nddd\nfff\nggg\n";
 	cargarArchivoFM9(0, bufferTesteoDos);
 
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
-	log_info(log_DAM,"Cargo archivo al FM9");
 	cargarScriptFM9(1, bufferTesteoTres);
-	log_info(log_DAM,"Enviando final carga dummy");
 
 	char bufferTesteoCuatro[60] = "\n\n\n\n\n";
 	cargarArchivoFM9(1, bufferTesteoCuatro);
