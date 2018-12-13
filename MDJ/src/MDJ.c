@@ -49,6 +49,13 @@ int main(){
 	pthread_t hilo_consola;
 	pthread_t hilo_conexion;
 
+	char *direccionArchivoMedata=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Metadata.bin"));;
+	strcpy(direccionArchivoMedata,config_MDJ.mount_point);
+	string_append(&direccionArchivoMedata,"/Metadata/Metadata.bin");
+	if (validarArchivoConfig(direccionArchivoMedata)<0){
+		log_error(log_MDJ,"No se encontro el file system en el punto de montaje");
+		return -1;
+	}
 	leerMetaData();
 	crearBitmap();
 	cerrarMDJ=0;
