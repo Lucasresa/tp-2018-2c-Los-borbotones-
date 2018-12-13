@@ -183,7 +183,31 @@ void* recibirPeticion(int socket, void* argumentos) {
 	    break;
 	}
 	case BORRAR_ARCHIVO:
+	{
+		log_info(log_DAM,"Peticion de borrar archivo recibida");
+		peticion_borrar* borrar_archivo=recibirYDeserializar(socket,*header);
+		int dtb_id = *recibirYDeserializarEntero(socket);
+
+		log_info(log_DAM,"Validando que el archivo %s exista",borrar_archivo->path);
+
+		if(validarArchivoMDJ(MDJ_fd,borrar_archivo->path)){
+			log_info(log_DAM,"El archivo existe, procedo a borrarlo");
+
+			serializarYEnviar(MDJ_fd,*header,borrar_archivo);
+			success=FINAL_BORRAR;
+
+		}else{
+			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+			success=ERROR_ARCHIVO_INEXISTENTE;
+		}
+
+		serializarYEnviarEntero(SAFA_fd,&success);
+		serializarYEnviarEntero(SAFA_fd,&dtb_id);
+		log_info(log_DAM,"Se le informo a SAFA el resultado de la operacion");
+		free(borrar_archivo->path);
+		free(borrar_archivo);
 		break;
+	}
 	case FLUSH_ARCHIVO:
 		break;
 	}

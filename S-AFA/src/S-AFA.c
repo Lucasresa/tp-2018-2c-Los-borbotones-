@@ -175,9 +175,11 @@ void atenderDAM(int*fd){
 			archivo->path=recibirYDeserializarString(fd_DAM);
 			archivo->acceso=*recibirYDeserializarEntero(fd_DAM);
 			list_add(aux->archivos,archivo);
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,aux);
 			pthread_mutex_unlock(&mx_PCP);
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
@@ -186,12 +188,27 @@ void atenderDAM(int*fd){
 		}
 		case FINAL_CREAR:
 			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
+
+			break;
+		case FINAL_BORRAR:
+			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+
 			break;
 		case FINALIZAR_PROCESO:
 			id_dtb=*recibirYDeserializarEntero(fd_DAM);
