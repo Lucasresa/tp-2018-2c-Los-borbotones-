@@ -228,7 +228,7 @@ void crearArchivo(char *path, int numero_lineas) {
 	while(flag !=0){
 		ultimoBloqueChar=string_itoa(numeroDeBloqueLibre);
 		bitarray_set_bit(bitarray, numeroDeBloqueLibre);
-		actualizarBitarray();
+		//actualizarBitarray();
 		string_append(&actualizarBloques,ultimoBloqueChar);
 		if (cantNFaltantes < (i+1)*config_MetaData.tamanio_bloques){
 			cantNescribir = cantNFaltantes;
@@ -352,13 +352,11 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 	char **bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 
 	int cantBloques=cantidadDeBloques(bloques);
-	char *stringBloque;
 	int i;
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
-	int cantidadDebloques=sizeof(bloques);
-	string_append(&actualizarBloques,bloques[i]);
-	for(i=0;i<cantidadDebloques-1; i++){
+	string_append(&actualizarBloques,bloques[0]);
+	for(i=0;i<cantBloques-1; i++){
 		puts(bloques[i]);
 		string_append(&actualizarBloques,",");
 		string_append(&actualizarBloques,bloques[i]);
@@ -366,12 +364,15 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 	int suguienteBloqueLibre;
 	for(i=0;i<bloquesNecesario;i++){
 		string_append(&actualizarBloques,",");
-		char *ultimoBloqueChar = atoi(proximobloqueLibre());
+		suguienteBloqueLibre =proximobloqueLibre();
+		char *ultimoBloqueChar;
+		ultimoBloqueChar= string_itoa(suguienteBloqueLibre);
+		bitarray_set_bit(bitarray,suguienteBloqueLibre);
 		string_append(&actualizarBloques,ultimoBloqueChar);
 	}
     string_append(&actualizarBloques,"]");
     config_set_value(archivo_MetaData, "Bloques",actualizarBloques);
-    char *tamanio=atoi(strlen(archivo_a_guardar->strig_archivo));
+    char *tamanio=string_itoa(strlen(archivo_a_guardar->strig_archivo));
     config_set_value(archivo_MetaData, "Tamanio",tamanio);
 	config_destroy(archivo_MetaData);
 
@@ -823,36 +824,6 @@ void guardarEnArchivo(){
 
 }
 
-
-int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque){
-	t_config *archivo_MetaData;
-	archivo_MetaData=config_create(archivo_a_guardar->path);
-	t_config_MetaArchivo actualizarMetadataARchivo;
-	actualizarMetadataARchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
-	actualizarMetadataARchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	char *ultimoBloqueChar;
-	char *sizeDelStringArchivoAGuardarChar;
-	//sprintf(ultimoBloqueChar, "%d", ultimoBloque);
-	ultimoBloqueChar=string_itoa(ultimoBloque);
-	sizeDelStringArchivoAGuardarChar=string_itoa(sizeDelStringArchivoAGuardar);
-	config_set_value(archivo_MetaData, "TAMANIO",sizeDelStringArchivoAGuardarChar);
-	char *actualizarBloques=malloc(strlen("[")+1);
-	strcpy(actualizarBloques,"[");
-    int cantidadDebloques=sizeof(actualizarMetadataARchivo.bloques)+1;
-	for(int i=0;i<cantidadDebloques; i++){
-		puts(actualizarMetadataARchivo.bloques[i]);
-		string_append(&actualizarBloques,actualizarMetadataARchivo.bloques[i]);
-		string_append(&actualizarBloques,",");
-	}
-
-	string_append(&actualizarBloques,ultimoBloqueChar);
-	string_append(&actualizarBloques,"]");
-	config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
-	config_save(archivo_MetaData);
-	metadataArchivo->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	return 0;
-}
-
 char *substring(char *string, int position, int length)
 {
    char *pointer;
@@ -945,6 +916,7 @@ void crearDirectorio(char *path){
    	    }
     }
 }
+/*
 int verificar_bloques(char *path){
 	t_config *archivo_MetaData;
 	archivo_MetaData=config_create(path);
@@ -957,7 +929,7 @@ int verificar_bloques(char *path){
 	struct stat statbuf;
 }
 
-
+*/
 int cantidadDeBloques (char **bloque){
 	int i=0;
 	while (bloque[i]!=0){
@@ -999,11 +971,11 @@ int hayEspacio(peticion_crear *crear){
 	return -1;
 }
 
-
+/*
 void actualizarBitarray(){
 	char * direccionBitmap = path_bitmap();
 }
-
+*/
 /*int cmd_md5(char *linea){
         char **parametros = string_split(linea, " ");
         puts(parametros[1]);
