@@ -226,6 +226,9 @@ void* recibirPeticion(int socket, void* argumentos) {
 		break;
 	}
 	case FLUSH_ARCHIVO:
+
+		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
+
 		break;
 	}
 	return 0;

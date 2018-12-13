@@ -188,7 +188,7 @@ void atenderDAM(int*fd){
 			t_archivo* archivo=malloc(sizeof(t_archivo));
 
 			pthread_mutex_lock(&mx_colas);
-			aux=getDTBEnCola(cola_block,id_dtb);
+			aux=buscarDTBEnCola(cola_block,id_dtb,STATUS);
 			pthread_mutex_unlock(&mx_colas);
 
 			archivo->path=string_duplicate(archivo_nuevo->path);

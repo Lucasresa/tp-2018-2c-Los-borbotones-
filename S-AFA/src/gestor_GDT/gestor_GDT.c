@@ -739,8 +739,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		dtb_aux=getDTBEnCola(cola_block,dtb->id);
 
-		list_add_all(dtb_aux->archivos,dtb->archivos);
-
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
 		else if(config_SAFA.algoritmo==IOBF)
@@ -781,6 +779,8 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
+
+		dtb->quantum_sobrante=0;
 
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_ready,dtb);
