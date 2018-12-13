@@ -501,6 +501,12 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	list_add(cola_new,dtb);
 	pthread_mutex_unlock(&mx_colas);
 
+	//Cargo el semaforo perteneciente al dtb
+	pthread_mutex_t* sem=malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(sem,NULL);
+	dictionary_put(semaforos_dtb,string_itoa(dtb->id),sem);
+	pthread_mutex_lock(sem);
+
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
 	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
@@ -752,6 +758,10 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
+
+		pthread_mutex_t* sem = dictionary_remove(semaforos_dtb,string_itoa(dtb->id));
+
+		pthread_mutex_destroy(sem);
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)

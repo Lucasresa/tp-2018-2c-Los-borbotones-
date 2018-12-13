@@ -18,6 +18,10 @@ int main(){
 
 	info_metricas=list_create();
 
+	//Creo lista de semaforos por proceso
+
+	semaforos_dtb=dictionary_create();
+
 	//Levanto archivo de configuracion del S-AFA e inicializo los semaforos
 
 	iniciar_semaforos();
@@ -151,9 +155,15 @@ void atenderDAM(int*fd){
 			exit(0);
 		}
 
+		id_dtb=*recibirYDeserializarEntero(fd_DAM);
+
+		pthread_mutex_t* sem_dtb = dictionary_get(semaforos_dtb,string_itoa(id_dtb));
+
+		pthread_mutex_lock(sem_dtb);
+
 		switch(*protocolo){
 		case FINAL_CARGA_DUMMY:
-			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+			dtb->id=id_dtb;
 
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_DUMMY,dtb);
@@ -165,7 +175,6 @@ void atenderDAM(int*fd){
 		case FINAL_ABRIR:
 		{
 			t_archivo* archivo=malloc(sizeof(t_archivo));
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -186,7 +195,7 @@ void atenderDAM(int*fd){
 			break;
 		}
 		case FINAL_CREAR:
-			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+			dtb->id=id_dtb;
 
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
@@ -198,7 +207,7 @@ void atenderDAM(int*fd){
 
 			break;
 		case FINAL_BORRAR:
-			dtb->id=*recibirYDeserializarEntero(fd_DAM);
+			dtb->id=id_dtb;
 
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
@@ -210,7 +219,6 @@ void atenderDAM(int*fd){
 
 			break;
 		case FINALIZAR_PROCESO:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
 			pthread_mutex_unlock(&mx_colas);
@@ -226,7 +234,6 @@ void atenderDAM(int*fd){
 			}
 			break;
 		case ERROR_ARCHIVO_EXISTENTE:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			log_error(log_SAFA,"El dtb %d intento crear un archivo ya existente",id_dtb);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -243,7 +250,6 @@ void atenderDAM(int*fd){
 			}
 			break;
 		case ERROR_ARCHIVO_INEXISTENTE:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			log_error(log_SAFA,"El dtb %d intento operar sobre un archivo que no existe",id_dtb);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -260,7 +266,6 @@ void atenderDAM(int*fd){
 			}
 			break;
 		case ERROR_FM9_SIN_ESPACIO:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			log_error(log_SAFA,"No hay suficiente espacio en FM9 para cargar el archivo pedido por el DTB %d",id_dtb);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -277,7 +282,6 @@ void atenderDAM(int*fd){
 			}
 			break;
 		case ERROR_MDJ_SIN_ESPACIO:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			log_error(log_SAFA,"No hay suficiente espacio en MDJ para cargar lo que hay en FM9",id_dtb);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -295,7 +299,6 @@ void atenderDAM(int*fd){
 			break;
 
 		case ERROR_SEG_MEM:
-			id_dtb=*recibirYDeserializarEntero(fd_DAM);
 			log_error(log_SAFA,"Segmentation Fault en memoria provocado por el DTB %d",id_dtb);
 			pthread_mutex_lock(&mx_colas);
 			aux=getDTBEnCola(cola_block,id_dtb);
@@ -475,6 +478,11 @@ void atenderCPU(int*fd){
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(protocolo,dtb);
 			pthread_mutex_unlock(&mx_PCP);
+
+			if(protocolo==BLOQUEAR_PROCESO){
+				pthread_mutex_t* sem_dtb = dictionary_get(semaforos_dtb,string_itoa(dtb_cpu));
+				pthread_mutex_unlock(sem_dtb);
+			}
 
 			if(protocolo==FINALIZAR_PROCESO&&dtb->f_inicializacion==1){
 				pthread_mutex_lock(&mx_PLP);
