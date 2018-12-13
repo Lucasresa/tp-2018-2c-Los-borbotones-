@@ -33,6 +33,8 @@ int cargarScriptFM9(int pid, char* buffer);
 
 int guardarArchivoMDJ(char* path, char* buffer);
 char* obtenerArchivoMDJ(char *path);
+int validarArchivoMDJ(int , char* );
+int crearArchivoMDJ(int ,int ,peticion_crear* );
 
 int recibirHeader(int socket, int headerEsperado);
 
