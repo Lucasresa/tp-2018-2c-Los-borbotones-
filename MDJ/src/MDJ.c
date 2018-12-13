@@ -378,15 +378,18 @@ void consola_MDJ(){
 		}
 		if (!strncmp(linea, "bloque", 6)){
 			//char * path = "/scripts/checkpoint.escriptorio";
-			char * path = "fer/2.txt";
-			crearDirectorio(path);
-			crearArchivo(path,70);
+			//path: /equipos/equipo1.txt	offset: 0	size: 16
+			//char * path = "fer/2.txt";
+			//char *path="/equipos/equipo1.txt"
+			//crearDirectorio(path);
+			//crearArchivo(path,70);
 			//borrar_archivo(path);
 			peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
-			//obtener->offset=0;
-			//obtener->path="scripts/checkpoint.escriptorio";
-			//obtener->size=10;
-			//crearStringDeArchivoConBloques(obtener);
+			obtener->offset=0;
+			obtener->path="equipos/equipo1.txt";
+
+			obtener->size=16;
+			crearStringDeArchivoConBloques(obtener);
 
 			/*int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
@@ -578,8 +581,12 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	}
 	else{
 		int copiarHasta = hasta;
-		copiarHasta = hasta-metadataArchivo.tamanio ;
-		char *sub3 =substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
+		copiarHasta = metadataArchivo.tamanio -desplazamiento_archivo ;
+		char *sub3;
+		sub3=(char*)malloc(copiarHasta+1);
+		//=substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
+		memcpy(sub3, contenidoArchivo+desplazamiento_archivo,copiarHasta);
+		sub3[obtener->size] = '\0';
 		printf("Enviando: %s\n",sub3);
 		serializarYEnviarString(DAM_fd, sub3);
 		usleep(config_MDJ.time_delay*1000);
