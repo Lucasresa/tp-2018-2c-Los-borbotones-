@@ -504,8 +504,8 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	//Cargo el semaforo perteneciente al dtb
 	pthread_mutex_t* sem=malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(sem,NULL);
-	dictionary_put(semaforos_dtb,string_itoa(dtb->id),sem);
 	pthread_mutex_lock(sem);
+	dictionary_put(semaforos_dtb,string_itoa(dtb->id),sem);
 
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
