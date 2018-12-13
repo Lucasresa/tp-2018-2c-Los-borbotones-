@@ -56,6 +56,9 @@ int main(){
 		log_error(log_MDJ,"No se encontro el file system en el punto de montaje");
 		return -1;
 	}
+	else{
+
+	}
 	leerMetaData();
 	crearBitmap();
 	cerrarMDJ=0;
@@ -185,10 +188,9 @@ void determinarOperacion(int operacion,int fd) {
 	}
 	case BORRAR_DATOS:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
-		puts(borrar->path);
 		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
-		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
-	    borrar_archivo(borrar->path);
+		borrar_archivo(borrar->path);
+	    log_info(log_MDJ,"Archivo borrado y bloques liberado para::",borrar->path);
 	    usleep(config_MDJ.time_delay*1000);
 	    break;
 	}
@@ -387,16 +389,16 @@ void consola_MDJ(){
 			//char * path = "/scripts/checkpoint.escriptorio";
 			//path: /equipos/equipo1.txt	offset: 0	size: 16
 			//char * path = "fer/2.txt";
-			//char *path="/equipos/equipo1.txt"
+			char *path="equipos/equipo1.txt";
 			//crearDirectorio(path);
 			//crearArchivo(path,70);
-			//borrar_archivo(path);
-			peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
-			obtener->offset=0;
-			obtener->path="equipos/equipo1.txt";
+			borrar_archivo(path);
+			//peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
+			//obtener->offset=0;
+			//obtener->path="equipos/equipo1.txt";
 
-			obtener->size=16;
-			crearStringDeArchivoConBloques(obtener);
+			//obtener->size=16;
+			//crearStringDeArchivoConBloques(obtener);
 
 			/*int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
@@ -534,6 +536,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques);
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
+	config_destroy(archivo_MetaData);
 	int sizeArchivoBloque;
 	struct stat statbuf;
 	int i;
@@ -541,13 +544,14 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	char *pathBloqueCompleto;
 
 	for(i=0;i<cantidadBloques;i++){
+		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
 		}
 		else{
 			sizeArchivoBloque = metadataArchivo.tamanio;
 		}
-		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
+
 
 		int f = open(pathBloqueCompleto, O_RDONLY);
 		if (f < 0){
@@ -641,25 +645,35 @@ int leerMetaData(){
 int borrar_archivo(char *path_archivo){
 		char * complete_path;
         complete_path = archivo_path(path_archivo);
-        if(existe_archivo(complete_path)==0){
-
+    	t_config *archivo_MetaData;
+    	archivo_MetaData=config_create(complete_path);
+    	t_config_MetaArchivo metadataArchivo;
+    	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+    	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques);
+    	config_destroy(archivo_MetaData);
+    	char *pathBloqueCompleto;
+    	int i;
+    	int bloquelibre;
+    	for(i=0;i<cantidadBloques;i++){
+    		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
+    		log_info(log_MDJ,"liberado bloque n°:",metadataArchivo.bloques[i]);
+    		//Si el bloque no llega a existir lo crea y lo deja en blanco
+    		//aunque no va a par
+    		fclose(fopen(pathBloqueCompleto, "w"));
+    		free(pathBloqueCompleto);
+    		bloquelibre= atoi(metadataArchivo.bloques[i]);
+    		bitarray_clean_bit(bitarray, bloquelibre);
+    	}
+        if(validarArchivoConfig(complete_path)==0){
                 remove(complete_path);
+                log_info(log_MDJ,"borrado archivo en:",complete_path);
                 free(complete_path);
+
                 return 0;
         }
         else
                 return -1;
 
-}
-
-int existe_archivo(char *path_archivo){
-        FILE *file;
-        char *path =archivo_path(path_archivo);
-		if (file=fopen(path,"r")){
-			free(path);
-			return 1;
-		}
-        return -1;
 }
 
 int todos_bloques_libre(char *path_archivo){
@@ -673,7 +687,7 @@ int todos_bloques_libre(char *path_archivo){
 	while(i<= cantidadBloques){
 		char * pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
-		if (existe_archivo(pathBloqueCompleto)!=0) {
+		if (validarArchivoConfig(pathBloqueCompleto)<0) {
 			return -1;
 		}
 		int numeroBloque;
