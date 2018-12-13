@@ -29,7 +29,7 @@ int main(){
 	//Levanto archivo de configuracion del MDJ (FileSystem)
 
     char *archivo;
-	archivo="src/CONFIG_MDJ.cfg";
+    archivo="src/CONFIG_MDJ.cfg";
 
     if(validarArchivoConfig(archivo)<0)
     	return -1;
@@ -41,6 +41,9 @@ int main(){
 	config_MDJ.time_delay=config_get_int_value(file_MDJ,"RETARDO");
 
 	config_destroy(file_MDJ);
+
+	archivo_a_guardar = malloc(sizeof(t_config_archivo_a_guardar));
+	archivo_a_guardar->ocupado_archivo_a_guardar=0;
 
 	//-----------------------------------------------------------------------------------------------
 	//Ejecuto la consola del MDJ en un hilo aparte
@@ -74,6 +77,7 @@ int main(){
 		if(cerrarMDJ==1)
 			break;
 	}
+	free(archivo_a_guardar);
 	pthread_detach(hilo_consola);
 	pthread_detach(hilo_conexion);
 
@@ -149,7 +153,6 @@ void determinarOperacion(int operacion,int fd) {
 		int creacion = CREAR_OK;
 		log_info(log_MDJ,"Se recibio una peticion de creacion de archivo:");
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
-		char *pathCompleto = archivo_path(crear->path);
 		if (hayEspacio(crear)!=0){
 								log_info(log_MDJ,"No se puede crear archivo: por q no hay espacio",crear->path);
 								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
@@ -177,11 +180,9 @@ void determinarOperacion(int operacion,int fd) {
 	}
 	case GUARDAR_DATOS:
 	{
-		log_info(log_MDJ,"Peticion de guardado de DAM:");
+		log_info(log_MDJ,"Recibido Peticion de guardado de DAM:");
 		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
-		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\tbuffer: %s\n",
-				guardado->path,guardado->offset,guardado->size,guardado->buffer);
-		log_info(log_MDJ,"Peticion de guardado de DAM:",guardado->path);
+		log_info(log_MDJ,"Peticion de guardado de DAM para:",guardado->path);
 		guardarDatos(guardado);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -282,22 +283,98 @@ int guardarDatos(peticion_guardar *guardado) {
     strcat(complete_path, "/Archivos/");
     strcat(complete_path, guardado->path);
 
-
-    if (!archivo_a_guardar.ocupado_archivo_a_guardar){
-    	string_archivo(complete_path,&archivo_a_guardar.strig_archivo);
-    	archivo_a_guardar.path=complete_path;
-    	archivo_a_guardar.ocupado_archivo_a_guardar=TRUE;
+    if (!archivo_a_guardar->ocupado_archivo_a_guardar==0){
+    	strcpy(archivo_a_guardar->strig_archivo,guardado->buffer);
+    	archivo_a_guardar->path=string_duplicate(complete_path);
+    	archivo_a_guardar->ocupado_archivo_a_guardar=1;
+    	t_config *archivo_MetaData;
+    	archivo_MetaData=config_create(complete_path);
+    	archivo_a_guardar->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+    	config_destroy(archivo_MetaData);
     }
     else{
     	  if(guardado->size==0){
-    	    	guardarEnArchivo();
-    	    	return 0;
+    		  	if(hayEspacioParaGuardar()==0){
+    		  		guardarEnArchivo();
+    		  		return 0;
+    		  	}
+    	    	return -1;
     	   }
-    	  strncpy(archivo_a_guardar.strig_archivo+guardado->offset*guardado->size,guardado->buffer,guardado->size);
+    	  else{
+    		  string_append(&archivo_a_guardar->strig_archivo,guardado->buffer);
+    	  }
 
     }
     free(guardado);
     return 0;
+}
+
+int hayEspacioParaGuardar(){
+	int cantidadDeBloquesDelArchivo = cantidadDeBloques (archivo_a_guardar->bloques);
+	int bloquesLibresCantidad =  cantidadDeBloquesLibres();
+	int espacioDelArchivo = strlen(archivo_a_guardar->strig_archivo);
+	int espacioMaximoActual =cantidadDeBloquesDelArchivo*config_MetaData.tamanio_bloques;
+	int espacioMaximoLibre = bloquesLibresCantidad * config_MetaData.tamanio_bloques;
+	if((espacioMaximoActual)>espacioDelArchivo){
+		log_info(log_MDJ,"no se necesita espacio Adicional para guadar data de :",archivo_a_guardar->path);
+		return 0;
+	}
+	else if (espacioMaximoLibre +espacioMaximoActual > espacioDelArchivo ){
+		int espacioNecesario= espacioDelArchivo -(espacioMaximoLibre +espacioMaximoActual);
+		int bloquesNecesario =cantidadDeBloquesNecesario(espacioNecesario);
+		asignarleBloquesNuevosA(archivo_a_guardar,bloquesNecesario);
+		log_info(log_MDJ,"no se necesita bloques adicionales para guardar el archivo :",archivo_a_guardar->path);
+		return 0;
+	}
+	else{
+		log_info(log_MDJ,"ho hay espacio para guardar el archivo:",archivo_a_guardar->path);
+		free(archivo_a_guardar->strig_archivo);
+		free(archivo_a_guardar->path);
+		free(archivo_a_guardar->bloques);
+		archivo_a_guardar->ocupado_archivo_a_guardar=0;
+		return -1;
+	}
+
+
+}
+
+int cantidadDeBloquesNecesario(int espacioFaltante){
+	int i=1;
+	while (i*config_MetaData.tamanio_bloques<espacioFaltante){
+		i++;
+	}
+	return i;
+}
+
+void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int bloquesNecesario){
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(archivo_a_guardar->path);
+	char **bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+
+	int cantBloques=cantidadDeBloques(bloques);
+	char *stringBloque;
+	int i;
+	char *actualizarBloques=malloc(strlen("[")+1);
+	strcpy(actualizarBloques,"[");
+	int cantidadDebloques=sizeof(bloques);
+	string_append(&actualizarBloques,bloques[i]);
+	for(i=0;i<cantidadDebloques-1; i++){
+		puts(bloques[i]);
+		string_append(&actualizarBloques,",");
+		string_append(&actualizarBloques,bloques[i]);
+	}
+	int suguienteBloqueLibre;
+	for(i=0;i<bloquesNecesario;i++){
+		string_append(&actualizarBloques,",");
+		char *ultimoBloqueChar = atoi(proximobloqueLibre());
+		string_append(&actualizarBloques,ultimoBloqueChar);
+	}
+    string_append(&actualizarBloques,"]");
+    config_set_value(archivo_MetaData, "Bloques",actualizarBloques);
+    char *tamanio=atoi(strlen(archivo_a_guardar->strig_archivo));
+    config_set_value(archivo_MetaData, "Tamanio",tamanio);
+	config_destroy(archivo_MetaData);
+
 }
 
 int crear_carpetas() {
@@ -709,17 +786,16 @@ int todos_bloques_libre(char *path_archivo){
 
 void guardarEnArchivo(){
 	//archivo_a_guardar;
-	int seCreoBloque=FALSE;
 	t_config *archivo_MetaData;
-	archivo_MetaData=config_create(archivo_a_guardar.path);
+	archivo_MetaData=config_create(archivo_a_guardar->path);
 	t_config_MetaArchivo metadataArchivo;
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	int bloquesCantidad=cantidadDeBloques (metadataArchivo.bloques);
 	int sizeDelStringArchivoAGuardar;
-	sizeDelStringArchivoAGuardar=strlen(archivo_a_guardar.strig_archivo);
-	int sizeGuardar;
-	if (config_MetaData.tamanio_bloques*cantidadBloques<sizeDelStringArchivoAGuardar){
+	sizeDelStringArchivoAGuardar=strlen(archivo_a_guardar->strig_archivo);
+	/*
+	if (config_MetaData.tamanio_bloques*bloquesCantidad<sizeDelStringArchivoAGuardar){
 		config_MetaData.cantidad_bloques++;
 		actualizarARchivo(&metadataArchivo,sizeDelStringArchivoAGuardar,config_MetaData.cantidad_bloques);
 		seCreoBloque=TRUE;
@@ -732,7 +808,6 @@ void guardarEnArchivo(){
 	    int size;
 	    struct stat s;
 	    int fd = open (pathBloqueCompleto, O_RDWR);
-	    /* Get the size of the file. */
 	    int status = fstat (fd, &s);
 	    size = s.st_size;
 	    if(status<0){
@@ -751,13 +826,13 @@ void guardarEnArchivo(){
 	    munmap(map, sizeGuardar);
 	    close(fd);
 	}
-
+	*/
 }
 
 
 int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque){
 	t_config *archivo_MetaData;
-	archivo_MetaData=config_create(archivo_a_guardar.path);
+	archivo_MetaData=config_create(archivo_a_guardar->path);
 	t_config_MetaArchivo actualizarMetadataARchivo;
 	actualizarMetadataARchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	actualizarMetadataARchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
