@@ -49,18 +49,18 @@ int main(){
 	pthread_t hilo_consola;
 	pthread_t hilo_conexion;
 
+	char *direccionArchivoMedata=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Metadata.bin"));;
+	strcpy(direccionArchivoMedata,config_MDJ.mount_point);
+	string_append(&direccionArchivoMedata,"/Metadata/Metadata.bin");
+	if (validarArchivoConfig(direccionArchivoMedata)<0){
+		log_error(log_MDJ,"No se encontro el file system en el punto de montaje");
+		return -1;
+	}
 	leerMetaData();
 	crearBitmap();
 	cerrarMDJ=0;
 	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
 	pthread_create(&hilo_conexion,NULL,(void*)conexion_DMA,NULL);
-	//conexion_DMA();
-	//if (crear_carpetas() != 0) {
-	//	log_error(log_MDJ,"Error al crear los directorios para el MDJ");
-	//	return -1;
-	//}
-
-	//log_info(log_MDJ,"Directorios creados");
 
 	//-----------------------------------------------------------------------------------------------
     //Espero que el DAM se conecte y logueo cuando esto ocurra
@@ -129,26 +129,36 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		int validar=VALIDAR_OK;
-		if (existe_archivo(validacion->path)!=0){
+		char *pathCompleto = archivo_path(validacion->path);
+		if (validarArchivoConfig(pathCompleto)<0){
+			log_info(log_MDJ,"No existe el archivo:",validacion->path);
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
+			log_error(log_MDJ,"Se va a enviar una validacion de fallo a DAM:");
 			validar=VALIDAR_FALLO;
 		}
-		serializarYEnviarEntero(DAM_fd, &validar);
+		log_info(log_MDJ,"Se envia validacion a DAM::");
 		usleep(config_MDJ.time_delay*1000);
+		serializarYEnviarEntero(DAM_fd, &validar);
 		break;
 	}
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
+		log_info(log_MDJ,"Se recibio una peticion de creacion de archivo:");
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
-		if (existe_archivo(crear->path)!=0){
-						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
-						creacion= CREAR_FALLO;
+		char *pathCompleto = archivo_path(crear->path);
+		if (hayEspacio(crear)!=0){
+								log_info(log_MDJ,"No se puede crear archivo: por q no hay espacio",crear->path);
+								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
+								creacion= CREAR_FALLO;
 		}
 		else{
+			log_info(log_MDJ,"Creacion de direcctorios si fuera necesario para archivo:",crear->path);
 			crearDirectorio(crear->path);
+			log_info(log_MDJ,"Creacion de archivo:",crear->path);
 			crearArchivo(crear->path, crear->cant_lineas);
 		}
+		log_info(log_MDJ,"Se envia el codigo de creacion de archivo:");
 		serializarYEnviarEntero(DAM_fd, &creacion);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -164,10 +174,11 @@ void determinarOperacion(int operacion,int fd) {
 	}
 	case GUARDAR_DATOS:
 	{
+		log_info(log_MDJ,"Peticion de guardado de DAM:");
 		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
 		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\tbuffer: %s\n",
 				guardado->path,guardado->offset,guardado->size,guardado->buffer);
-
+		log_info(log_MDJ,"Peticion de guardado de DAM:",guardado->path);
 		guardarDatos(guardado);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -175,6 +186,7 @@ void determinarOperacion(int operacion,int fd) {
 	case BORRAR_DATOS:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		puts(borrar->path);
+		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
 		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
 	    borrar_archivo(borrar->path);
 	    usleep(config_MDJ.time_delay*1000);
@@ -188,11 +200,12 @@ void determinarOperacion(int operacion,int fd) {
 
 void crearArchivo(char *path, int numero_lineas) {
     FILE* fichero_metadata;
-    FILE* bloque_crear;
+    //FILE* bloque_crear;
     //Creacion Del archivo
 
     char *complete_path =archivo_path(path);
     fichero_metadata = fopen(complete_path, "wr");
+    //fichero_metadata->
     fclose(fichero_metadata);
 
     //Carga de MetaData del archivo
@@ -200,8 +213,8 @@ void crearArchivo(char *path, int numero_lineas) {
 	archivo_MetaData=config_create(complete_path);
 	char *ultimoBloqueChar;
 	char *sizeDelStringArchivoAGuardarChar;
-	int numeroDeBloque=config_MetaData.cantidad_bloques;
-	ultimoBloqueChar=string_itoa(numeroDeBloque);
+	int numeroDeBloqueLibre=proximobloqueLibre();
+	//ultimoBloqueChar=string_itoa(numeroDeBloque);
 	sizeDelStringArchivoAGuardarChar=string_itoa(numero_lineas);
 	char *actualizarBloques=malloc(strlen("[")+1);
 	strcpy(actualizarBloques,"[");
@@ -210,8 +223,9 @@ void crearArchivo(char *path, int numero_lineas) {
 	int cantNescribir;
 	int flag = 1;
 	while(flag !=0){
-		config_MetaData.cantidad_bloques++;
-		ultimoBloqueChar=string_itoa(config_MetaData.cantidad_bloques);
+		ultimoBloqueChar=string_itoa(numeroDeBloqueLibre);
+		bitarray_set_bit(bitarray, numeroDeBloqueLibre);
+		actualizarBitarray();
 		string_append(&actualizarBloques,ultimoBloqueChar);
 		if (cantNFaltantes < (i+1)*config_MetaData.tamanio_bloques){
 			cantNescribir = cantNFaltantes;
@@ -221,7 +235,7 @@ void crearArchivo(char *path, int numero_lineas) {
 			cantNFaltantes -= config_MetaData.tamanio_bloques;
 			cantNescribir=config_MetaData.tamanio_bloques;
 			string_append(&actualizarBloques,",");
-
+			numeroDeBloqueLibre=proximobloqueLibre();
 		}
 		char *pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(ultimoBloqueChar);
@@ -370,11 +384,21 @@ void consola_MDJ(){
 			cmd_ls(linea);
 		}
 		if (!strncmp(linea, "bloque", 6)){
-			char * path = "/equipo/test";
+			//char * path = "/scripts/checkpoint.escriptorio";
+			//path: /equipos/equipo1.txt	offset: 0	size: 16
+			//char * path = "fer/2.txt";
+			//char *path="/equipos/equipo1.txt"
 			//crearDirectorio(path);
-			//crearArchivo(path,10000);
+			//crearArchivo(path,70);
 			//borrar_archivo(path);
-			int creacion = CREAR_OK;
+			peticion_obtener *obtener = malloc (sizeof(peticion_obtener));
+			obtener->offset=0;
+			obtener->path="equipos/equipo1.txt";
+
+			obtener->size=16;
+			crearStringDeArchivoConBloques(obtener);
+
+			/*int creacion = CREAR_OK;
 			log_info(log_MDJ,"peticion de creacion de archivo:",path);
 			if (existe_archivo(path)!=0){
 				log_error(log_MDJ,"No se puede crear por q existe el archivo:",path);
@@ -386,7 +410,7 @@ void consola_MDJ(){
 				crearArchivo(path, 52);
 				log_info(log_MDJ,"Se creo el archivo:",path);
 			}
-
+			*/
 		}
 
 	}
@@ -508,13 +532,14 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	t_config_MetaArchivo metadataArchivo;
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	int cantidadBloques =cantidadDeBloques (metadataArchivo.bloques);
 	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
 	int sizeArchivoBloque;
 	struct stat statbuf;
 	int i;
 	char *src;
 	char *pathBloqueCompleto;
+
 	for(i=0;i<cantidadBloques;i++){
 		if(metadataArchivo.tamanio >=config_MetaData.tamanio_bloques){
 			sizeArchivoBloque = config_MetaData.tamanio_bloques;
@@ -563,8 +588,12 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 	}
 	else{
 		int copiarHasta = hasta;
-		copiarHasta = hasta-metadataArchivo.tamanio ;
-		char *sub3 =substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
+		copiarHasta = metadataArchivo.tamanio -desplazamiento_archivo ;
+		char *sub3;
+		sub3=(char*)malloc(copiarHasta+1);
+		//=substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
+		memcpy(sub3, contenidoArchivo+desplazamiento_archivo,copiarHasta);
+		sub3[obtener->size] = '\0';
 		printf("Enviando: %s\n",sub3);
 		serializarYEnviarString(DAM_fd, sub3);
 		usleep(config_MDJ.time_delay*1000);
@@ -610,7 +639,7 @@ int leerMetaData(){
 }
 
 int borrar_archivo(char *path_archivo){
-        char * complete_path;
+		char * complete_path;
         complete_path = archivo_path(path_archivo);
         if(existe_archivo(complete_path)==0){
 
@@ -624,8 +653,13 @@ int borrar_archivo(char *path_archivo){
 }
 
 int existe_archivo(char *path_archivo){
-        struct stat   buffer;
-        return (stat (archivo_path(path_archivo), &buffer) == 0);
+        FILE *file;
+        char *path =archivo_path(path_archivo);
+		if (file=fopen(path,"r")){
+			free(path);
+			return 1;
+		}
+        return -1;
 }
 
 int todos_bloques_libre(char *path_archivo){
@@ -657,7 +691,6 @@ int todos_bloques_libre(char *path_archivo){
 	return 0;
 
 }
-
 
 
 void guardarEnArchivo(){
@@ -761,16 +794,20 @@ char *substring(char *string, int position, int length)
    return pointer;
 }
 
-
-void crearBitmap(){
-
-	//FILE* bloque_crear;
-	//bloque_crear->_IO_buf_base
+char * path_bitmap(){
 	puts(config_MDJ.mount_point);
 	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));
 	strcpy(direccionArchivoBitMap,config_MDJ.mount_point);
 	string_append(&direccionArchivoBitMap,"/Metadata/Bitmap.bin");
 	puts(direccionArchivoBitMap);
+	return direccionArchivoBitMap;
+
+}
+
+void crearBitmap(){
+	//FILE* bloque_crear;
+	//bloque_crear->_IO_buf_base
+	char *direccionArchivoBitMap = path_bitmap();
 	int bitmap = open(direccionArchivoBitMap, O_RDWR);
 	struct stat mystat;
 	//puts(bitmap);
@@ -787,6 +824,12 @@ void crearBitmap(){
 	}
 
 	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	for (int i=0;i<cantidadDebits;i++){
+		printf("posicion %d valor %d:\n",i,bitarray_test_bit(bitarray,i));
+	}
+
+
 
 }
 void crearDirectorio(char *path){
@@ -817,11 +860,65 @@ void crearDirectorio(char *path){
     	    	else
     	    	    printf( "%s es un archivo \n", arr[i] );
    	    }
-
     }
+}
+int verificar_bloques(char *path){
+	t_config *archivo_MetaData;
+	archivo_MetaData=config_create(path);
+	t_config_MetaArchivo metadataArchivo;
+	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
+	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
+	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
+	int sizeArchivoBloque;
+	struct stat statbuf;
+}
 
 
+int cantidadDeBloques (char **bloque){
+	int i=0;
+	while (bloque[i]!=0){
+		i++;
+	}
+	return i;
+}
 
+int cantidadDeBloquesLibres (){
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	int libre =0;
+	int i;
+	for (i=0;i<cantidadDebits;i++){
+		if (bitarray_test_bit(bitarray,i)==0){
+			libre++;
+		}
+	}
+	return libre;
+}
+int proximobloqueLibre (){
+	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
+	int i;
+	int libre=0;
+	for (i=0;i<cantidadDebits;i++){
+		if(bitarray_test_bit(bitarray,i)==0){
+			libre=i;
+			break;
+		}
+	}
+	return libre;
+}
+
+int hayEspacio(peticion_crear *crear){
+	int espaciolibre = cantidadDeBloquesLibres()*config_MetaData.tamanio_bloques;
+	int espacioNecesario = crear->cant_lineas;
+	if(espaciolibre>espacioNecesario){
+		return 0;
+	}
+	return -1;
+}
+
+
+void actualizarBitarray(){
+	char * direccionBitmap = path_bitmap();
 }
 
 /*int cmd_md5(char *linea){

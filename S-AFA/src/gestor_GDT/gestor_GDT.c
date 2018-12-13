@@ -501,6 +501,15 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	list_add(cola_new,dtb);
 	pthread_mutex_unlock(&mx_colas);
 
+	//Cargo el semaforo perteneciente al dtb
+	pthread_mutex_t* sem=malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(sem,NULL);
+	pthread_mutex_lock(sem);
+
+	pthread_mutex_lock(&mx_semaforos);
+	dictionary_put(semaforos_dtb,string_itoa(dtb->id),sem);
+	pthread_mutex_unlock(&mx_semaforos);
+
 	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
 
 	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
@@ -730,8 +739,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_lock(&mx_colas);
 		dtb_aux=getDTBEnCola(cola_block,dtb->id);
 
-		list_add_all(dtb_aux->archivos,dtb->archivos);
-
 		if(config_SAFA.algoritmo==VRR&&dtb_aux->quantum_sobrante>0)
 			list_add(cola_ready_VRR,dtb_aux);
 		else if(config_SAFA.algoritmo==IOBF)
@@ -753,13 +760,27 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		list_add(cola_exit,dtb);
 		pthread_mutex_unlock(&mx_colas);
 
+		pthread_mutex_lock(&mx_semaforos);
+		pthread_mutex_t* sem = dictionary_remove(semaforos_dtb,string_itoa(dtb->id));
+		pthread_mutex_unlock(&mx_semaforos);
+
+
+		pthread_mutex_destroy(sem);
+
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)
 				multiprogramacion_actual+=1;
 		}
+		if(dtb->f_inicializacion==1){
+			serializarYEnviarEntero(DAM,&operacion);
+			serializarYEnviarEntero(DAM,&dtb->id);
+		}
+
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
+
+		dtb->quantum_sobrante=0;
 
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_ready,dtb);

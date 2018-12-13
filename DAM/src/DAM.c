@@ -11,6 +11,8 @@ int main(){
 
 	file_DAM = config_create(archivo);
 
+	pthread_mutex_init(&mutex_SAFA,NULL);
+
 	config_DAM.puerto_dam=config_get_int_value(file_DAM,"PUERTO");
 	config_DAM.ip_safa=string_duplicate(config_get_string_value(file_DAM,"IP_SAFA"));
 	config_DAM.puerto_safa=config_get_int_value(file_DAM,"PUERTO_SAFA");
@@ -59,6 +61,10 @@ int main(){
 		exit(1);
 	} else {
 		log_info(log_DAM, "Conexión con SAFA establecido");
+		pthread_t hilo_SAFA;
+		pthread_create(&hilo_SAFA,NULL,(void*)escucharSAFA,(void*)&SAFA_fd);
+		log_info(log_DAM,"Hilo para escuchar mensajes de SAFA creado");
+		pthread_detach(hilo_SAFA);
 	}
 
 	while(true) {
@@ -74,71 +80,82 @@ void* funcionHandshake(int socket, void* argumentos) {
 }
 
 void* recibirPeticion(int socket, void* argumentos) {
-	int length;
-	int header;
-	length = recv(socket,&header,sizeof(int),0);
-	if ( length <= 0 ) {
+	int* header,success;
+
+	header = recibirYDeserializarEntero(socket);
+
+	if(header==NULL){
+		log_info(log_DAM,"Se perdio la conexion con el socket %d",socket);
 		close(socket);
-		FD_CLR(socket, &set_fd);
-		log_error(log_DAM, "Se perdió la conexión con un socket.");
-		perror("error");
-		return 0;
 	}
 
-	switch(header){
+
+	switch(*header){
 	case DESBLOQUEAR_DUMMY:
 	{
 		desbloqueo_dummy* dummy;
-		dummy = recibirYDeserializar(socket,header);
+		dummy = recibirYDeserializar(socket,*header);
 		log_info(log_DAM,"Recibi el header desbloquear dummy %s", dummy->path);
-		char* buffer = obtenerArchivoMDJ(dummy->path);
 
-		log_info(log_DAM,"Cargo archivo al FM9");
-		cargarScriptFM9(dummy->id_dtb, buffer);
-		log_info(log_DAM,"Enviando final carga dummy");
+		if(validarArchivoMDJ(MDJ_fd,dummy->path)>0){
 
-		int success=FINAL_CARGA_DUMMY;
+			log_info(log_DAM,"Validacion exitosa en MDJ");
+
+			char* buffer = obtenerArchivoMDJ(dummy->path);
+
+			log_info(log_DAM,"Cargo archivo al FM9");
+			cargarScriptFM9(dummy->id_dtb, buffer);
+			log_info(log_DAM,"Enviando final carga dummy");
+			success=FINAL_CARGA_DUMMY;
+
+		    log_info(log_DAM,"Final carga dummy enviado al safa");
+
+		    free(buffer);
+		}
+		else{
+			log_error(log_DAM,"El escriptorio no existe en MDJ");
+
+			success=ERROR_ARCHIVO_INEXISTENTE;
+
+			log_info(log_DAM,"Se envio un error a SAFA para que aborte el DTB dummy");
+		}
+		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&success);
 	    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
-	    log_info(log_DAM,"Final carga dummy enviado al safa");
-		return 0;
+		pthread_mutex_unlock(&mutex_SAFA);
+
+		break;
 	}
 	case CREAR_ARCHIVO:
 	{
 		log_info(log_DAM,"Peticion de crear archivo recibida");
-		peticion_crear* crear_archivo=recibirYDeserializar(socket,header);
+		peticion_crear* crear_archivo=recibirYDeserializar(socket,*header);
 		int dtb_id = *recibirYDeserializarEntero(socket);
 
-		log_info(log_DAM,"Enviando peticion de crear archivo a MDJ");
-		serializarYEnviar(MDJ_fd,header,crear_archivo);
-		int respuesta;
+		log_info(log_DAM,"Validando que el archivo %s no exista",crear_archivo->path);
 
-		respuesta = *recibirYDeserializarEntero(MDJ_fd);
-		printf("Recibi: %d\n",respuesta);
+		if(validarArchivoMDJ(MDJ_fd,crear_archivo->path)<0){
+			log_info(log_DAM,"El archivo no existe, sigo con la creacion");
 
-		switch(respuesta){
-
-			case CREAR_OK:{
-
-				printf("creacion ok\n");
-				int success=FINAL_CREAR;
-				serializarYEnviarEntero(SAFA_fd,&success);
-				serializarYEnviarEntero(SAFA_fd,&dtb_id);
-				log_info(log_DAM,"El archivo se creo con exito");
-				return 0;
+			if(crearArchivoMDJ(MDJ_fd,*header,crear_archivo)){
+				log_info(log_DAM,"Se creo exitosamente el archivo %s", crear_archivo->path);
+				success = FINAL_CREAR;
+			}else{
+				log_error(log_DAM,"No hay espacio suficiente en MDJ para crear el archivo");
+				success= ERROR_MDJ_SIN_ESPACIO;
 			}
-			case CREAR_FALLO:{
-				printf("creacion fallida\n");
-			    int success=ERROR_ARCHIVO_EXISTENTE;
-				serializarYEnviarEntero(SAFA_fd,&success);
-				serializarYEnviarEntero(SAFA_fd,&dtb_id);
-				log_info(log_DAM,"Hubo un error al crear el archivo");
-				return 0;
-			}
-			default:
-				printf("fallo el enum crear");
-				return -1;
+		}else{
+			log_error(log_DAM,"El archivo ya existe en MDJ, Avisando a SAFA...");
+			success=ERROR_ARCHIVO_EXISTENTE;
 		}
+		pthread_mutex_lock(&mutex_SAFA);
+		serializarYEnviarEntero(SAFA_fd,&success);
+		serializarYEnviarEntero(SAFA_fd,&dtb_id);
+		pthread_mutex_unlock(&mutex_SAFA);
+		log_info(log_DAM,"Se le informo a SAFA el resultado de la operacion");
+		free(crear_archivo->path);
+		free(crear_archivo);
+		break;
 	}
 	case ABRIR_ARCHIVO:
 	{
@@ -147,19 +164,72 @@ void* recibirPeticion(int socket, void* argumentos) {
 		char*path = recibirYDeserializarString(socket);
 		int dtb_id = *recibirYDeserializarEntero(socket);
 
-		char* buffer = obtenerArchivoMDJ(path);
+		if(validarArchivoMDJ(MDJ_fd,path)>0){
+			char* buffer = obtenerArchivoMDJ(path);
 
-		log_info(log_DAM,"Cargo archivo al FM9");
-		int base = cargarArchivoFM9(dtb_id, buffer);
-		log_info(log_DAM,"Enviando Final abrir archivo");
+			log_info(log_DAM,"Cargo archivo al FM9");
+			int base = cargarArchivoFM9(dtb_id, buffer);
 
-		int success=FINAL_ABRIR;
-		info_archivo* info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
-		serializarYEnviar(SAFA_fd,FINAL_ABRIR,info_archivo);
-	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
-	    log_info(log_DAM,"Final carga dummy enviado al safa");
-		return 0;
+			success=FINAL_ABRIR;
+
+			info_archivo info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
+
+			pthread_mutex_lock(&mutex_SAFA);
+			serializarYEnviar(SAFA_fd,FINAL_ABRIR,&info_archivo);
+			pthread_mutex_unlock(&mutex_SAFA);
+			//FALTA VALIDAR SI HAY ESPACIO EN FM9
+			log_info(log_DAM,"Se informo a SAFA que el archivo se cargo con exito");
+
+			free(buffer);
+		}else{
+			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+
+			success=ERROR_ARCHIVO_INEXISTENTE;
+
+			pthread_mutex_lock(&mutex_SAFA);
+			serializarYEnviarEntero(SAFA_fd,&success);
+			serializarYEnviarEntero(SAFA_fd,&dtb_id);
+			pthread_mutex_unlock(&mutex_SAFA);
+
+			log_info(log_DAM,"Se informo a SAFA que el archivo no existe");
+		}
+		free(path);
+	    break;
 	}
+	case BORRAR_ARCHIVO:
+	{
+		log_info(log_DAM,"Peticion de borrar archivo recibida");
+		peticion_borrar* borrar_archivo=recibirYDeserializar(socket,*header);
+		int dtb_id = *recibirYDeserializarEntero(socket);
+
+		log_info(log_DAM,"Validando que el archivo %s exista",borrar_archivo->path);
+
+		if(validarArchivoMDJ(MDJ_fd,borrar_archivo->path)>0){
+			log_info(log_DAM,"El archivo existe, procedo a borrarlo");
+
+			serializarYEnviar(MDJ_fd,*header,borrar_archivo);
+			success=FINAL_BORRAR;
+
+		}else{
+			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+			success=ERROR_ARCHIVO_INEXISTENTE;
+		}
+
+		pthread_mutex_lock(&mutex_SAFA);
+		serializarYEnviarEntero(SAFA_fd,&success);
+		serializarYEnviarEntero(SAFA_fd,&dtb_id);
+		pthread_mutex_lock(&mutex_SAFA);
+
+		log_info(log_DAM,"Se le informo a SAFA el resultado de la operacion");
+		free(borrar_archivo->path);
+		free(borrar_archivo);
+		break;
+	}
+	case FLUSH_ARCHIVO:
+
+		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
+
+		break;
 	}
 	return 0;
 }
@@ -325,3 +395,81 @@ void testeoFM9() {
 	char bufferTesteoCuatro[60] = "\n\n\n\n\n";
 	cargarArchivoFM9(1, bufferTesteoCuatro);
 }
+
+int validarArchivoMDJ(int MDJ, char* path){
+
+	peticion_validar* validacion = malloc(sizeof(peticion_validar));
+	validacion->path = string_duplicate(path);
+	int header = VALIDAR_ARCHIVO,respuesta,retorno;
+
+	serializarYEnviar(MDJ,header,validacion);
+
+	respuesta = *recibirYDeserializarEntero(MDJ);
+
+	free(validacion->path);
+	free(validacion);
+
+	if(respuesta==VALIDAR_OK){
+		retorno= 1;
+	}else{
+		retorno= -1;
+	}
+
+	return retorno;
+}
+
+int crearArchivoMDJ(int MDJ,int operacion,peticion_crear* crear_archivo){
+	log_info(log_DAM,"Enviando peticion de crear archivo a MDJ");
+	serializarYEnviar(MDJ_fd,operacion,crear_archivo);
+	int respuesta,retorno;
+
+	respuesta = *recibirYDeserializarEntero(MDJ_fd);
+
+	switch(respuesta){
+	case CREAR_OK:
+		retorno=1;
+		break;
+	case CREAR_FALLO:
+		retorno=0;
+		break;
+	}
+	return retorno;
+}
+
+void escucharSAFA(int* fd){
+	int SAFA=*fd, id_dtb;
+
+	int*protocolo;
+
+	while(1){
+
+		protocolo=recibirYDeserializarEntero(SAFA);
+
+		pthread_mutex_lock(&mutex_SAFA);
+
+		if(protocolo==NULL){
+			log_error(log_DAM,"Se perdio la conexion con SAFA, cierro DAM");
+			free(protocolo);
+			exit(0);
+		}
+
+		switch(*protocolo){
+		case FINALIZAR_PROCESO:
+
+			log_info(log_DAM,"SAFA me aviso que un proceso acaba de finalizar");
+
+			id_dtb=*recibirYDeserializarEntero(SAFA);
+
+			//Avisar a FM9 que tiene que liberar el espacio ocupado por el proceso
+
+			break;
+		}
+
+		pthread_mutex_unlock(&mutex_SAFA);
+
+	}
+}
+
+
+
+

@@ -157,16 +157,23 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}
 			break;
 		case CONCENTRAR:
+			log_info(log_CPU,"Se ejecuto la operacion CONCENTRAR");
+
 			actualizarDTB(&dtb);
 			break;
 		case ASIGNAR:
 			//CPU se comunica directamente con FM9
 
+			log_info(log_CPU,"Se ejecuto la operacion ASIGNAR");
+
+			actualizarDTB(&dtb);
 
 
 
 			break;
 		case WAIT:
+			log_info(log_CPU,"Se ejecuto la operacion WAIT");
+
 			actualizarDTB(&dtb);
 			notificarSAFA(SAFA,WAIT_RECURSO,dtb);
 			serializarYEnviarString(SAFA,linea_parseada.argumentos.wait.recurso);
@@ -176,6 +183,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}
 			break;
 		case SIGNAL:
+			log_info(log_CPU,"Se ejecuto la operacion SIGNAL");
+
 			actualizarDTB(&dtb);
 			notificarSAFA(SAFA,SIGNAL_RECURSO,dtb);
 			serializarYEnviarString(SAFA,linea_parseada.argumentos.signal.recurso);
@@ -203,6 +212,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			interrupcion=1;
 			break;
 		case CLOSE:
+			log_info(log_CPU,"Se ejecuto la operacion CLOSE");
+
 			actualizarDTB(&dtb);
 			if((posicion_file=isOpenFile(dtb,linea_parseada.argumentos.close.path))!=-1){
 				direccion_logica* file = malloc(sizeof(direccion_logica));

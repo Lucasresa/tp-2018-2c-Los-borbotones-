@@ -73,6 +73,12 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener);
 void crearDirectorio(char *path);
 void actualizar_configuracion_Metadata(int ultimoBlque);
 char *string_config_metadata();
+int cantidadDeBloques (char **bloque);
+int proximobloqueLibre ();
+int cantidadDeBloquesLibres ();
+int cantidadDeBloques (char **bloque);
+int hayEspacio(peticion_crear  *crear);
+void actualizarBitarray();
 struct addrinfo *server_info;
 
 typedef struct{

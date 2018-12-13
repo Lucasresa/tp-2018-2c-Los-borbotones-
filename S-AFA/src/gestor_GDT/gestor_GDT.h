@@ -90,6 +90,7 @@ t_dictionary* cola_exec;
 
 t_list* cola_exit;
 
+
 t_log* log_SAFA;
 
 t_list* CPU_libres;
@@ -107,6 +108,10 @@ pthread_mutex_t mx_claves;
 pthread_mutex_t mx_metricas;
 
 pthread_mutex_t File_config;
+
+pthread_mutex_t mx_semaforos;
+
+t_dictionary* semaforos_dtb;
 
 t_list* info_metricas;
 
