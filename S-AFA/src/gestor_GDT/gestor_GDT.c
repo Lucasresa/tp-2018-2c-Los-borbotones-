@@ -757,6 +757,11 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 			if(dtb->f_inicializacion!=0)
 				multiprogramacion_actual+=1;
 		}
+		if(dtb->f_inicializacion==1){
+			serializarYEnviarEntero(DAM,&operacion);
+			serializarYEnviarEntero(DAM,&dtb->id);
+		}
+
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);

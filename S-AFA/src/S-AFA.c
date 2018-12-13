@@ -26,7 +26,6 @@ int main(){
 
 	multiprogramacion_actual=config_SAFA.multiprog;
 
-
 	//Hilo para actualizar achivo de configuracion del S-AFA
 
 	pthread_t hilo_inotify;
@@ -365,6 +364,8 @@ void atenderCPU(int*fd){
 			}
 
 			log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
+
+
 
 			pthread_exit(NULL);
 		}

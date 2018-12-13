@@ -126,9 +126,9 @@ void determinarOperacion(int operacion,int fd) {
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
 			validar=VALIDAR_FALLO;
 		}
+		usleep(config_MDJ.time_delay*1000);
 
 		serializarYEnviarEntero(DAM_fd, &validar);
-		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
 	case CREAR_ARCHIVO:{
