@@ -123,10 +123,12 @@ void determinarOperacion(int operacion,int fd) {
 		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		int validar=VALIDAR_OK;
 		if (existe_archivo(validacion->path)==0){
+			log_info(log_MDJ,"No existe el archivo:",validacion->path);
 			log_error(log_MDJ,"No existe el archivo:",validacion->path);
+			log_error(log_MDJ,"Se va a enviar una validacion de fallo a DAM:");
 			validar=VALIDAR_FALLO;
 		}
-
+		log_info(log_MDJ,"Se envia validacion a DAM::");
 		serializarYEnviarEntero(DAM_fd, &validar);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -134,19 +136,25 @@ void determinarOperacion(int operacion,int fd) {
 	case CREAR_ARCHIVO:{
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
+		log_info(log_MDJ,"Se recibio una peticion de creacion de archivo:");
 		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
 		if (hayEspacio(crear)!=0){
+								log_info(log_MDJ,"No se puede crear archivo: por q no hay espacio",crear->path);
 								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
 								creacion= CREAR_FALLO;
 		}
 		if (existe_archivo(crear->path)!=0){
+						log_info(log_MDJ,"No se puede crear archivo por q existe:",crear->path);
 						log_error(log_MDJ,"No se puede crear por q existe el archivo:",crear->path);
 						creacion= CREAR_FALLO;
 		}
 		else{
+			log_info(log_MDJ,"Creacion de direcctorios si fuera necesario para archivo:",crear->path);
 			crearDirectorio(crear->path);
+			log_info(log_MDJ,"Creacion de archivo:",crear->path);
 			crearArchivo(crear->path, crear->cant_lineas);
 		}
+		log_info(log_MDJ,"Se envia el codigo de creacion de archivo:");
 		serializarYEnviarEntero(DAM_fd, &creacion);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -162,10 +170,11 @@ void determinarOperacion(int operacion,int fd) {
 	}
 	case GUARDAR_DATOS:
 	{
+		log_info(log_MDJ,"Peticion de guardado de DAM:");
 		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
 		printf("Peticion de guardado..\n\tpath: %s\toffset: %d\tsize: %d\tbuffer: %s\n",
 				guardado->path,guardado->offset,guardado->size,guardado->buffer);
-
+		log_info(log_MDJ,"Peticion de guardado de DAM:",guardado->path);
 		guardarDatos(guardado);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -173,6 +182,7 @@ void determinarOperacion(int operacion,int fd) {
 	case BORRAR_DATOS:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		puts(borrar->path);
+		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
 		printf("Peticion de borrado..\n\tpath: %s",borrar->path);
 	    borrar_archivo(borrar->path);
 	    usleep(config_MDJ.time_delay*1000);
@@ -618,7 +628,7 @@ int leerMetaData(){
 }
 
 int borrar_archivo(char *path_archivo){
-        char * complete_path;
+		char * complete_path;
         complete_path = archivo_path(path_archivo);
         if(existe_archivo(complete_path)==0){
 
@@ -633,7 +643,9 @@ int borrar_archivo(char *path_archivo){
 
 int existe_archivo(char *path_archivo){
         struct stat   buffer;
-        return (stat (archivo_path(path_archivo), &buffer) == 0);
+        char *archivo = archivo_path(path_archivo);
+        puts(archivo);
+        return (stat (archivo, &buffer) == 0);
 }
 
 int todos_bloques_libre(char *path_archivo){
