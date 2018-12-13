@@ -102,24 +102,21 @@ void* recibirPeticion(int socket, void* argumentos) {
 			log_info(log_DAM,"Enviando final carga dummy");
 			success=FINAL_CARGA_DUMMY;
 
-			serializarYEnviarEntero(SAFA_fd,&success);
-		    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
-
 		    log_info(log_DAM,"Final carga dummy enviado al safa");
 
 		    free(buffer);
 		}
 		else{
+			log_error(log_DAM,"El escriptorio no existe en MDJ");
+
 			success=ERROR_ARCHIVO_INEXISTENTE;
 
-			log_warning(log_DAM,"El escriptorio no existe en MDJ");
-
-			serializarYEnviarEntero(SAFA_fd,&success);
-			serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
-
 			log_info(log_DAM,"Se envio un error a SAFA para que aborte el DTB dummy");
-
 		}
+
+		serializarYEnviarEntero(SAFA_fd,&success);
+	    serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
+
 		break;
 	}
 	case CREAR_ARCHIVO:
@@ -127,7 +124,6 @@ void* recibirPeticion(int socket, void* argumentos) {
 		log_info(log_DAM,"Peticion de crear archivo recibida");
 		peticion_crear* crear_archivo=recibirYDeserializar(socket,*header);
 		int dtb_id = *recibirYDeserializarEntero(socket);
-		int success;
 
 		log_info(log_DAM,"Validando que el archivo %s no exista",crear_archivo->path);
 
@@ -138,11 +134,11 @@ void* recibirPeticion(int socket, void* argumentos) {
 				log_info(log_DAM,"Se creo exitosamente el archivo %s", crear_archivo->path);
 				success = FINAL_CREAR;
 			}else{
-				log_warning(log_DAM,"No hay espacio suficiente en MDJ para crear el archivo");
+				log_error(log_DAM,"No hay espacio suficiente en MDJ para crear el archivo");
 				success= ERROR_MDJ_SIN_ESPACIO;
 			}
 		}else{
-			log_warning(log_DAM,"El archivo ya existe en MDJ, Avisando a SAFA...");
+			log_error(log_DAM,"El archivo ya existe en MDJ, Avisando a SAFA...");
 			success=ERROR_ARCHIVO_EXISTENTE;
 		}
 
@@ -160,19 +156,36 @@ void* recibirPeticion(int socket, void* argumentos) {
 		char*path = recibirYDeserializarString(socket);
 		int dtb_id = *recibirYDeserializarEntero(socket);
 
-		char* buffer = obtenerArchivoMDJ(path);
+		if(validarArchivoMDJ(MDJ_fd,path)){
+			char* buffer = obtenerArchivoMDJ(path);
 
-		log_info(log_DAM,"Cargo archivo al FM9");
-		int base = cargarArchivoFM9(dtb_id, buffer);
-		log_info(log_DAM,"Enviando Final abrir archivo");
+			log_info(log_DAM,"Cargo archivo al FM9");
+			int base = cargarArchivoFM9(dtb_id, buffer);
 
-		int success=FINAL_ABRIR;
-		info_archivo info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
-		serializarYEnviar(SAFA_fd,FINAL_ABRIR,&info_archivo);
-	    //Aca hay que agregar el "acceso" para que el dtb sepa acceder al archivo
-	    log_info(log_DAM,"Final carga dummy enviado al safa");
+			success=FINAL_ABRIR;
+			info_archivo info_archivo = {.path=path,.pid=dtb_id,.acceso=base};
+			serializarYEnviar(SAFA_fd,FINAL_ABRIR,&info_archivo);
+			//FALTA VALIDAR SI HAY ESPACIO EN FM9
+			log_info(log_DAM,"Se informo a SAFA que el archivo se cargo con exito");
+
+			free(buffer);
+		}else{
+			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+
+			success=ERROR_ARCHIVO_INEXISTENTE;
+
+			serializarYEnviarEntero(SAFA_fd,&success);
+			serializarYEnviarEntero(SAFA_fd,&dtb_id);
+
+			log_info(log_DAM,"Se informo a SAFA que el archivo no existe");
+		}
+		free(path);
 	    break;
 	}
+	case BORRAR_ARCHIVO:
+		break;
+	case FLUSH_ARCHIVO:
+		break;
 	}
 	return 0;
 }
