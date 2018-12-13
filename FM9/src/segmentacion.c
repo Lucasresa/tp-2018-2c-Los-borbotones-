@@ -41,7 +41,7 @@ int recibirPeticionSeg(int socket) {
 		int base_vacia = segmentoFirstFit(size_scriptorio);
 
 		// Creo un segmento en la tabla
-		printf("Creo un segmento en posicion %i\n", base_vacia);
+		log_info(log_FM9, "Creo un segmento en posicion %i\n", base_vacia);
 		list_add(tabla_segmentos, crear_fila_tabla_seg(0,size_scriptorio,base_vacia));
 
 		free(datos_script);
@@ -161,7 +161,7 @@ int recibirPeticionSeg(int socket) {
 		char* linea;
 
 		// Envío línea a línea el archivo
-		for (int count = segmento_archivo->base_segmento; count <= segmento_archivo->limite_segmento; ++count) {
+		for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
 			linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
 			serializarYEnviarString(socket,linea);
 		}
@@ -179,6 +179,11 @@ struct fila_tabla_seg *crear_fila_tabla_seg(int id_segmento, int limite_segmento
 	   p->id_segmento = id_segmento;
 	   p->limite_segmento = limite_segmento;
 	   p->base_segmento = base_segmento;
+
+	   // Limpio la memoria que acabo de reservar para que no contenga basura
+		for (int count = p->base_segmento; count < (p->base_segmento+p->limite_segmento); ++count) {
+			strcpy(memoria[count],"");
+		}
 	   return p;
 }
 
@@ -216,7 +221,7 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 	}
 
 	strcpy(memoria[base_segmento+offset],linea);
-	printf("Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
+	log_info(log_FM9,"Escribí en posición %i: '%s'\n", base_segmento+offset, memoria[base_segmento+offset]);
 
 	return 0;
 }
@@ -229,7 +234,6 @@ t_list* buscarTablaSeg(int pid) {
 	}
 	fila_tabla_segmentos_pid *relacion_pid_tabla = list_find(tabla_segmentos_pid, (void*) es_pid_buscado);
 	if(relacion_pid_tabla == NULL) {
-		puts("devuelvo null");
 		return NULL;
 	}
 	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
@@ -310,12 +314,14 @@ void *consolaThreadSeg(void *vargp)
 					log_info(log_FM9, "%i, %i, %i \n", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
 				}
 				list_iterate(tabla_segmentos, (void*) print_segmento);
-				log_info(log_FM9, "Memoria del process id: %i\n", pid);
+				log_info(log_FM9, "Memoria del process id: %i", pid);
 				void _print_memoria_segmento(fila_tabla_seg *segmento_archivo) {
-					for (int count = segmento_archivo->base_segmento; count <= segmento_archivo->limite_segmento; ++count) {
-						log_info(log_FM9, "Posición %i: %s\n", count, memoria[count]);
+					log_info(log_FM9, "==============");
+					for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
+						log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
 					}
 				}
+				list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);
 			}
 		} else {
 			puts("Comando no reconozido.");
