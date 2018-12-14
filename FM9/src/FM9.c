@@ -25,6 +25,7 @@ int main(){
 
 	pthread_t thread_id;
 
+
 	if (config_FM9.modo == SEG) {
 		// Abro la consola
 		pthread_create(&thread_id, NULL, consolaThreadSeg, NULL);
@@ -36,6 +37,8 @@ int main(){
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
 		crearTablaPagInv();
+		//Abro la consola
+		pthread_create(&thread_id, NULL, consolaThreadPagInv, NULL);
 	}
 
 	int listener_socket;
@@ -81,28 +84,6 @@ struct fila_pag_invertida *crear_fila_tabla_pag_inv(int indice, int pid, int pag
 	   p->pagina = pagina;
 	   p->flag = flag;
 	   return p;
-}
-
-void *consolaThread(void *vargp)
-{
-	while(true) {
-		char *line = readline("$ ");
-
-		if (*line==(int)NULL) continue;
-
-		char *command = strtok(line, " ");
-
-		if (strcmp(command, "dump")==0) {
-			char *value = strtok(0, " ");
-			if (value==NULL) {
-				puts("Please insert an id to dump");
-				continue;
-			}
-
-		} else {
-			puts("Command not recognized.");
-		}
-	}
 }
 
 t_modo detectarModo(char* modo){
@@ -253,25 +234,7 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 	return primera_pagina;
 	free(datos_script);
 }
-char* leerMemoriaPagInv(int pid, int pagina, int offset) {
 
-
-	int es_pid_pagina_buscados(fila_pag_invertida *p) {
-		return (p->pid == pid)&&(p->pagina == pagina);
-	}
-
-	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
-
-	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
-
-	int marcoEncontrado = fila_tabla_pag_inv->indice+offset;
-
-	printf("Leo memoria en posicion %i: '%s'\n", marcoEncontrado+offset, memoria[marcoEncontrado+offset]);
-
-	return memoria[marcoEncontrado+offset];
-
-
-}
 
 int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag) {
 
@@ -359,5 +322,110 @@ int minPagina(int pid) {
 			i++;
 		}
 	}
+}
+
+void *consolaThreadPagInv(void *vargp)
+{
+	while(true) {
+		char *line = readline("> ");
+
+		if (*line==(int)NULL) continue;
+
+		char *command = strtok(line, " ");
+
+		//Verifica que se pase por parametro el id de un proceso
+		if (strcmp(command, "tabla")==0) {
+			char *buffer = strtok(0, " ");
+			if (buffer==NULL) {
+				puts("Por favor inserte un id");
+				continue;
+			}
+			int pid = atoi(buffer);
+			/*
+			if (pid == NULL) {
+			    printf("PID invalid\n");
+			    continue;
+			}*/
+
+			// Imprimo la tabla de paginas
+				log_info(log_FM9, "Tabla de paginas");
+				log_info(log_FM9, "Marco, Pagina, PID");
+				log_info(log_FM9, "=========================");
+				// Recorro la tabla de segmentos, imprimiendo cada segmento
+				void print_segmento(fila_pag_invertida *p) {
+					log_info(log_FM9, "    %i         %i     %i   ", p->indice, p->pagina, p->pid);
+				}
+				list_iterate(lista_tabla_pag_inv, (void*) print_segmento);
+				log_info(log_FM9, "=========================", pid);
+				log_info(log_FM9, "Memoria del process id: %i", pid);
+				/*
+				void _print_memoria_pid(fila_tabla_seg *segmento_archivo) {
+					log_info(log_FM9, "=");
+					for (int count = fila_pag_invertida->indice; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
+						log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
+					}
+				}
+				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_segmento);
+				*/
+
+		} else {
+			puts("Comando no reconocido.");
+		}
+	}
+}
+
+char* leerMemoriaPagInv(int pid, int pagina, int offset) {
+
+
+	int es_pid_pagina_buscados(fila_pag_invertida *p) {
+		return (p->pid == pid)&&(p->pagina == pagina);
+	}
+
+	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
+
+	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
+
+	int marcoEncontrado = fila_tabla_pag_inv->indice+offset;
+
+	printf("Leo memoria en posicion %i: '%s'\n", marcoEncontrado+offset, memoria[marcoEncontrado+offset]);
+
+	return memoria[marcoEncontrado+offset];
+}
+
+//Imprime toda la tabla de paginas
+void imprimirTabla() {
+    int i = 0;
+    int indiceBuscado(fila_pag_invertida *p) {
+      return (p->indice == i);
+    }
+    for (i=0 ; i > config_FM9.tamanio/config_FM9.tam_pagina ; i++) {
+        fila_pag_invertida* filaAImprimir = list_find(lista_tabla_pag_inv, (void*) indiceBuscado);
+        log_info(log_FM9, "%i, %i, %i", filaAImprimir->indice, filaAImprimir->pagina, filaAImprimir->pid);;
+    }
+}
+
+//B
+void buscarEntradas() {
+    int i = 0;
+    int indiceBuscado(fila_pag_invertida *p) {
+      return (p->indice == i);
+    }
+    for (i=0 ; i > config_FM9.tamanio/config_FM9.tam_pagina ; i++) {
+        fila_pag_invertida* filaAImprimir = list_find(lista_tabla_pag_inv, (void*) indiceBuscado);
+        log_info(log_FM9, "%i, %i, %i", filaAImprimir->indice, filaAImprimir->pagina, filaAImprimir->pid);;
+    }
+}
+
+void eliminarPid(int pid){
+// Obtengo la tabla de segmentos para ese PID
+    void buscarYreemplazarPid(fila_pag_invertida *p) {
+        if (p->pid == pid){
+            p->pid = -1;
+            p->flag = 0;
+            p->pagina = -1;
+        }
+    }
+    list_iterate(lista_tabla_pag_inv, (void*) buscarYreemplazarPid);
+
 }
 

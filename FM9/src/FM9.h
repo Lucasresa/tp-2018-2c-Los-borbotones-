@@ -67,6 +67,8 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag)
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script);
 fila_pag_invertida* encontrarFilaVacia();
 
-int arrayDePaginas[1];
+void imprimirTabla();
+
+void *consolaThreadPagInv(void *vargp);
 
 #endif /* FM9_H_ */
