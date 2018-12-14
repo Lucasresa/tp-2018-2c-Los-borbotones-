@@ -111,7 +111,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
-	int interrupcion=0,uso_DAM=0;
+	int interrupcion,uso_DAM=0;
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
@@ -123,6 +123,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 
 	do{
+
+		interrupcion=0;
 
 		direccion->pid=dtb.id;
 		direccion->base=0;
@@ -166,9 +168,52 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 			log_info(log_CPU,"Se ejecuto la operacion ASIGNAR");
 
+			cargar_en_memoria* escritura = malloc(sizeof(cargar_en_memoria));
+
+			posicion_file=isOpenFile(dtb,linea_parseada.argumentos.asignar.path);
+			int response;
+
+			//archivo abierto
+			if(posicion_file!=-1){
+
+				log_info(log_CPU,"El archivo se encuentra abierto por el dtb");
+				t_archivo* archivo = list_get(dtb.archivos,posicion_file);
+
+				escritura->id_segmento=archivo->acceso;
+				escritura->linea=string_duplicate(linea_parseada.argumentos.asignar.valor);
+				escritura->offset=linea_parseada.argumentos.asignar.linea;
+				escritura->pid=dtb.id;
+
+				log_info(log_CPU,"Se envio la informacion necesaria a FM9 para la asignacion");
+				serializarYEnviar(FM9,ESCRIBIR_LINEA,escritura);
+
+				response=*recibirYDeserializarEntero(FM9);
+
+				if(response==LINEA_CARGADA){
+					log_info(log_CPU,"Se cargo correctamente la linea en FM9");
+
+				}else{
+					log_error(log_CPU,"Ocurrio un error al cargar linea, error segmento/memoria");
+
+					interrupcion=1;
+
+					response=ERROR_SEG_MEM;
+				}
+
+			}else{
+				log_error(log_CPU,"El archivo sobre el que se desea operar no se encuentra abierto");
+
+				interrupcion=1;
+
+				response=ERROR_ARCHIVO_INEXISTENTE;
+			}
 			actualizarDTB(&dtb);
 
+			if(interrupcion==1)
+				notificarSAFA(SAFA,response,dtb);
 
+			free(escritura->linea);
+			free(escritura);
 
 			break;
 		case WAIT:
@@ -199,7 +244,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			log_info(log_CPU,"Se ejecuto la operacion FLUSH");
 			protocolo=FLUSH_ARCHIVO;
 			serializarYEnviarEntero(DAM,&protocolo);
-			serializarYEnviarString(DAM,linea_parseada.argumentos.abrir.path);
+			serializarYEnviarString(DAM,linea_parseada.argumentos.flush.path);
 
 			serializarYEnviarEntero(DAM,&dtb.id);
 
@@ -291,7 +336,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		log_warning(log_CPU, "Instruccion ejecutada, quantum restante = %d",dtb.quantum_sobrante);
 
-		if(!uso_DAM)
+		if(!uso_DAM&&!interrupcion)
 			notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
 
 		usleep(config_CPU.retardo*1000);
@@ -310,7 +355,7 @@ void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
 
 	if(protocolo==ID_DTB)
 		serializarYEnviarEntero(SAFA,&id_dtb);
-	else if(protocolo!=SENTENCIA_EJECUTADA&&protocolo!=SENTENCIA_DAM)
+	else if(protocolo!=SENTENCIA_DAM)
 		serializarYEnviarDTB(SAFA,buffer,DTB);
 
 }
@@ -320,9 +365,10 @@ void actualizarDTB(t_DTB* dtb){
 	if(rafaga_recibida!=0){
 		rafaga_actual--;
 
-		dtb->pc++;
 		dtb->quantum_sobrante=rafaga_actual;
 	}
+	dtb->pc++;
+
 }
 
 int isOpenFile(t_DTB dtb, char* path){

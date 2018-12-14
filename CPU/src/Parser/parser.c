@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "parser.h"
 #include <commons/string.h>
+#include <string.h>
 #include <ctype.h>
 
 //Funcion que abre un archivo solo para lectura
@@ -46,7 +47,8 @@ t_operacion parseLine(char* line){
 		return op;
 	}
 
-	char**split = string_split(auxLine," ");
+
+	char**split = string_n_split(auxLine,4," ");
 
 	op._free=split;
 

@@ -155,7 +155,9 @@ void ejecutarComando(int nro_op, char * args){
 					sentencias_Totales = (float)getSentenciasTotales();
 					sentencias_Exit = (float)getSentenciasParaExit();
 					total_Procesos = (float)list_size(info_metricas);
+
 					procesos_Exit = (float)list_size(cola_exit);
+
 
 					tiempo_respuesta_promedio = getTiempoDeRespuestaPromedioSistema();
 
@@ -340,7 +342,9 @@ void actualizarTiempoDeRespuestaDTB(){
 	for(i=0;i<dtb_totales;i++){
 		metrica=list_get(info_metricas,i);
 
+		pthread_mutex_lock(&mx_colas);
 		estado = buscarDTB(&dtb,metrica->id_dtb,STATUS);
+		pthread_mutex_unlock(&mx_colas);
 
 		if(!string_equals_ignore_case(estado,"new")&&!string_equals_ignore_case(estado,"finalizado")){
 			metrica->tiempo_respuesta++;
@@ -455,9 +459,11 @@ int getSentenciasParaExit(){
 	t_DTB* dtb_aux;
 
 	for(i=0;i<total_procesos;i++){
+		pthread_mutex_lock(&mx_colas);
 		dtb_aux=list_get(cola_exit,i);
-
-		sumatoria+=dtb_aux->pc;
+		pthread_mutex_unlock(&mx_colas);
+		if(dtb_aux->f_inicializacion==1)
+			sumatoria+=dtb_aux->pc;
 
 	}
 

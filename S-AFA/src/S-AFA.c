@@ -472,14 +472,55 @@ void atenderCPU(int*fd){
 		}else if(protocolo==SENTENCIA_EJECUTADA){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
+			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			pthread_mutex_unlock(&mx_metricas);
+
+			pthread_mutex_lock(&mx_metricas);
 			actualizarTiempoDeRespuestaDTB();
+			pthread_mutex_unlock(&mx_metricas);
+
+			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricasDTBNew();
+			pthread_mutex_unlock(&mx_metricas);
+
 		}else if(protocolo==SENTENCIA_DAM){
 			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
+
+			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
+			pthread_mutex_unlock(&mx_metricas);
+
+			pthread_mutex_lock(&mx_metricas);
 			actualizarTiempoDeRespuestaDTB();
+			pthread_mutex_unlock(&mx_metricas);
+
+			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricasDTBNew();
+			pthread_mutex_unlock(&mx_metricas);
+
+		}else if(protocolo==ERROR_SEG_MEM){
+
+			log_error(log_SAFA,"El dtb intento acceder a una posicion invalida de memoria");
+			pthread_mutex_lock(&mx_colas);
+			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+
+		}else if(protocolo==ERROR_ARCHIVO_INEXISTENTE){
+
+			log_error(log_SAFA,"El dtb intento operar sobre un archivo que no estaba abierto");
+			pthread_mutex_lock(&mx_colas);
+			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
+			pthread_mutex_unlock(&mx_colas);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(FINALIZAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+
 		}
 		else{
 
