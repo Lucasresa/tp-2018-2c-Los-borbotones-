@@ -675,7 +675,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		sub3=(char*)malloc(copiarHasta+1);
 		//=substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
 		memcpy(sub3, contenidoArchivo+desplazamiento_archivo,copiarHasta);
-		sub3[obtener->size] = '\0';
+		sub3[copiarHasta] = '\0';
 		printf("Enviando: %s\n",sub3);
 		serializarYEnviarString(DAM_fd, sub3);
 		usleep(config_MDJ.time_delay*1000);
