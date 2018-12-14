@@ -231,7 +231,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&success);
 		serializarYEnviarEntero(SAFA_fd,&dtb_id);
-		pthread_mutex_lock(&mutex_SAFA);
+		pthread_mutex_unlock(&mutex_SAFA);
 
 		log_info(log_DAM,"Se le informo a SAFA el resultado de la operacion");
 		free(borrar_archivo->path);
@@ -318,7 +318,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&respuesta_safa);
 		serializarYEnviarEntero(SAFA_fd,&direccion_archivo->pid);
-		pthread_mutex_lock(&mutex_SAFA);
+		pthread_mutex_unlock(&mutex_SAFA);
 
 		break;
 	}
