@@ -121,7 +121,7 @@ int recibirPeticionSeg(int socket) {
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
 		if (cargarEnMemoriaSeg(info_a_cargar->pid, info_a_cargar->id_segmento, info_a_cargar->offset, info_a_cargar->linea)<0) {
-			log_error(log_FM9, "Se intentó cargar una memoria fuera del limite del segmento.");
+			log_error(log_FM9, "Se intentó cargar una línea fuera del limite del segmento.");
 			message=ERROR_ESCRIBIR_LINEA;
 		} else {
 			message=LINEA_CARGADA;

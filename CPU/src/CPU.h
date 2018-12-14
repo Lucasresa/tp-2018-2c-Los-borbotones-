@@ -2,6 +2,7 @@
 #include <commons/config.h>
 #include <commons/log.h>
 #include "Parser/parser.h"
+#include <commons/collections/list.h>
 
 #ifndef CPU_H_
 #define CPU_H_
