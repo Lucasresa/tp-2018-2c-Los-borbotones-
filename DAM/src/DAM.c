@@ -239,8 +239,9 @@ void* recibirPeticion(int socket, void* argumentos) {
 		break;
 	}
 	case FLUSH_ARCHIVO:
-		char* archivo;
 		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
+
+		char* archivo;
 		direccion_logica* direccion_archivo = recibirYDeserializar(socket,FLUSH_ARCHIVO);
 
 		// Le pido al FM9 que me envíe el archivo línea a línea
