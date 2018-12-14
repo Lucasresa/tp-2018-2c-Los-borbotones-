@@ -242,15 +242,18 @@ void* recibirPeticion(int socket, void* argumentos) {
 		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
 
 		char* archivo;
+		log_info(log_DAM,"Recibiendo parametros para el flush");
 		direccion_logica* direccion_archivo = recibirYDeserializar(socket,FLUSH_ARCHIVO);
-
-
+		archivo=recibirYDeserializarString(socket);
 		// Le pido al FM9 que me envíe el archivo línea a línea
+		log_info(log_DAM,"Realizar Fulsh para:",archivo);
+
 		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
 
 	    size_t message_len = 1;
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
+	    log_info(log_DAM,"Obteniendo datos para el flush de fm9:",archivo);
 		while(true) {
 			// Recibo una línea
 			buffer = recibirYDeserializarString(FM9_fd);
@@ -283,13 +286,14 @@ void* recibirPeticion(int socket, void* argumentos) {
 			memcpy(mandarString, buffer+desplazamiento_archivo, sizeEnviar);
 			mandarString[sizeEnviar] = '\0';
 			printf("Enviando: %s\n",mandarString);
-			peticion_guardar guardado = {.path=direccion_archivo->path,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
+			peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
 			serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 			log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
 			offset++;
 		}
+
 		//terminacion de guardado
-		peticion_guardar guardado = {.path=direccion_archivo->path,.offset=0,.size=0,.buffer=""};
+		peticion_guardar guardado = {.path=archivo,.offset=0,.size=0,.buffer=""};
 		serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 		log_info(log_DAM,"finalizacion de guardar en MDJ");
 		free(file);
