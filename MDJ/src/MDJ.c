@@ -283,8 +283,8 @@ int guardarDatos(peticion_guardar *guardado) {
     strcat(complete_path, "/Archivos/");
     strcat(complete_path, guardado->path);
 
-    if (!archivo_a_guardar->ocupado_archivo_a_guardar==0){
-    	strcpy(archivo_a_guardar->strig_archivo,guardado->buffer);
+    if (archivo_a_guardar->ocupado_archivo_a_guardar==0){
+    	memcpy(archivo_a_guardar->strig_archivo,guardado->buffer,strlen(guardado->buffer));
     	archivo_a_guardar->path=string_duplicate(complete_path);
     	archivo_a_guardar->ocupado_archivo_a_guardar=1;
     	t_config *archivo_MetaData;
@@ -793,36 +793,56 @@ void guardarEnArchivo(){
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
 	int bloquesCantidad=cantidadDeBloques (metadataArchivo.bloques);
-	int sizeDelStringArchivoAGuardar;
-	sizeDelStringArchivoAGuardar=strlen(archivo_a_guardar->strig_archivo);
+	int sizeDelStringArchivoAGuardar = strlen(archivo_a_guardar->strig_archivo);
 	int sizeGuardar;
 	for(int i=0;i<bloquesCantidad;i++){
+		int offset=0;
 		char *pathBloqueCompleto;
 		pathBloqueCompleto = bloque_path(metadataArchivo.bloques[i]);
-	    char *map;
-	    int size;
-	    struct stat s;
-	    int fd = open (pathBloqueCompleto, O_RDWR);
-	    int status = fstat (fd, &s);
-	    size = s.st_size;
-	    if(status<0){
-	    	printf("archivo no existe %s\n",pathBloqueCompleto);
-	    }
-	    map = (char *) mmap (0, size, PROT_READ, MAP_PRIVATE | PROT_WRITE, fd, 0);
-	    int offset=0;
-	    offset=i*config_MetaData.tamanio_bloques;
-	    sizeGuardar=config_MetaData.tamanio_bloques;
-	    if((i+1)*config_MetaData.tamanio_bloques<sizeDelStringArchivoAGuardar){
-	    	sizeGuardar = (i+1)*config_MetaData.tamanio_bloques - sizeDelStringArchivoAGuardar;
-
-	    }
-	    memcpy(map, archivo_a_guardar->strig_archivo+offset, sizeGuardar);
-	    msync(map, sizeGuardar, MS_SYNC);
-	    munmap(map, sizeGuardar);
-	    close(fd);
+		offset=i*config_MetaData.tamanio_bloques;
+		if(sizeDelStringArchivoAGuardar < (i+1)*config_MetaData.tamanio_bloques){
+		    	sizeGuardar=sizeDelStringArchivoAGuardar;
+		}
+		else{
+		    	sizeDelStringArchivoAGuardar-=config_MetaData.tamanio_bloques;
+		}
+		char *guardar = malloc(sizeGuardar +1);
+		strncpy(guardar, archivo_a_guardar->strig_archivo+offset, sizeGuardar);
+		guardarEnbloque(pathBloqueCompleto,guardar);
+		free(guardar);
+		free(pathBloqueCompleto);
 	}
-
 }
+
+int guardarEnbloque(char *path,char *string){
+	 /* printf("lo q voy a guardar %s\n:",string);
+	  //deja al archivo en blanco para despues guardar el substring
+	  const char *text2 = "hello";
+	  int fd = open(path, O_RDWR);
+	  size_t textsize = strlen(string) + 1;
+	  char *map = mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	  puts(path);
+	  memcpy(map, string, strlen(string));
+	  msync(map, textsize, MS_SYNC);
+	  textsize =strlen(text2)+1;
+	  memcpy(map, string, strlen(string));
+	  msync(map, textsize, MS_SYNC);
+	  munmap(map, textsize);
+	  close(fd);
+	  */
+	  log_info(log_MDJ,"guardar en bloque:",path);
+	  int fd = open(path, O_RDWR);
+	  const char *text = string;
+	  size_t textsize = strlen(text) + 1;
+	  char *map = mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	  memcpy(map, text, strlen(text));
+	  msync(map, textsize, MS_SYNC);
+	  munmap(map, textsize);
+	  close(fd);
+	  return 0;
+}
+
+
 
 char *substring(char *string, int position, int length)
 {

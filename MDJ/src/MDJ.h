@@ -130,5 +130,6 @@ int hayEspacioParaGuardar();
 int actualizarARchivo(t_config_MetaArchivo *metadataArchivo,int sizeDelStringArchivoAGuardar,int ultimoBloque);
 char *substring(char *string, int position, int length);
 int cantidadDeBloquesNecesario(int espacioNecesario);
+int guardarEnbloque(char *path,char *string);
 void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int bloquesNecesario);
 #endif /* MDJ_H_ */

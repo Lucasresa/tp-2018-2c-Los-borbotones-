@@ -283,7 +283,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			}
 			mandarString=(char*)malloc(sizeEnviar+1);
 			desplazamiento_archivo=offset*config_DAM.transfer_size;
-			memcpy(mandarString, buffer+desplazamiento_archivo, sizeEnviar);
+			memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
 			mandarString[sizeEnviar] = '\0';
 			printf("Enviando: %s\n",mandarString);
 			peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
