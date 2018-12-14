@@ -59,9 +59,12 @@ void *recibirPeticion(int, void*);
 t_modo detectarModo(char*);
 void crearTablaPagInv();
 
+int recibirPeticionPagInv(int socket);
 int traducirOffset(int offset);
 int traducirPagina(int pagina,int offset);
-
+int minPagina(int pid);
+int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag);
+int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script);
 fila_pag_invertida* encontrarFilaVacia();
 
 int arrayDePaginas[1];

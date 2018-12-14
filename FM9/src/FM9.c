@@ -1,8 +1,8 @@
 #include "FM9.h"
 
 int main(){
-	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
+	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_FM9.cfg";
@@ -98,7 +98,6 @@ void *consolaThread(void *vargp)
 				puts("Please insert an id to dump");
 				continue;
 			}
-			printf("Structures of process with id: %s \n", value);
 
 		} else {
 			puts("Command not recognized.");
@@ -121,7 +120,6 @@ t_modo detectarModo(char* modo){
 }
 
 void* funcionHandshake(int socket, void* argumentos) {
-	printf("conexion establecida con socket %i\n", socket);
 	log_info(log_FM9, "Conexión establecida");
 	return 0;
 }
@@ -131,7 +129,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 	if (config_FM9.modo == SEG) {
 		recibirPeticionSeg(socket);
 	} else if (config_FM9.modo == TPI) {
-		// Llamar acá a la función que resuelve peticiones en modo TPI
+		recibirPeticionPagInv(socket);
 	}
 	return 0;
 }
@@ -154,40 +152,31 @@ int recibirPeticionPagInv(int socket) {
 		return 0;
 	}
 	case INICIAR_MEMORIA_PID:
+	{
+		int message;
+		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
+		int pagina_base = cargarEstructuraArchivo(datos_script);
+		if (pagina_base == -1) {
+			message=ERROR_FM9_SIN_ESPACIO;
+		} else {
+			message=MEMORIA_INICIALIZADA;
+		}
+		serializarYEnviarEntero(socket,&message);
+		return 0;
+	}
 	case ABRIR_ARCHIVO:
 	{
-		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
-		int pid = datos_script->pid;
-
-		int tamanio_script = datos_script->size_script;
-
-		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
-
-		int cantidad_frames = tamanio_script/cant_lineas_pag;
-
-		int frames_redondeados = ceil(cantidad_frames);
-
-		int i = 0;
-
-		// TODO: Busco en memoria espacio libre
-
-		for( i = 0; i < frames_redondeados; i = i + 1 ){
-			//Encontramos un marco disponible
-			fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
-			//El PID ya me viene como parametro
-			unaFilaDisponible->pid = pid;
-			//Encuentro la minima pagina que puedo asignar
-			unaFilaDisponible->pagina = minPagina();
-			//Seteamos el flag a 1 para que sepa que está ocupado
-			unaFilaDisponible->flag = 1;
-		  }
-
-
-		free(datos_script);
-
-		int success=MEMORIA_INICIALIZADA;
-
-		serializarYEnviarEntero(socket,&success);
+		int message;
+		iniciar_scriptorio_memoria* datos_archivo = recibirYDeserializar(socket,header);
+		int pagina_base = cargarEstructuraArchivo(datos_archivo);
+		if (pagina_base == -1) {
+			message=ERROR_FM9_SIN_ESPACIO;
+		} else {
+			message=ESTRUCTURAS_CARGADAS;
+		}
+		// Envio la info para acceder al archivo al DAM
+		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=pagina_base,.offset=0};
+		serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
 		return 0;
 	}
 	case PEDIR_LINEA:
@@ -200,15 +189,16 @@ int recibirPeticionPagInv(int socket) {
 	case ESCRIBIR_LINEA:
 	{
 		cargar_en_memoria* info_a_cargar;
-
-		int pagina = 0;
-
 		info_a_cargar = recibirYDeserializar(socket,header);
+
+		int pagina = info_a_cargar->id_segmento;
 
 		//Cargo en memoria con mi pagina y offset traducido
 		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea, 1);
 
 		free(info_a_cargar);
+		int message=LINEA_CARGADA;
+		serializarYEnviarEntero(socket,&message);
 		return 0;
 
 	}
@@ -218,15 +208,51 @@ int recibirPeticionPagInv(int socket) {
 		//char* linea_string;
 		//linea_string = recibirYDeserializar(socket,header);
 		//strcpy(memoria[memoria_counter],linea_string);
-		//printf("String recibido y guardado en linea %i: %s\n", memoria_counter, memoria[memoria_counter]);
 		//memoria_counter++;
 		return 0;
 	}
-
-
 	}
 }
 
+int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
+
+	int pid = datos_script->pid;
+
+	float tamanio_script = datos_script->size_script;
+
+	float cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+
+	int frames_redondeados = ceil(tamanio_script/cant_lineas_pag);
+
+	int i = 0;
+
+	int primera_pagina = -1;
+
+	for( i = 0; i < frames_redondeados; i = i + 1 ) {
+		//Encontramos un marco disponible
+		fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
+		if (unaFilaDisponible == NULL ){
+			// loggear que hubo un error
+			log_error(log_FM9, "No hay fila vacia.");
+			// Avisar al DAM del error
+			return -1;
+		}
+
+		//El PID ya me viene como parametro
+		unaFilaDisponible->pid = pid;
+		//Encuentro la minima pagina que puedo asignar
+		unaFilaDisponible->pagina = minPagina(pid);
+		//Seteamos el flag a 1 para que sepa que está ocupado
+		unaFilaDisponible->flag = 1;
+		if (i==0) {
+			primera_pagina = unaFilaDisponible->pagina;
+		}
+		log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
+	}
+
+	return primera_pagina;
+	free(datos_script);
+}
 char* leerMemoriaPagInv(int pid, int pagina, int offset) {
 
 
@@ -257,8 +283,10 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag)
 	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
 	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
 
-	memoria[fila_tabla_pag_inv->indice+offset] = linea;
-	printf("Escribí en Posición %i: '%s'\n", fila_tabla_pag_inv->indice+offset, memoria[fila_tabla_pag_inv->indice+offset]);
+	int linea_a_escribir = (config_FM9.tam_pagina/config_FM9.max_linea)*fila_tabla_pag_inv->indice+offset;
+
+	strcpy(memoria[linea_a_escribir],linea);
+	printf("Escribí en Posición %i: '%s'\n", linea_a_escribir, memoria[linea_a_escribir]);
 	return 0;
 
 }
@@ -294,10 +322,13 @@ void crearTablaPagInv(){
 	int tamanio_pagina = config_FM9.tam_pagina;
 	int i;
 
-	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
+	lista_tabla_pag_inv = list_create();
 
+	int cantidad_marcos = tamanio_memoria/tamanio_pagina;
+	fila_pag_invertida* mi_fila;
 	for( i = 0; i < cantidad_marcos; i = i + 1 ){
-		list_add(lista_tabla_pag_inv,crear_fila_tabla_pag_inv(i,0,0,0));
+		mi_fila = crear_fila_tabla_pag_inv(i,-1,-1,0);
+		list_add(lista_tabla_pag_inv,mi_fila);
 	}
 }
 
@@ -313,7 +344,7 @@ fila_pag_invertida* encontrarFilaVacia() {
 }
 
 //Compara las posiciones para saber cual es la primer pagina que falta, solo sirve si está ordenado
-int minPagina(pid) {
+int minPagina(int pid) {
 	int i = 0;
 	fila_pag_invertida* fila;
 	int coincideConLaBusqueda(fila_pag_invertida *p) {

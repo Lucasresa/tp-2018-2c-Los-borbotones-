@@ -309,13 +309,13 @@ int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
 		return -1;
 	}
 
+	log_info(log_DAM,"Enviando archivo al FM9...\n");
+
 	direccion_logica* direccion = recibirYDeserializar(FM9_fd,ESTRUCTURAS_CARGADAS);
 
     char* linea = NULL;
 	linea = strtok(buffer, "\n");
 	cargar_en_memoria paquete = {.pid=pid,.id_segmento=direccion->base,.offset=0,.linea=NULL};
-
-	log_info(log_DAM,"Enviando archivo al FM9...\n");
 
     while (linea != NULL)
     {
