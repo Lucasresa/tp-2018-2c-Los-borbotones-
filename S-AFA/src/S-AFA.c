@@ -173,6 +173,7 @@ void atenderDAM(int*fd){
 
 		switch(*protocolo){
 		case FINAL_CARGA_DUMMY:
+
 			dtb->id=id_dtb;
 
 			pthread_mutex_lock(&mx_PCP);
@@ -220,6 +221,18 @@ void atenderDAM(int*fd){
 
 			break;
 		case FINAL_BORRAR:
+			dtb->id=id_dtb;
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
+			pthread_mutex_unlock(&mx_PCP);
+
+			pthread_mutex_lock(&mx_PCP);
+			ejecutarPCP(EJECUTAR_PROCESO,NULL);
+			pthread_mutex_unlock(&mx_PCP);
+
+			break;
+		case FINAL_FLUSH:
 			dtb->id=id_dtb;
 
 			pthread_mutex_lock(&mx_PCP);
