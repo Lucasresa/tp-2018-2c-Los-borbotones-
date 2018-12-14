@@ -239,9 +239,9 @@ void* recibirPeticion(int socket, void* argumentos) {
 		break;
 	}
 	case FLUSH_ARCHIVO:
-		char* archivo;
 		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
 		direccion_logica* direccion_archivo = recibirYDeserializar(socket,FLUSH_ARCHIVO);
+
 
 		// Le pido al FM9 que me envíe el archivo línea a línea
 		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
@@ -249,7 +249,6 @@ void* recibirPeticion(int socket, void* argumentos) {
 	    size_t message_len = 1;
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
-
 		while(true) {
 			// Recibo una línea
 			buffer = recibirYDeserializarString(FM9_fd);
@@ -264,7 +263,34 @@ void* recibirPeticion(int socket, void* argumentos) {
 		}
 
 		// TODO: Enviar el string buffer al MDJ
-
+		char *mandarString;
+		int sizeEnviar;
+		int offset=0;
+		int desplazamiento_archivo;
+		while (message_len!=0){
+			if(message_len > config_DAM.transfer_size){
+				sizeEnviar=config_DAM.transfer_size;
+				message_len -= config_DAM.transfer_size;
+			}
+			else{
+				sizeEnviar=message_len;
+				message_len=0;
+			}
+			mandarString=(char*)malloc(sizeEnviar+1);
+			desplazamiento_archivo=offset*config_DAM.transfer_size;
+			memcpy(mandarString, buffer+desplazamiento_archivo, sizeEnviar);
+			mandarString[sizeEnviar] = '\0';
+			printf("Enviando: %s\n",mandarString);
+			peticion_guardar guardado = {.path=direccion_archivo->path,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
+			serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
+			log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
+			offset++;
+		}
+		//terminacion de guardado
+		peticion_guardar guardado = {.path=direccion_archivo->path,.offset=0,.size=0,.buffer=""};
+		serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
+		log_info(log_DAM,"finalizacion de guardar en MDJ");
+		free(file);
 		break;
 	}
 	return 0;
