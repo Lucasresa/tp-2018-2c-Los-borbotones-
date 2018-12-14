@@ -94,19 +94,19 @@ void ejecutarComando(int nro_op, char * args){
 						printf("DTB %d\nEstado DTB: %s\nProgram Counter: %d\nScript: %s\nArchivos abiertos: %d\n",
 							dtb_status->id, estado, dtb_status->pc, dtb_status->escriptorio,
 								list_size(dtb_status->archivos));
-						if(config_SAFA.algoritmo==VRR)
-							printf("Quantum sobrante: %d\n",dtb_status->quantum_sobrante);
-						if(dtb_status->f_inicializacion==0){
-							printf("Tipo: DTB Dummy\n");
-						}else{
-							printf("Tipo: DTB Inicializado\n");
-						}
 						if(list_size(dtb_status->archivos)!=0){
 							t_archivo* archivo;
 							for(i=0;i<list_size(dtb_status->archivos);i++){
 								archivo=list_get(dtb_status->archivos,i);
 								printf("\t%s\n",archivo->path);
 							}
+						}
+						if(config_SAFA.algoritmo==VRR)
+							printf("Quantum sobrante: %d\n",dtb_status->quantum_sobrante);
+						if(dtb_status->f_inicializacion==0){
+							printf("Tipo: DTB Dummy\n");
+						}else{
+							printf("Tipo: DTB Inicializado\n");
 						}
 					}
 				}

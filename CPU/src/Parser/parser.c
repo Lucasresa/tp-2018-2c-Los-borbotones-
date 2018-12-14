@@ -21,6 +21,8 @@ FILE* openFile(char* path){
 
 //Funcion para liberar la memoria usada para parsear las lineas
 void destroyParse(t_operacion op){
+	if(op.keyword==FIN)
+		return;
 	if(op._free){
 		string_iterate_lines(op._free,(void*)free);
 		free(op._free);
@@ -39,14 +41,14 @@ t_operacion parseLine(char* line){
 
 	if(auxLine[0]==COMENTARIO){
 		op.keyword=COMENT;
+		free(auxLine);
 		return op;
 	}
 
-	if(isblank(auxLine[0])){
+	if(isblank(auxLine[0])||auxLine[0]=='\0'){
 		op.keyword=FIN;
 		return op;
 	}
-
 
 	char**split = string_n_split(auxLine,4," ");
 
