@@ -225,6 +225,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			if(*resultado_wait!=WAIT_EXITOSO){
 				interrupcion=1;
 			}
+			free(resultado_wait);
 			break;
 		case SIGNAL:
 			log_info(log_CPU,"Se ejecuto la operacion SIGNAL");
@@ -236,6 +237,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			if(*resultado_signal!=SIGNAL_EXITOSO){
 				interrupcion=1;
 			}
+			free(resultado_signal);
 			break;
 		case FLUSH:
 			//CPU envia una peticion de FLUSH a DAM (envio el protocolo - path - id_dtb)
@@ -252,12 +254,16 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				direccion_flush->base=getAccesoFile(dtb,linea_parseada.argumentos.flush.path);
 
 				serializarYEnviar(DAM,FLUSH_ARCHIVO,direccion_flush);
+				serializarYEnviarString(DAM,linea_parseada.argumentos.flush.path);
 
 				log_info(log_CPU,"Informacion enviada a DAM para persistir el archivo en MDJ");
 
 				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 				uso_DAM=1;
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+
+				free(direccion_flush);
+
 			}else{
 
 				log_error(log_CPU,"El dtb no contiene el archivo %s abierto",linea_parseada.argumentos.flush.path);
@@ -368,6 +374,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	}while(!interrupcion);
 
 	log_warning(log_CPU,"Se produjo una interrupcion durante la ejecucion del dtb %d",dtb.id);
+
+	free(direccion);
 }
 
 void notificarSAFA(int SAFA,int protocolo, t_DTB DTB){
