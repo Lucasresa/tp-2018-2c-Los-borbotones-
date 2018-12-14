@@ -499,7 +499,15 @@ void atenderCPU(int*fd){
 			actualizarMetricasDTBNew();
 			pthread_mutex_unlock(&mx_metricas);
 
-		}else if(protocolo==ERROR_SEG_MEM){
+		}else if(protocolo==FINAL_CERRAR){
+
+			log_info(log_SAFA,"El dtb %d acaba de cerrar uno de sus archivo",dtb_cpu);
+
+			list_clean(dtb->archivos);
+			list_add_all(dtb->archivos,dtb_modificado.archivos);
+
+		}
+		else if(protocolo==ERROR_SEG_MEM){
 
 			log_error(log_SAFA,"El dtb intento acceder a una posicion invalida de memoria");
 			pthread_mutex_lock(&mx_colas);
@@ -543,6 +551,7 @@ void atenderCPU(int*fd){
 			}
 
 			if(protocolo==FINALIZAR_PROCESO&&dtb->f_inicializacion==1){
+				log_info(log_SAFA,"El dtb termino de ejecutar su script");
 				pthread_mutex_lock(&mx_PLP);
 				ejecutarPLP();
 				pthread_mutex_unlock(&mx_PLP);

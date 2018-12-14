@@ -139,6 +139,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		switch(linea_parseada.keyword){
 		case ABRIR:
 			log_info(log_CPU,"Se ejecuto la operacion ABRIR");
+
+			actualizarDTB(&dtb);
 			if(isOpenFile(dtb,linea_parseada.argumentos.abrir.path)>-1){
 				log_info(log_CPU,"El archivo ya esta abierto");
 			}
@@ -153,7 +155,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 				uso_DAM=1;
-				actualizarDTB(&dtb);
+
 				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 				interrupcion=1;
 			}
@@ -165,7 +167,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		case ASIGNAR:
 			//CPU se comunica directamente con FM9
-
 			log_info(log_CPU,"Se ejecuto la operacion ASIGNAR");
 
 			cargar_en_memoria* escritura = malloc(sizeof(cargar_en_memoria));
@@ -175,7 +176,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 			//archivo abierto
 			if(posicion_file!=-1){
-
 				log_info(log_CPU,"El archivo se encuentra abierto por el dtb");
 				t_archivo* archivo = list_get(dtb.archivos,posicion_file);
 
@@ -199,7 +199,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 					response=ERROR_SEG_MEM;
 				}
-
 			}else{
 				log_error(log_CPU,"El archivo sobre el que se desea operar no se encuentra abierto");
 
@@ -270,16 +269,26 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				serializarYEnviar(FM9,CERRAR_ARCHIVO,file);
 
-				//---------------------------------------
-				//Actualizo la info del dtb (quito el archivo de su lista)
-				list_remove(dtb.archivos,posicion_file);
+				response=*recibirYDeserializarEntero(FM9);
 
-				//Mandar a FM9 la informacion necesaria para que libere la memoria de dicho archivo
-				//Luego hay que actualizar la lista de archivos abiertos del dtb
+				if(response==FINAL_CERRAR){
+					log_info(log_CPU,"El archivo fue cerraado con exito");
+					//Actualizo la info del dtb (quito el archivo de su lista)
+					list_remove(dtb.archivos,posicion_file);
+				}else{
+					log_error(log_CPU,"Ocurrio un error al cerrar el archivo, error segmento/memoria");
+
+					interrupcion=1;
+				}
+				free(file);
 			}else{
-				notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
+				log_error(log_CPU,"El dtb intento cerrar un archivo que no tiene abierto");
+
+				response=ERROR_ARCHIVO_INEXISTENTE;
+
 				interrupcion=1;
 			}
+			notificarSAFA(SAFA,response,dtb);
 			break;
 		case CREAR:
 		{
@@ -297,16 +306,18 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			actualizarDTB(&dtb);
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			interrupcion=1;
+
+			free(crear_archivo->path);
+			free(crear_archivo);
 			break;
 		}
 		case BORRAR:
 			//CPU envia peticion de borrar un archivo a DAM (protocolo - path - id_dtb)
 			log_info(log_CPU,"Se ejecuto la operacion BORRAR");
 
-			peticion_borrar* borrar_archivo=malloc(sizeof(peticion_crear));
+			peticion_borrar* borrar_archivo=malloc(sizeof(peticion_borrar));
 			borrar_archivo->path=string_duplicate(linea_parseada.argumentos.borrar.path);
 			serializarYEnviar(DAM,BORRAR_ARCHIVO,borrar_archivo);
-
 			serializarYEnviarEntero(DAM,&dtb.id);
 
 			log_info(log_CPU,"Informacion enviada a DAM para Borrar el archivo");
@@ -314,10 +325,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
 			uso_DAM=1;
 			actualizarDTB(&dtb);
-
 			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 			interrupcion=1;
 
+			free(borrar_archivo->path);
+			free(borrar_archivo);
 			break;
 		case FIN:
 			log_info(log_CPU,"Se termino de ejecutar el script");
