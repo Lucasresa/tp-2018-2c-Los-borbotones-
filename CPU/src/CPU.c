@@ -241,17 +241,31 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			//CPU envia una peticion de FLUSH a DAM (envio el protocolo - path - id_dtb)
 
 			log_info(log_CPU,"Se ejecuto la operacion FLUSH");
-			protocolo=FLUSH_ARCHIVO;
-			serializarYEnviarEntero(DAM,&protocolo);
-			serializarYEnviarString(DAM,linea_parseada.argumentos.flush.path);
-			serializarYEnviarEntero(DAM,&dtb.id);
 
-			log_info(log_CPU,"Informacion enviada a DAM para persistir el archivo en MDJ");
-
-			notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
-			uso_DAM=1;
 			actualizarDTB(&dtb);
-			notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			if(isOpenFile(dtb,linea_parseada.argumentos.flush.path)!=-1){
+
+				log_info(log_CPU,"El archivo %s se encuentra abierto por el dtb",linea_parseada.argumentos.flush.path);
+				direccion_logica* direccion_flush= malloc(sizeof(direccion_logica));
+				direccion_flush->pid=dtb.id;
+				direccion_flush->offset=0;
+				direccion_flush->base=getAccesoFile(dtb,linea_parseada.argumentos.flush.path);
+
+				serializarYEnviar(DAM,FLUSH_ARCHIVO,direccion_flush);
+
+				log_info(log_CPU,"Informacion enviada a DAM para persistir el archivo en MDJ");
+
+				notificarSAFA(SAFA,SENTENCIA_DAM,dtb);
+				uso_DAM=1;
+				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
+			}else{
+
+				log_error(log_CPU,"El dtb no contiene el archivo %s abierto",linea_parseada.argumentos.flush.path);
+
+				notificarSAFA(SAFA,ERROR_ARCHIVO_INEXISTENTE,dtb);
+
+			}
+
 			interrupcion=1;
 			break;
 		case CLOSE:

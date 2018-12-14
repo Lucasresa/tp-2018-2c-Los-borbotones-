@@ -190,6 +190,11 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((desbloqueo_dummy*)package)->id_dtb);
 		serializarYEnviarString(socket,((desbloqueo_dummy*)package)->path);
 		break;
+	case FLUSH_ARCHIVO:
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->pid);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->base);
+		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
+		break;
 	case CERRAR_ARCHIVO:
 	case ESTRUCTURAS_CARGADAS:
 	case LEER_ARCHIVO:
