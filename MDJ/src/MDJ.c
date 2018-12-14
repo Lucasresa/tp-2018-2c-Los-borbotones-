@@ -59,10 +59,9 @@ int main(){
 		log_error(log_MDJ,"No se encontro el file system en el punto de montaje");
 		return -1;
 	}
-	else{
-
-	}
 	leerMetaData();
+	crearEstructura();
+
 	crearBitmap();
 	cerrarMDJ=0;
 	pthread_create(&hilo_consola,NULL,(void*)consola_MDJ,NULL);
@@ -857,8 +856,7 @@ char *substring(char *string, int position, int length)
    return pointer;
 }
 
-char * path_bitmap(){
-	puts(config_MDJ.mount_point);
+char *path_bitmap(){
 	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));
 	strcpy(direccionArchivoBitMap,config_MDJ.mount_point);
 	string_append(&direccionArchivoBitMap,"/Metadata/Bitmap.bin");
@@ -980,6 +978,40 @@ int hayEspacio(peticion_crear *crear){
 	return -1;
 }
 
+
+int creacionDeArchivoBitmap(char *path,int cantidad){
+    int x = 0;
+    FILE *fh = fopen (path, "wb");
+    for(int i=0;i<cantidad;i++){
+        if (fh != NULL) {
+                fwrite (&x, sizeof (x), 1, fh);
+        }
+    }
+    fclose(fh);
+    return 0;
+
+}
+
+void crearDirectoriofileSystem(char *directorio){
+	char *direccionDirectorio=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen(directorio));
+	strcpy(direccionDirectorio,config_MDJ.mount_point);
+	string_append(&direccionDirectorio,directorio);
+	if (mkdir(direccionDirectorio, S_IRWXU) != 0) {
+	    if (errno != EEXIST)
+	   	        	printf( "No se creo el directorio por q ya existe%s\n",direccionDirectorio);
+	}
+}
+
+void crearEstructura(){
+	char *directorio="/Directorio";
+	crearDirectoriofileSystem(directorio);
+	directorio="/Bloque";
+	crearDirectoriofileSystem(directorio);
+	if (validarArchivoConfig(path_bitmap())<0){
+			log_info(log_MDJ,"creacion del archivo bitmap");
+			creacionDeArchivoBitmap(path_bitmap(),config_MetaData.cantidad_bloques);
+	}
+}
 /*
 void actualizarBitarray(){
 	char * direccionBitmap = path_bitmap();
