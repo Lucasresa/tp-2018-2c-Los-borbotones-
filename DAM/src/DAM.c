@@ -240,6 +240,8 @@ void* recibirPeticion(int socket, void* argumentos) {
 	}
 	case FLUSH_ARCHIVO:
 		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
+
+		char* archivo;
 		direccion_logica* direccion_archivo = recibirYDeserializar(socket,FLUSH_ARCHIVO);
 
 
