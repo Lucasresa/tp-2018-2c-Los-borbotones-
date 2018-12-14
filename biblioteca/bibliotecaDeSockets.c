@@ -192,6 +192,7 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		break;
 	case CERRAR_ARCHIVO:
 	case ESTRUCTURAS_CARGADAS:
+	case LEER_ARCHIVO:
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->pid);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->base);
 		serializarYEnviarEntero(socket,&((direccion_logica*)package)->offset);
@@ -324,6 +325,8 @@ void* recibirYDeserializar(int socket,int tipo){
 	}
 	case CERRAR_ARCHIVO:
 	case ESTRUCTURAS_CARGADAS:
+	case LEER_ARCHIVO:
+	case FLUSH_ARCHIVO:
 	{
 		direccion_logica* direccion = malloc(sizeof(direccion_logica));
 		direccion->pid=*recibirYDeserializarEntero(socket);

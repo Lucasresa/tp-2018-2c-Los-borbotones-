@@ -175,6 +175,8 @@ int recibirPeticionSeg(int socket) {
 			linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
 			serializarYEnviarString(socket,linea);
 		}
+		char finArchivo[] = "FIN_ARCHIVO";
+		serializarYEnviarString(socket,finArchivo);
 		free(direccion);
 
 		return 0;

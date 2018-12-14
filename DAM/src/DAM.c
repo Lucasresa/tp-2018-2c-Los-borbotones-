@@ -239,8 +239,31 @@ void* recibirPeticion(int socket, void* argumentos) {
 		break;
 	}
 	case FLUSH_ARCHIVO:
-
+		char* archivo;
 		log_info(log_DAM,"Peticion de flush sobre un archivo recibida");
+		direccion_logica* direccion_archivo = recibirYDeserializar(socket,FLUSH_ARCHIVO);
+
+		// Le pido al FM9 que me envíe el archivo línea a línea
+		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
+
+	    size_t message_len = 1;
+	    char* buffer;
+	    char *file = (char*) malloc(message_len);
+
+		while(true) {
+			// Recibo una línea
+			buffer = recibirYDeserializarString(FM9_fd);
+			if (string_equals_ignore_case(buffer,"FIN_ARCHIVO")) {
+				break;
+			} else {
+				// Concateno la línea del fm9 con las líneas anteriores...
+				message_len += strlen(buffer);
+				file = (char*) realloc(file, message_len);
+				strncat(file, buffer, message_len);
+			}
+		}
+
+		// TODO: Enviar el string buffer al MDJ
 
 		break;
 	}

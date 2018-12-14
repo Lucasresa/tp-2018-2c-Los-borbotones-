@@ -244,7 +244,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			protocolo=FLUSH_ARCHIVO;
 			serializarYEnviarEntero(DAM,&protocolo);
 			serializarYEnviarString(DAM,linea_parseada.argumentos.flush.path);
-
 			serializarYEnviarEntero(DAM,&dtb.id);
 
 			log_info(log_CPU,"Informacion enviada a DAM para persistir el archivo en MDJ");
