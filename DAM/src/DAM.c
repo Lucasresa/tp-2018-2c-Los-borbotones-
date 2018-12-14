@@ -297,6 +297,15 @@ void* recibirPeticion(int socket, void* argumentos) {
 		serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 		log_info(log_DAM,"finalizacion de guardar en MDJ");
 		free(file);
+		//Esto se podria poner en el switch de dam para q no espere el guardado de mdj
+		int respuesta = recibirYDeserializarEntero(socket);
+		if(respuesta==GUARDAR_OK){
+			//informar al safa
+		}
+		else{
+			//informar al safa
+		}
+
 		break;
 	}
 	return 0;

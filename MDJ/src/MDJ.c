@@ -294,10 +294,15 @@ int guardarDatos(peticion_guardar *guardado) {
     }
     else{
     	  if(guardado->size==0){
+    		    int respuesta;
     		  	if(hayEspacioParaGuardar()==0){
     		  		guardarEnArchivo();
+    		  		respuesta=GUARDAR_OK;
+    		  		serializarYEnviarEntero(DAM_fd,&respuesta);
     		  		return 0;
     		  	}
+    		  	respuesta=GUARDAR_FALLO;
+    		  	serializarYEnviarEntero(DAM_fd,&respuesta);
     	    	return -1;
     	   }
     	  else{
@@ -786,7 +791,6 @@ int todos_bloques_libre(char *path_archivo){
 
 
 void guardarEnArchivo(){
-	//archivo_a_guardar;
 	t_config *archivo_MetaData;
 	archivo_MetaData=config_create(archivo_a_guardar->path);
 	t_config_MetaArchivo metadataArchivo;
@@ -815,21 +819,6 @@ void guardarEnArchivo(){
 }
 
 int guardarEnbloque(char *path,char *string){
-	 /* printf("lo q voy a guardar %s\n:",string);
-	  //deja al archivo en blanco para despues guardar el substring
-	  const char *text2 = "hello";
-	  int fd = open(path, O_RDWR);
-	  size_t textsize = strlen(string) + 1;
-	  char *map = mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	  puts(path);
-	  memcpy(map, string, strlen(string));
-	  msync(map, textsize, MS_SYNC);
-	  textsize =strlen(text2)+1;
-	  memcpy(map, string, strlen(string));
-	  msync(map, textsize, MS_SYNC);
-	  munmap(map, textsize);
-	  close(fd);
-	  */
 	  log_info(log_MDJ,"guardar en bloque:",path);
 	  int fd = open(path, O_RDWR);
 	  const char *text = string;

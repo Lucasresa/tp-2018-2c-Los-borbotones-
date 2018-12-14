@@ -69,7 +69,9 @@ typedef enum{
 	VALIDAR_FALLO,
 	CREAR_FALLO,
 	CREAR_OK,
-	CERRAR_PID                 // Al FM9, para que finalice un proceso
+	CERRAR_PID,
+	GUARDAR_OK,
+	GUARDAR_FALLO// Al FM9, para que finalice un proceso
 
 }t_protocolo;
 
