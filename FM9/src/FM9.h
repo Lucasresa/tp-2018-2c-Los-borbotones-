@@ -42,6 +42,16 @@ typedef struct fila_pag_invertida{
 // Esta es la tabla de paginas entera
 t_list *lista_tabla_pag_inv;
 
+typedef struct fila_tabla_archivos{
+	int archivo;
+	int tamanio;
+	t_list* paginas_asociadas;
+
+}fila_tabla_archivos;
+
+t_list *tabla_archivos;
+
+
 int ultimo_indice;
 
 fd_set set_fd;
@@ -66,6 +76,9 @@ int minPagina(int pid);
 int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag);
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script);
 fila_pag_invertida* encontrarFilaVacia();
+int encontrarIdDisponible();
+
+char* leerMemoriaPagInv(int pid, int pagina, int offset);
 
 void imprimirTabla();
 

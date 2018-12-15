@@ -37,6 +37,8 @@ int main(){
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
 		crearTablaPagInv();
+		// Creo una tabla de archivos
+		tabla_archivos = list_create();
 		//Abro la consola
 		pthread_create(&thread_id, NULL, consolaThreadPagInv, NULL);
 	}
@@ -149,17 +151,19 @@ int recibirPeticionPagInv(int socket) {
 	{
 		int message;
 		iniciar_scriptorio_memoria* datos_archivo = recibirYDeserializar(socket,header);
-		int pagina_base = cargarEstructuraArchivo(datos_archivo);
-		if (pagina_base == -1) {
-			message=ERROR_FM9_SIN_ESPACIO;
+		int resultado = cargarEstructuraArchivo(datos_archivo);
+		if (resultado == -1) {
+		message=ERROR_FM9_SIN_ESPACIO;
 		} else {
-			message=ESTRUCTURAS_CARGADAS;
-		}
+		message=ESTRUCTURAS_CARGADAS;
+
 		// Envio la info para acceder al archivo al DAM
-		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=pagina_base,.offset=0};
-		serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
+		direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=resultado,.offset=0};
+		serializarYEnviar(socket,message,&info_acceso_archivo);
 		return 0;
+		}
 	}
+
 	case PEDIR_LINEA:
 	{
 		direccion_logica* direccion;
@@ -184,14 +188,42 @@ int recibirPeticionPagInv(int socket) {
 
 	}
 
-	case ENVIAR_ARCHIVO:
+	case LEER_ARCHIVO:
 	{
-		//char* linea_string;
-		//linea_string = recibirYDeserializar(socket,header);
-		//strcpy(memoria[memoria_counter],linea_string);
-		//memoria_counter++;
+		// Recibo PID e indice
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+
+		int idArchivo = direccion->base;
+
+		// Obtengo la direccion real
+		fila_tabla_archivos* mifila = list_get(tabla_archivos, idArchivo);
+
+		int inicio = list_get (mifila->paginas_asociadas,0);
+		int tamanio = list_size (mifila->paginas_asociadas);
+
+		char* linea;
+
+		int indiceReal = traducirPagina(0,direccion->offset);
+		int pagina = list_get (mifila->paginas_asociadas,indiceReal);
+
+
+		// Envío línea a línea el archivo
+
+		for (int count = inicio; count < tamanio; ++count) {
+			//El offset siempre va a ser 0 porque ya aplico mi traducción antes y no necesito que sea traducida
+			//Por la función leerMemoriaPagInv
+
+			linea = leerMemoriaPagInv(direccion->pid, pagina, 0);
+			serializarYEnviarString(socket,linea);
+		}
+		char finArchivo[] = "FIN_ARCHIVO";
+		serializarYEnviarString(socket,finArchivo);
+		free(direccion);
+
 		return 0;
-	}
+		}
+
 	}
 }
 
@@ -207,7 +239,8 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 
 	int i = 0;
 
-	int primera_pagina = -1;
+	if (hayMemoriaDisponible(frames_redondeados)){
+
 
 	for( i = 0; i < frames_redondeados; i = i + 1 ) {
 		//Encontramos un marco disponible
@@ -222,17 +255,39 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 		//El PID ya me viene como parametro
 		unaFilaDisponible->pid = pid;
 		//Encuentro la minima pagina que puedo asignar
+		int paginaAutilizar = minPagina(pid);
 		unaFilaDisponible->pagina = minPagina(pid);
 		//Seteamos el flag a 1 para que sepa que está ocupado
 		unaFilaDisponible->flag = 1;
+
+
+		//RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
+		fila_tabla_archivos *fila;
+		//T Encuentro un ID de pagina disponible
+		int idArchivo = encontrarIdDisponible();
+		fila->archivo = idArchivo;
+		// Averiguo el tamaño
+		fila->tamanio = (int) tamanio_script;
+		// Agrego a mi lista de paginas asociadas tantas paginas
+		for (int j = 0; j > frames_redondeados; j = j+1){
+			list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
+		}
+
+		list_add(lista_tabla_pag_inv,fila);
+
+		/*
 		if (i==0) {
 			primera_pagina = unaFilaDisponible->pagina;
 		}
 		log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
-	}
+	*/
 
-	return primera_pagina;
+	return idArchivo;
 	free(datos_script);
+	}
+	} else {
+		return -1;
+	  }
 }
 
 
@@ -353,7 +408,7 @@ void *consolaThreadPagInv(void *vargp)
 				log_info(log_FM9, "=========================");
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
 				void print_segmento(fila_pag_invertida *p) {
-					log_info(log_FM9, "    %i         %i     %i   ", p->indice, p->pagina, p->pid);
+					log_info(log_FM9, "    %i    %i     %i   ", p->indice, p->pagina, p->pid);
 				}
 				list_iterate(lista_tabla_pag_inv, (void*) print_segmento);
 				log_info(log_FM9, "=========================", pid);
@@ -376,20 +431,20 @@ void *consolaThreadPagInv(void *vargp)
 
 char* leerMemoriaPagInv(int pid, int pagina, int offset) {
 
-
 	int es_pid_pagina_buscados(fila_pag_invertida *p) {
 		return (p->pid == pid)&&(p->pagina == pagina);
 	}
+	float cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
 
 	//Que elemento de la lista cumple con ese pid y esa pagina que se pasan por parametro?
 
-	fila_pag_invertida *fila_tabla_pag_inv = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
+	fila_pag_invertida *marcoEncontrado = list_find(lista_tabla_pag_inv, (void*) es_pid_pagina_buscados);
 
-	int marcoEncontrado = fila_tabla_pag_inv->indice+offset;
+	int direccionFisica = marcoEncontrado->indice*cant_lineas_pag+offset;
 
-	printf("Leo memoria en posicion %i: '%s'\n", marcoEncontrado+offset, memoria[marcoEncontrado+offset]);
+	printf("Leo memoria en posicion %i: '%s'\n", direccionFisica, memoria[direccionFisica]);
 
-	return memoria[marcoEncontrado+offset];
+	return memoria[direccionFisica];
 }
 
 //Imprime toda la tabla de paginas
@@ -404,17 +459,6 @@ void imprimirTabla() {
     }
 }
 
-//B
-void buscarEntradas() {
-    int i = 0;
-    int indiceBuscado(fila_pag_invertida *p) {
-      return (p->indice == i);
-    }
-    for (i=0 ; i > config_FM9.tamanio/config_FM9.tam_pagina ; i++) {
-        fila_pag_invertida* filaAImprimir = list_find(lista_tabla_pag_inv, (void*) indiceBuscado);
-        log_info(log_FM9, "%i, %i, %i", filaAImprimir->indice, filaAImprimir->pagina, filaAImprimir->pid);;
-    }
-}
 
 void eliminarPid(int pid){
 // Obtengo la tabla de segmentos para ese PID
@@ -426,6 +470,36 @@ void eliminarPid(int pid){
         }
     }
     list_iterate(lista_tabla_pag_inv, (void*) buscarYreemplazarPid);
+}
+
+int encontrarIdDisponible(){
+	int i = 0;
+	fila_tabla_archivos* fila;
+	int idCoincide(fila_tabla_archivos *p) {
+		  return (p->archivo == i);
+	}
+	while (true) {
+	fila = list_find(tabla_archivos, (void*) idCoincide);
+		if (fila == NULL){
+			return i;
+		} else {
+			i++;
+		}
+	}
 
 }
+
+int hayMemoriaDisponible(int marcosNecesarios){
+	int marcosLibres = 0;
+	int cuantasLibres(fila_pag_invertida *p) {
+		if (p->flag == 0){
+			marcosLibres++;
+		}
+
+		list_iterate(lista_tabla_pag_inv, (void*) cuantasLibres);
+		return marcosNecesarios <= marcosLibres;
+
+		}
+}
+
 
