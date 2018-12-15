@@ -3,6 +3,7 @@
 
 #include "../../biblioteca/bibliotecaDeSockets.h"
 #include "segmentacion.h"
+#include "seg_paginada.h"
 #include <math.h>
 
 

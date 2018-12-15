@@ -52,17 +52,13 @@ int main(){
 
 	log_info(log_CPU,"Conexion exitosa con FM9");
 
-	int test;
-
 	while(1){
-		log_info(log_CPU,"Recibo rafaga");
+		log_info(log_CPU,"Esperando recibir algun DTB/Dummy");
 		if(recv(SAFA_fd,&rafaga_recibida,sizeof(int),0)<=0){
 			perror("Error al recibir la rafaga de planificacion");
 			exit(1);
 		}
 		//Espero para recibir un DTB a ejecutar
-
-		log_info(log_CPU,"Esperando DTB del S-AFA");
 
 		t_DTB dtb=RecibirYDeserializarDTB(SAFA_fd);
 
@@ -76,7 +72,7 @@ int main(){
 			log_info(log_CPU,"El DTB tiene su flag en 0, comenzando inicializacion...");
 			inicializarDTB(DAM_fd,SAFA_fd,&dtb);
 		}else{
-			log_info(log_CPU,"El DTB tiene su flag en 1, comenzando con la ejecucion...");
+			log_info(log_CPU,"El DTB tiene su flag en 1, comenzando con la ejecucion de su script...");
 			comenzarEjecucion(SAFA_fd,DAM_fd,FM9_fd,dtb);
 		}
 	}
@@ -90,9 +86,9 @@ void inicializarDTB(int DAM_fd,int SAFA_fd,t_DTB* dtb){
 	int protocolo=BLOQUEAR_PROCESO;
 	//Enviar peticion de "abrir" al MDJ por medio de "el diego"
 	desbloqueo_dummy dummy = {.path = string_duplicate(dtb->escriptorio), .id_dtb = dtb->id};
-	log_info(log_CPU, "enviando desbloquear dummy");
 	serializarYEnviar(DAM_fd,DESBLOQUEAR_DUMMY,&dummy);
-	log_info(log_CPU, "desbloquear dummy enviado");
+
+	log_info(log_CPU, "Se notifico a DAM para que inicialice el DTB");
 	//Una vez enviando el dummy a DAM tengo que avisarle a SAFA que bloquee el proceso mientras se carga en memoria el script
 
 	notificarSAFA(SAFA_fd,protocolo,*dtb);
@@ -111,7 +107,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
-	int interrupcion,uso_DAM=0;
+	int interrupcion,uso_DAM=0,isComent;
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
@@ -125,7 +121,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	do{
 
 		interrupcion=0;
-
+		isComent=0;
 		direccion->pid=dtb.id;
 		direccion->base=0;
 		direccion->offset=dtb.pc;
@@ -181,7 +177,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				escritura->id_segmento=archivo->acceso;
 				escritura->linea=string_duplicate(linea_parseada.argumentos.asignar.valor);
-				escritura->offset=linea_parseada.argumentos.asignar.linea;
+				escritura->offset=linea_parseada.argumentos.asignar.linea-1;
 				escritura->pid=dtb.id;
 
 				log_info(log_CPU,"Se envio la informacion necesaria a FM9 para la asignacion");
@@ -195,12 +191,25 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				}else{
 					log_error(log_CPU,"Ocurrio un error al cargar linea, error segmento/memoria");
 
+					log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+					protocolo=CERRAR_PID;
+					serializarYEnviarEntero(FM9,&protocolo);
+					serializarYEnviarEntero(FM9,&dtb.id);
+
 					interrupcion=1;
 
 					response=ERROR_SEG_MEM;
 				}
 			}else{
 				log_error(log_CPU,"El archivo sobre el que se desea operar no se encuentra abierto");
+
+
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
 
 				interrupcion=1;
 
@@ -224,7 +233,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			serializarYEnviarString(SAFA,linea_parseada.argumentos.wait.recurso);
 			int* resultado_wait=recibirYDeserializarEntero(SAFA);
 			if(*resultado_wait!=WAIT_EXITOSO){
-				log_info(log_CPU,"El recurso esta bloqueado");
+				log_warning(log_CPU,"El recurso esta bloqueado");
 				interrupcion=1;
 			}else{
 				log_info(log_CPU,"El recurso se bloqueo/creo con exito");
@@ -276,6 +285,12 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				log_error(log_CPU,"El dtb no contiene el archivo %s abierto",linea_parseada.argumentos.flush.path);
 
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
+
 				notificarSAFA(SAFA,ERROR_ARCHIVO_INEXISTENTE,dtb);
 
 			}
@@ -305,11 +320,23 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				}else{
 					log_error(log_CPU,"Ocurrio un error al cerrar el archivo, error segmento/memoria");
 
+					log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+					protocolo=CERRAR_PID;
+					serializarYEnviarEntero(FM9,&protocolo);
+					serializarYEnviarEntero(FM9,&dtb.id);
+
 					interrupcion=1;
 				}
 				free(file);
 			}else{
 				log_error(log_CPU,"El dtb intento cerrar un archivo que no tiene abierto");
+
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
 
 				response=ERROR_ARCHIVO_INEXISTENTE;
 
@@ -360,11 +387,22 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		case FIN:
 			log_info(log_CPU,"Se termino de ejecutar el script");
+
+			log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9,&protocolo);
+			serializarYEnviarEntero(FM9,&dtb.id);
+
 			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
 			interrupcion=1;
 			break;
+		case COMENT:
+			isComent=1;
+			break;
 		}
 
+		if(!isComent){
 		if(rafaga_recibida!=0){
 			if(rafaga_actual==0 && interrupcion==0){
 				notificarSAFA(SAFA,FIN_QUANTUM,dtb);
@@ -378,7 +416,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		if(!uso_DAM&&!interrupcion)
 			notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
-
+		}
 		usleep(config_CPU.retardo*1000);
 	}while(!interrupcion);
 

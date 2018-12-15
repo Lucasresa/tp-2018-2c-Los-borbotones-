@@ -59,9 +59,10 @@ int recibirPeticionSeg(int socket) {
 	}
 	case CERRAR_PID:
 	{
+		log_info(log_FM9, "Recibo instrucción para cerrar PID");
 		int pid = *recibirYDeserializarEntero(socket);
 
-		// Busco la tabla de segmentos del proceso
+		// Busco y borro la tabla de segmentos del proceso
 		t_list* tabla_segmentos = buscarYBorrarTablaSeg(pid);
 
 		// Recorro la tabla de segmentos, liberando la memoria
@@ -72,12 +73,15 @@ int recibirPeticionSeg(int socket) {
 	    list_iterate(tabla_segmentos, (void*) _iterate_elements);
 	    list_destroy(tabla_segmentos);
 
+	    log_info(log_FM9, "PID cerrado");
+
 		int success=CERRAR_PID;
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 	case ABRIR_ARCHIVO:
 	{
+		log_info(log_FM9, "Recibo instrucción para cargar archivo");
 		// Me llega PID y tamaño del archivo (en lineas)
 		iniciar_scriptorio_memoria* datos_archivo = recibirYDeserializar(socket,header);
 
@@ -90,6 +94,7 @@ int recibirPeticionSeg(int socket) {
 		if (memoria_libre == -1) {
 			int mensaje = ERROR_FM9_SIN_ESPACIO;
 			serializarYEnviarEntero(socket,&mensaje);
+			log_error(log_FM9, "No hay espacio para el archivo");
 		} else {
 			// Defino el ID de segmento que voy a usar para este archivo
 			int id_nuevo_segmento = siguiente_id_segmento(tabla_segmentos);
@@ -99,7 +104,7 @@ int recibirPeticionSeg(int socket) {
 
 			// Envio la info para acceder al archivo al DAM
 			direccion_logica info_acceso_archivo = {.pid=datos_archivo->pid, .base=id_nuevo_segmento,.offset=0};
-
+			log_info(log_FM9, "Estructuras del archivo cargadas. Segmento: %i, base:%i limite: %i", id_nuevo_segmento, memoria_libre, datos_archivo->size_script);
 			serializarYEnviar(socket,ESTRUCTURAS_CARGADAS,&info_acceso_archivo);
 		}
 
@@ -133,6 +138,7 @@ int recibirPeticionSeg(int socket) {
 	}
 	case CERRAR_ARCHIVO:
 	{
+		log_info(log_FM9, "Recibo instrucción para cerrar archivo");
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
 		int id_segmento = direccion->base;
@@ -153,6 +159,7 @@ int recibirPeticionSeg(int socket) {
 		// Registro el nuevo espacio libre en memoria
 		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
 		free(direccion);
+		log_info(log_FM9, "Archivo cerrado");
 
 		serializarYEnviarEntero(socket,&success);
 		return 0;
@@ -163,22 +170,25 @@ int recibirPeticionSeg(int socket) {
 		// Recibo PID y base logica (id de segmento)
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
+		log_info(log_FM9, "Recibo instrucción para leer archivo (flush) del pid %i, segmento %i", direccion->pid, direccion->base);
 
 		// Obtengo la direccion real
-		t_list* tabla_segmentos = buscarTablaSeg(direccion->pid);
-		fila_tabla_seg* segmento_archivo = list_get(tabla_segmentos, direccion->base);
+		fila_tabla_seg* segmento_archivo = buscarSegmento(direccion->pid, direccion->base);
+
+		log_info(log_FM9, "Segmento %i tiene base real %i", direccion->base, segmento_archivo->base_segmento);
 
 		char* linea;
 
 		// Envío línea a línea el archivo
-		for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
-			linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		for (int count = 0; count < segmento_archivo->limite_segmento; ++count) {
+			linea = leerMemoriaSeg(direccion->pid, direccion->base, count);
 			serializarYEnviarString(socket,linea);
+			log_info(log_FM9, "Envio línea: %s", linea);
 		}
 		char finArchivo[] = "FIN_ARCHIVO";
 		serializarYEnviarString(socket,finArchivo);
 		free(direccion);
-
+		log_info(log_FM9, "Fin leer archivo", linea);
 		return 0;
 	}
 	}
@@ -212,11 +222,16 @@ char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
 	t_list *tabla_segmentos = buscarTablaSeg(pid);
 
 	// Obtengo la direccion real/fisica base
-	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	fila_tabla_seg* segmento = buscarSegmento(pid, id_segmento);
 	int base_segmento = segmento->base_segmento;
 
-	return memoria[base_segmento+offset];
+	if (segmento->limite_segmento < offset) {
+		log_error(log_FM9, "Se intentó leer fuera del límite de un segmento");
+		return NULL;
+	}
 
+	log_info(log_FM9, "Leo posición %i: %s", base_segmento+offset, memoria[base_segmento+offset]);
+	return memoria[base_segmento+offset];
 
 }
 
@@ -225,7 +240,7 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 	t_list *tabla_segmentos = buscarTablaSeg(pid);
 
 	// Obtengo la direccion real/fisica base
-	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	fila_tabla_seg *segmento = buscarSegmentoEnTabla(tabla_segmentos, id_segmento);
 	int base_segmento = segmento->base_segmento;
 
 	if (segmento->limite_segmento < offset) {
@@ -250,6 +265,15 @@ t_list* buscarTablaSeg(int pid) {
 	}
 	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
+}
+
+fila_tabla_seg* buscarSegmentoEnTabla(t_list* tabla_de_segmentos, int id_segmento) {
+	// Obtengo la tabla de segmentos para ese ID
+	int es_segmento_buscado(fila_tabla_seg *p) {
+		return (p->id_segmento == id_segmento);
+	}
+	fila_tabla_seg* segmento_buscado = list_find(tabla_de_segmentos, (void*) es_segmento_buscado);
+	return segmento_buscado;
 }
 
 t_list* buscarYBorrarTablaSeg(int pid) {
@@ -281,6 +305,23 @@ int segmentoFirstFit(int lineas_segmento) {
 	list_add(memoria_vacia_seg, nueva_fila);
 
 	return fila_memoria_vacia->base;
+}
+
+fila_tabla_seg* buscarSegmento(int pid, int id_segmento) {
+	t_list* tabla_segmentos = buscarTablaSeg(pid);
+
+	// Obtengo la tabla de segmentos para ese PID
+	int es_id_buscado(fila_tabla_seg *p) {
+		return (p->id_segmento == id_segmento);
+	}
+	fila_tabla_seg *segmento = list_find(tabla_segmentos, (void*) es_id_buscado);
+
+	if(segmento == NULL) {
+		log_error(log_FM9, "Se intentó acceder a un segmento que no existe en memoria.");
+		return NULL;
+	}
+
+	return segmento;
 }
 
 int siguiente_id_segmento(t_list* tabla_segmentos) {
@@ -323,7 +364,7 @@ void *consolaThreadSeg(void *vargp)
 				continue;
 			} else {
 				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
-				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
+				log_info(log_FM9, "N° Segmento, Linea Base, Límite", pid);
 				log_info(log_FM9, "=========================", pid);
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
 				void print_segmento(fila_tabla_seg *p) {
@@ -341,7 +382,7 @@ void *consolaThreadSeg(void *vargp)
 				list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);
 			}
 		} else {
-			puts("Comando no reconozido.");
+			puts("Comando no reconocido.");
 		}
 	}
 }

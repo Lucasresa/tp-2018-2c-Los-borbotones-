@@ -67,6 +67,8 @@ int main(){
 		pthread_detach(hilo_SAFA);
 	}
 
+	//testeoFM9();
+
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
 	}
@@ -80,7 +82,7 @@ void* funcionHandshake(int socket, void* argumentos) {
 }
 
 void* recibirPeticion(int socket, void* argumentos) {
-	int* header,success;
+	int* header,success,protocolo;
 	int error_holder = 0;
 
 	header = recibirYDeserializarEntero(socket);
@@ -125,6 +127,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			success=ERROR_ARCHIVO_INEXISTENTE;
 
 			log_info(log_DAM,"Se envio un error a SAFA para que aborte el DTB dummy");
+
 		}
 		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&success);
@@ -149,10 +152,24 @@ void* recibirPeticion(int socket, void* argumentos) {
 				success = FINAL_CREAR;
 			}else{
 				log_error(log_DAM,"No hay espacio suficiente en MDJ para crear el archivo");
+
+				log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9_fd,&protocolo);
+				serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 				success= ERROR_MDJ_SIN_ESPACIO;
 			}
 		}else{
 			log_error(log_DAM,"El archivo ya existe en MDJ, Avisando a SAFA...");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_EXISTENTE;
 		}
 		pthread_mutex_lock(&mutex_SAFA);
@@ -197,6 +214,12 @@ void* recibirPeticion(int socket, void* argumentos) {
 		}else{
 			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
 
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_INEXISTENTE;
 
 			pthread_mutex_lock(&mutex_SAFA);
@@ -225,6 +248,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		}else{
 			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_INEXISTENTE;
 		}
 
@@ -250,10 +280,11 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
 
-	    size_t message_len = 1;
+	    size_t message_len = (size_t)sizeof (char);
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
-	    log_info(log_DAM,"Obteniendo datos para el flush de fm9:",archivo);
+	    strcpy(file,"");
+	    log_info(log_DAM,"Obteniendo datos para el flush");
 		while(true) {
 			// Recibo una línea
 			buffer = recibirYDeserializarString(FM9_fd);
@@ -261,13 +292,16 @@ void* recibirPeticion(int socket, void* argumentos) {
 				break;
 			} else {
 				// Concateno la línea del fm9 con las líneas anteriores...
-				message_len += strlen(buffer);
+				message_len += strlen(buffer)+1; // El +1 es para el \n
 				file = (char*) realloc(file, message_len);
 				strncat(file, buffer, message_len);
+				message_len++;
+				strncat(file, "\n", message_len);
+				log_info(log_DAM,"String a guardar en mdj: %s",file);
 			}
 		}
 
-		//Enviar el string buffer al MDJ
+		//Enviar el string file al MDJ
 		int respuesta_safa;
 		if(validarArchivoMDJ(MDJ_fd,archivo)>0){
 			log_info(log_DAM,"Validacion exitosa, el archivo existe en MDJ");
@@ -289,10 +323,9 @@ void* recibirPeticion(int socket, void* argumentos) {
 				desplazamiento_archivo=offset*config_DAM.transfer_size;
 				memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
 				mandarString[sizeEnviar] = '\0';
-				printf("Enviando: %s\n",mandarString);
+				printf("Enviando a MDJ size: %i, linea: %s\n",sizeEnviar, mandarString);
 				peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
 				serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
-				log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
 				offset++;
 			}
 			//terminacion de guardado
@@ -313,6 +346,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 		}
 		else{
 			log_error(log_DAM,"Validacion fallida, el archivo ya no existe en MDJ");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&direccion_archivo->pid);
+
 			respuesta_safa=ERROR_ARCHIVO_INEXISTENTE;
 		}
 		pthread_mutex_lock(&mutex_SAFA);
@@ -366,6 +406,7 @@ char* obtenerArchivoMDJ(char *path) {
 }
 
 int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
+	log_info(log_DAM,"Informo al FM9 que inicie memoria para archivo.");
 	//int contador_offset;
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 
@@ -377,9 +418,10 @@ int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
         ptr++;
     }
 	datos_script->size_script = count;
+	log_info(log_DAM,"Informo al FM9 que inicie memoria para archivo.");
 	serializarYEnviar(FM9_fd,ABRIR_ARCHIVO,datos_script);
 	free(datos_script);
-
+	log_info(log_DAM,"Espero respuesta del FM9...");
 	int header = *recibirYDeserializarEntero(FM9_fd);
 	if (header == ERROR_FM9_SIN_ESPACIO) {
 		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
@@ -428,7 +470,7 @@ int cargarScriptFM9(int pid, char* buffer, int* error_holder) {
 	datos_script->size_script = count;
 	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
 	free(datos_script);
-
+	log_info(log_DAM,"Informo al FM9 que inicie memoria.");
 	int header = *recibirYDeserializarEntero(FM9_fd);
 	if (header == ERROR_FM9_SIN_ESPACIO) {
 		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
@@ -454,6 +496,7 @@ int cargarScriptFM9(int pid, char* buffer, int* error_holder) {
 			return -1;
 		}
     }
+    log_info(log_DAM,"Cargué todas las líneas del script en el FM9.");
 
     return 1;
 }
@@ -480,18 +523,21 @@ int recibirHeader(int socket, int headerEsperado) {
 
 void testeoFM9() {
 	int error_holder;
+	error_holder = 0;
 	char bufferTesteo[200] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
 	cargarScriptFM9(0, bufferTesteo, &error_holder);
 	if (error_holder != 0) {
+		log_info(log_DAM,"Hubo error en el error handler.");
 		return;
 	}
 
 	char bufferTesteoDos[60] = "asd\ndsa\nddd\nfff\nggg\n";
+	log_info(log_DAM,"Llamo a cargar archivo.");
 	cargarArchivoFM9(0, bufferTesteoDos, &error_holder);
 	if (error_holder != 0) {
 		return;
 	}
-
+/*
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
 	cargarScriptFM9(1, bufferTesteoTres, &error_holder);
 	if (error_holder != 0) {
@@ -502,7 +548,7 @@ void testeoFM9() {
 	cargarArchivoFM9(1, bufferTesteoCuatro, &error_holder);
 	if (error_holder != 0) {
 		return;
-	}
+	}*/
 }
 
 int validarArchivoMDJ(int MDJ, char* path){
@@ -568,6 +614,12 @@ void escucharSAFA(int* fd){
 			log_info(log_DAM,"SAFA me aviso que un proceso acaba de finalizar");
 
 			id_dtb=*recibirYDeserializarEntero(SAFA);
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			*protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,protocolo);
+			serializarYEnviarEntero(FM9_fd,&id_dtb);
 
 			//Avisar a FM9 que tiene que liberar el espacio ocupado por el proceso
 

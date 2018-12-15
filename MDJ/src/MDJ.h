@@ -132,4 +132,7 @@ char *substring(char *string, int position, int length);
 int cantidadDeBloquesNecesario(int espacioNecesario);
 int guardarEnbloque(char *path,char *string);
 void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int bloquesNecesario);
+int creacionDeArchivoBitmap(char *path,int cantidad);
+void crearEstructura();
+void crearDirectoriofileSystem(char *directorio);
 #endif /* MDJ_H_ */

@@ -41,6 +41,9 @@ int main(){
 		tabla_archivos = list_create();
 		//Abro la consola
 		pthread_create(&thread_id, NULL, consolaThreadPagInv, NULL);
+	} else if (config_FM9.modo == SPA) {
+		pthread_create(&thread_id, NULL, consolaThreadSP, NULL);
+		inicializarMemoriaSP();
 	}
 
 	int listener_socket;
@@ -113,6 +116,8 @@ void* recibirPeticion(int socket, void* argumentos) {
 		recibirPeticionSeg(socket);
 	} else if (config_FM9.modo == TPI) {
 		recibirPeticionPagInv(socket);
+	} else if (config_FM9.modo == SPA) {
+		recibirPeticionSP(socket);
 	}
 	return 0;
 }
@@ -225,6 +230,7 @@ int recibirPeticionPagInv(int socket) {
 		}
 
 	}
+	return -1;
 }
 
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){

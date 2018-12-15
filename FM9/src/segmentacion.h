@@ -58,5 +58,7 @@ struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int cant_linea
 struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
 int segmentoFirstFit(int tamanio);
 int siguiente_id_segmento(t_list* tabla_segmentos);
+fila_tabla_seg* buscarSegmento(int pid, int id_segmento);
+fila_tabla_seg* buscarSegmentoEnTabla(t_list* tabla_de_segmentos, int id_segmento);
 
 #endif /* SEGMENTACION_H_ */

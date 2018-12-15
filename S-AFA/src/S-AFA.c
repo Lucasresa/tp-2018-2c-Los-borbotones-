@@ -11,6 +11,7 @@ int main(){
 	CPU_libres=list_create();
 
 	claves=dictionary_create();
+	show_claves=list_create();
 
 	//Creo las colas del S-AFA
 
@@ -186,6 +187,7 @@ void atenderDAM(int*fd){
 		case FINAL_ABRIR:
 		{
 
+			log_info(log_SAFA,"Finalizo la apertura del archivo %s para el dtb %d",archivo_nuevo->path,id_dtb);
 			t_archivo* archivo=malloc(sizeof(t_archivo));
 
 			pthread_mutex_lock(&mx_colas);
@@ -211,6 +213,8 @@ void atenderDAM(int*fd){
 		case FINAL_CREAR:
 			dtb->id=id_dtb;
 
+			log_info(log_SAFA,"Creacion de archivo finalizada para el dtb: %d",id_dtb);
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
@@ -222,6 +226,8 @@ void atenderDAM(int*fd){
 			break;
 		case FINAL_BORRAR:
 			dtb->id=id_dtb;
+
+			log_info(log_SAFA,"Se Borro correctamente el archivo pedido por el dtb %d",id_dtb);
 
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
@@ -235,6 +241,8 @@ void atenderDAM(int*fd){
 		case FINAL_FLUSH:
 			dtb->id=id_dtb;
 
+			log_info(log_SAFA,"Flush finalizado correctamente");
+
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(DESBLOQUEAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
@@ -243,21 +251,6 @@ void atenderDAM(int*fd){
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
 
-			break;
-		case FINALIZAR_PROCESO:
-			pthread_mutex_lock(&mx_colas);
-			aux=getDTBEnCola(cola_block,id_dtb);
-			pthread_mutex_unlock(&mx_colas);
-
-			pthread_mutex_lock(&mx_PCP);
-			ejecutarPCP(FINALIZAR_PROCESO,aux);
-			pthread_mutex_unlock(&mx_PCP);
-
-			if(aux->f_inicializacion==1){
-				pthread_mutex_lock(&mx_PLP);
-				ejecutarPLP();
-				pthread_mutex_unlock(&mx_PLP);
-			}
 			break;
 		case ERROR_ARCHIVO_EXISTENTE:
 			log_error(log_SAFA,"El dtb %d intento crear un archivo ya existente",id_dtb);
@@ -355,8 +348,6 @@ void atenderCPU(int*fd){
 
 	int protocolo;
 
-	log_info(log_SAFA,"ejecutando PCP...");
-
 	pthread_mutex_lock(&mx_PCP);
 	ejecutarPCP(EJECUTAR_PROCESO,NULL);
 	pthread_mutex_unlock(&mx_PCP);
@@ -366,8 +357,7 @@ void atenderCPU(int*fd){
 	while(1){
 		if(recv(fd_CPU,&protocolo,sizeof(int),0)<=0){
 
-			log_info(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
-
+			log_error(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
 
 			//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
 			if(dictionary_has_key(cola_exec,string_itoa(dtb_cpu))){
@@ -386,22 +376,16 @@ void atenderCPU(int*fd){
 				pthread_mutex_unlock(&mx_PLP);
 			}
 			else{ //En caso de no estar ejecutando nada, lo elimino de la lista de CPU_libres
-				log_info(log_SAFA,"El CPU %d estaba libre, borrando de la lista....",fd_CPU);
 				pthread_mutex_lock(&mx_CPUs);
 				eliminarSocketCPU(fd_CPU);
 				pthread_mutex_lock(&mx_CPUs);
 			}
-
-			log_info(log_SAFA,"Se elimino el CPU %d de la lista de CPUs",fd_CPU);
-
-
 
 			pthread_exit(NULL);
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
 		t_DTB dtb_modificado;
-		log_info(log_SAFA,"protocolo: %d",protocolo);
 
 		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM){
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
@@ -416,7 +400,7 @@ void atenderCPU(int*fd){
 		//Si recibe un wait de algun recurso
 		if(protocolo==WAIT_RECURSO){
 			clave=recibirYDeserializarString(fd_CPU);
-
+			log_info(log_SAFA,"El dtb %d quiere bloquear la clave %s",dtb_cpu,clave);
 			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
 				pthread_mutex_lock(&mx_claves);
 				t_semaforo* sem_clave=dictionary_remove(claves,clave);
@@ -425,6 +409,7 @@ void atenderCPU(int*fd){
 				respuesta=wait_sem(sem_clave,dtb_modificado.id,clave);
 
 				if(respuesta==-1){
+					log_error(log_SAFA,"Clave no disponible, otro dtb la esta bloqueando");
 					pthread_mutex_lock(&mx_colas);
 					dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 					pthread_mutex_unlock(&mx_colas);
@@ -440,11 +425,21 @@ void atenderCPU(int*fd){
 					pthread_mutex_lock(&mx_PCP);
 					ejecutarPCP(EJECUTAR_PROCESO,NULL);
 					pthread_mutex_unlock(&mx_PCP);
+				}else{
+					log_info(log_SAFA,"Clave bloqueada con exito");
 				}
+
 			}else{ //Si no existe la clave en el sistema, tengo que generarla
+				log_warning(log_SAFA,"La clave no existe en el sistema, hay que crearla");
+
 				t_semaforo* clave_nueva=malloc(sizeof(t_semaforo));
 				clave_nueva->valor=1;
 				clave_nueva->cola_bloqueados=list_create();
+
+				char* clave_list = string_duplicate(clave);
+				pthread_mutex_lock(&mx_claves);
+				list_add(show_claves,clave_list);
+				pthread_mutex_unlock(&mx_claves);
 
 				respuesta=wait_sem(clave_nueva,dtb_modificado.id,clave);
 			}
@@ -453,12 +448,16 @@ void atenderCPU(int*fd){
 		}else if(protocolo==SIGNAL_RECURSO){
 			clave=recibirYDeserializarString(fd_CPU);
 
+			log_info(log_SAFA,"El dtb %d quiere liberar la clave %s",dtb_cpu,clave);
+
 			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
 				t_semaforo* sem_clave=dictionary_remove(claves,clave);
 
-				log_info(log_SAFA,"Clave %s - Procesos bloqueados %d - id dtb bloqueados %d",clave,sem_clave->valor,(int)list_get(sem_clave->cola_bloqueados,0));
+				log_info(log_SAFA,"Clave %s - Procesos bloqueados %d - id dtb bloqueado %d",clave,sem_clave->valor,(int)list_get(sem_clave->cola_bloqueados,0));
 
 				respuesta=signal_sem(sem_clave,clave);
+
+				log_info(log_SAFA,"La clave existe, continuo con el SIGNAL");
 
 				if(respuesta!=-1){
 					dtb=malloc(sizeof(t_DTB));
@@ -469,11 +468,14 @@ void atenderCPU(int*fd){
 					free(dtb);
 				}
 			}else{ //Si no existe la clave en el sistema, tengo que generarla
+				log_warning(log_SAFA,"La clave no existe en el sistema, hay que crearla");
 				t_semaforo* clave_nueva = malloc(sizeof(t_semaforo));
 				clave_nueva->valor=1;
 				clave_nueva->cola_bloqueados=list_create();
+				char* clave_list = string_duplicate(clave);
 				pthread_mutex_lock(&mx_claves);
 				dictionary_put(claves,clave,clave_nueva);
+				list_add(show_claves,clave_list);
 				pthread_mutex_unlock(&mx_claves);
 			}
 			respuesta=SIGNAL_EXITOSO;
@@ -481,9 +483,7 @@ void atenderCPU(int*fd){
 
 		}else if(protocolo==ID_DTB){
 			dtb_cpu=*recibirYDeserializarEntero(fd_CPU);
-			log_info(log_SAFA,"Recibido el id del dtb que ejecuta el CPU, %d",dtb_cpu);
 		}else if(protocolo==SENTENCIA_EJECUTADA){
-			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
 			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
@@ -498,7 +498,6 @@ void atenderCPU(int*fd){
 			pthread_mutex_unlock(&mx_metricas);
 
 		}else if(protocolo==SENTENCIA_DAM){
-			log_info(log_SAFA,"Actualizando metricas del DTB %d",dtb_cpu);
 
 			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
