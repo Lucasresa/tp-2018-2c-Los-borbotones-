@@ -358,6 +358,7 @@ void atenderCPU(int*fd){
 		if(recv(fd_CPU,&protocolo,sizeof(int),0)<=0){
 
 			log_error(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
+			pthread_mutex_lock(&sinc_CPUs);
 
 			//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
 			if(dictionary_has_key(cola_exec,string_itoa(dtb_cpu))){
@@ -380,12 +381,15 @@ void atenderCPU(int*fd){
 				eliminarSocketCPU(fd_CPU);
 				pthread_mutex_lock(&mx_CPUs);
 			}
+			pthread_mutex_unlock(&sinc_CPUs);
 
 			pthread_exit(NULL);
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
 		t_DTB dtb_modificado;
+
+		pthread_mutex_lock(&sinc_CPUs);
 
 		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM){
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
@@ -579,6 +583,7 @@ void atenderCPU(int*fd){
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
 			pthread_mutex_unlock(&mx_PCP);
 		}
+		pthread_mutex_unlock(&sinc_CPUs);
 	}
 }
 

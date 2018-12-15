@@ -58,8 +58,11 @@ void ejecutarComando(int nro_op, char * args){
 				if(args==NULL){
 					printf("ERROR: no escribio ninguna ruta, por favor escriba 'help'\n");
 				}else{
+					char* inicio_script=string_new();
+					string_append(&inicio_script,"scripts/");
+					string_append(&inicio_script,args);
 					t_DTB* dtb_new=malloc(sizeof(t_DTB));
-					agregarDTBDummyANew(args,dtb_new);
+					agregarDTBDummyANew(inicio_script,dtb_new);
 				}
 				break;
 			}

@@ -412,6 +412,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		if(!isComent){
 		if(rafaga_recibida!=0){
 			if(rafaga_actual==0 && interrupcion==0){
+				log_warning(log_CPU,"El DTB %d se quedo sin quantum",dtb.id);
 				notificarSAFA(SAFA,FIN_QUANTUM,dtb);
 				interrupcion=1;
 			}
