@@ -186,7 +186,7 @@ void determinarOperacion(int operacion,int fd) {
 		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
-	case BORRAR_DATOS:
+	case BORRAR_ARCHIVO:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
 		borrar_archivo(borrar->path);
@@ -610,6 +610,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		}
 		else
 		string_append(&contenidoArchivo,src);
+		munmap(src);
 		free(pathBloqueCompleto);
 		close(f);
 
