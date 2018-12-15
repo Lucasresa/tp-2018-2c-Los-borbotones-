@@ -71,13 +71,12 @@ int recibirPeticionSeg(int socket) {
 	    void _iterate_elements(fila_tabla_seg *p) {
 	    	log_info(log_FM9, "Borrando segmento con base en %i",p->base_segmento);
 	    	list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(p->base_segmento, p->limite_segmento));
-	    	//free(p);
+	    	free(p);
 	    }
 	    list_iterate(tabla_segmentos, (void*) _iterate_elements);
 	    //list_destroy(tabla_segmentos);
 
 	    log_info(log_FM9, "PID cerrado");
-	    printPID(1);
 
 		return 0;
 	}
