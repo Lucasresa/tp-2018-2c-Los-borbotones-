@@ -377,7 +377,7 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 	strcpy(actualizarBloques,"[");
 	string_append(&actualizarBloques,bloques[0]);
 	for(i=0;i<cantBloques-1; i++){
-		puts(bloques[i]);
+		//puts(bloques[i]);
 		string_append(&actualizarBloques,",");
 		string_append(&actualizarBloques,bloques[i]);
 	}
@@ -473,7 +473,7 @@ void cmd_cat(char *linea){
 	else{
 		char *content;
 		if ((string_archivo(parametros[1],&content))>0){
-			puts(content);
+			//puts(content);
 			free(content);
 		}
 	}
@@ -497,7 +497,7 @@ void cmd_cd(char *linea){
 }
 void cmd_ls(char *linea){
 	char **parametros = string_split(linea, " ");
-	puts(parametros[1]);
+	//puts(parametros[1]);
 	if(parametros[1] == NULL){
 		cmd_pwd();
 		strcat(dir_actual,"$");
@@ -822,7 +822,7 @@ char *path_bitmap(){
 	char *direccionArchivoBitMap=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen("/Metadata/Bitmap.bin"));
 	strcpy(direccionArchivoBitMap,config_MDJ.mount_point);
 	string_append(&direccionArchivoBitMap,"/Metadata/Bitmap.bin");
-	puts(direccionArchivoBitMap);
+	//puts(direccionArchivoBitMap);
 	return direccionArchivoBitMap;
 
 }
