@@ -289,7 +289,7 @@ int guardarDatos(peticion_guardar *guardado) {
     	archivo_a_guardar->ocupado_archivo_a_guardar=1;
     	t_config *archivo_MetaData;
     	archivo_MetaData=config_create(complete_path);
-    	archivo_a_guardar->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
+    	archivo_a_guardar->bloques=config_set_value(archivo_MetaData,"BLOQUES");
     	config_destroy(archivo_MetaData);
     }
     else{
