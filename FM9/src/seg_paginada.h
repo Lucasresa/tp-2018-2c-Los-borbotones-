@@ -60,6 +60,8 @@ int cargarEstructurasArchivo(fila_lista_procesos_sp* proceso, int tamanio_script
 int cargarEnMemoriaSP(int pid, int id_segmento, int offset, char* linea);
 char* leerMemoriaSP(int pid, int id_segmento, int offset) ;
 
+void removerSegmentoSP(fila_lista_procesos_sp*, int id_segmento);
+
 void *consolaThreadSP(void *vargp);
 
 #endif /* SEG_PAGINADA_H_ */

@@ -282,6 +282,7 @@ t_list* buscarYBorrarTablaSeg(int pid) {
 	}
 	t_list* tabla_segmentos = buscarTablaSeg(pid);
 	fila_tabla_segmentos_pid *relacion_pid_tabla = list_remove_by_condition(tabla_segmentos_pid, (void*) es_pid_buscado);
+	free(relacion_pid_tabla);
 	return tabla_segmentos;
 }
 

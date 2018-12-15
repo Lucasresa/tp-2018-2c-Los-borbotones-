@@ -51,16 +51,23 @@ int recibirPeticionSP(int socket) {
 		log_info(log_FM9, "Recibo instrucción para cerrar PID");
 		int pid = *recibirYDeserializarEntero(socket);
 
-		// Busco la tabla de segmentos del proceso
-		t_list* tabla_segmentos = buscarYBorrarTablaSeg(pid);
+		// Busco y remuevo la tabla de segmentos del proceso:
+		// Obtengo la tabla de segmentos para ese PID
+		int _es_pid_buscado(fila_lista_procesos_sp *p) {
+			return (p->pid == pid);
+		}
+		fila_lista_procesos_sp* proceso_buscado = list_remove_by_condition(lista_procesos_sp, (void*) _es_pid_buscado);
 
-		// Recorro la tabla de segmentos, liberando la memoria
-	    void _iterate_elements(fila_tabla_seg *p) {
-	    	list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(p->base_segmento, p->limite_segmento));
-	    	free(p);
+		// Por cada segmento, remuevo el segmento y lo recorro, liberando memoria
+
+
+	    void borrarSegmentoIterador(fila_tabla_segmentos_sp *p) {
+	    	removerSegmentoSP(proceso_buscado, p->id_segmento);
 	    }
-	    list_iterate(tabla_segmentos, (void*) _iterate_elements);
-	    list_destroy(tabla_segmentos);
+		list_iterate(proceso_buscado->tabla_de_segmentos, (void*) borrarSegmentoIterador);
+
+	    list_destroy(proceso_buscado->tabla_de_segmentos);
+	    free(proceso_buscado);
 
 	    log_info(log_FM9, "PID cerrado");
 
@@ -128,27 +135,13 @@ int recibirPeticionSP(int socket) {
 		int id_segmento = direccion->base;
 		int success;
 
-		// Busco el segmento del proceso:
+		// Busco la tabla de segmentos del proceso:
 		fila_lista_procesos_sp* proceso = buscarProcesoSP(direccion->pid);
 
-		// Remuevo el segmento indicado:
-		fila_tabla_seg* segmento_borrado = list_remove_by_condition(proceso->tabla_de_segmentos, id_segmento);
-		int es_id_buscado(fila_tabla_segmentos_sp *p) {
-			return (p->id_segmento == id_segmento);
-		}
-		fila_tabla_segmentos_pid *relacion_pid_tabla = list_remove_by_condition(tabla_segmentos_pid, (void*) es_id_buscado);
+		removerSegmentoSP(proceso, id_segmento);
 
-		if (segmento_borrado == NULL) {
-			success=ERROR_SEG_MEM;
-		} else {
-			success=FINAL_CERRAR;
-		}
-
-		// Registro el nuevo espacio libre en memoria
-		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
-		free(direccion);
 		log_info(log_FM9, "Archivo cerrado");
-
+		success=FINAL_CERRAR;
 		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
@@ -192,6 +185,28 @@ int recibirPeticionSP(int socket) {
 	}
 	}
 	return 0;
+}
+
+void removerSegmentoSP(fila_lista_procesos_sp* proceso, int id_segmento) {
+	// Remuevo el segmento indicado:
+	int es_id_buscado(fila_tabla_segmentos_sp *p) {
+		return (p->id_segmento == id_segmento);
+	}
+	fila_tabla_segmentos_sp* segmento_borrado = list_remove_by_condition(proceso->tabla_de_segmentos, (void*) es_id_buscado);
+
+	// Recorro el segmento borrado, liberando la memoria
+	int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+    void _iterate_elements(fila_tabla_paginas_sp *p) {
+    	int es_marco_buscado(fila_memoria_libre_sp *ps) {
+    		return (ps->indice == p->base_fisica/cant_lineas_pag);
+    	}
+    	fila_memoria_libre_sp* marco_buscado = list_find(tabla_memoria_libre_sp, (void*) es_marco_buscado);
+    	log_info(log_FM9, "Libero el marco con índice %i", marco_buscado->indice);
+    	marco_buscado->flag_presencia = false;
+    }
+    list_iterate(segmento_borrado->tabla_de_paginas, (void*) _iterate_elements);
+
+    free(segmento_borrado);
 }
 
 char* leerMemoriaSP(int pid, int id_segmento, int offset) {
