@@ -250,9 +250,10 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
 
-	    size_t message_len = 1;
+	    size_t message_len = (size_t)sizeof (char);
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
+	    strcpy(file,"");
 	    log_info(log_DAM,"Obteniendo datos para el flush de fm9:",archivo);
 		while(true) {
 			// Recibo una línea
@@ -261,9 +262,14 @@ void* recibirPeticion(int socket, void* argumentos) {
 				break;
 			} else {
 				// Concateno la línea del fm9 con las líneas anteriores...
-				message_len += strlen(buffer);
+				log_info(log_DAM,"Concateno string %s",buffer);
+				message_len += strlen(buffer)+1; // El +1 es para el \n
+				log_info(log_DAM,"Asique paso a reservar un tamaño de %zu",message_len);
 				file = (char*) realloc(file, message_len);
 				strncat(file, buffer, message_len);
+				message_len++;
+				strncat(file, "\n", message_len);
+				log_info(log_DAM,"Mi string actual es %s",file);
 			}
 		}
 
