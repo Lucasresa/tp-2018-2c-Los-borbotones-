@@ -126,7 +126,7 @@ void ejecutarComando(int nro_op, char * args){
 					printf("ERROR: se debe ingresar un id por favor escriba 'help'\n");
 				}else{
 					t_DTB* dtb;
-					int dtb_id = (int)strtol(args,(char**)NULL,10);
+					int dtb_id = (int)strtol(args,(char**)NULL,10),operacion;
 					char* estado;
 					estado=buscarDTB(&dtb,dtb_id,FINALIZAR);
 
@@ -138,12 +138,14 @@ void ejecutarComando(int nro_op, char * args){
 						pthread_mutex_lock(&mx_PCP);
 						ejecutarPCP(FINALIZAR_PROCESO,dtb);
 						pthread_mutex_unlock(&mx_PCP);
+
+						//Aviso a DAM que el dtb finalizo su ejecucion solo si esta inicializado
+						if(dtb->f_inicializacion==1){
+							operacion=FINALIZAR_PROCESO;
+							serializarYEnviarEntero(DAM,&operacion);
+							serializarYEnviarEntero(DAM,&dtb->id);
+						}
 						//Ejecuto PLP para ver si puedo agregar algun proceso a ready
-
-						//Debo avisar a DAM que finalizo el DTB (en caso de no ser dummy) para que avise a fm9 que debe liberar el espacio
-						//serializarYEnviarEntero(DAM,&operacion);
-						//serializarYEnviarEntero(DAM,&dtb->id);
-
 						pthread_mutex_lock(&mx_PLP);
 						ejecutarPLP();
 						pthread_mutex_unlock(&mx_PLP);
@@ -780,18 +782,12 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		pthread_mutex_t* sem = dictionary_remove(semaforos_dtb,string_itoa(dtb->id));
 		pthread_mutex_unlock(&mx_semaforos);
 
-
 		pthread_mutex_destroy(sem);
 
 		if(total_procesos_memoria<config_SAFA.multiprog){
 			if(dtb->f_inicializacion!=0)
 				multiprogramacion_actual+=1;
 		}
-		if(dtb->f_inicializacion==1){
-			serializarYEnviarEntero(DAM,&operacion);
-			serializarYEnviarEntero(DAM,&dtb->id);
-		}
-
 		break;
 	case FIN_QUANTUM:
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
