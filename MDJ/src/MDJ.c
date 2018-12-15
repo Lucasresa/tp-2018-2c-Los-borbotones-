@@ -299,6 +299,13 @@ int guardarDatos(peticion_guardar *guardado) {
     		  		guardarEnArchivo();
     		  		respuesta=GUARDAR_OK;
     		  		serializarYEnviarEntero(DAM_fd,&respuesta);
+    		  		//Actualizar Tamaño
+    		  		t_config *archivo_MetaData;
+    		  		archivo_MetaData=config_create(archivo_a_guardar->path);
+    		  		char *actualizarTamanio;
+    		  		actualizarTamanio= string_itoa(strlen(archivo_a_guardar->strig_archivo));
+    		  		config_set_value(archivo_MetaData, "TAMANIO",actualizarTamanio);
+    		  		config_destroy(archivo_MetaData);
     		  		return 0;
     		  	}
     		  	respuesta=GUARDAR_FALLO;
@@ -327,6 +334,7 @@ int hayEspacioParaGuardar(){
 	else if (espacioMaximoLibre +espacioMaximoActual > espacioDelArchivo ){
 		int espacioNecesario= espacioDelArchivo -(espacioMaximoLibre +espacioMaximoActual);
 		int bloquesNecesario =cantidadDeBloquesNecesario(espacioNecesario);
+		//Le asigna bloques nuevos a un archivo
 		asignarleBloquesNuevosA(archivo_a_guardar,bloquesNecesario);
 		log_info(log_MDJ,"no se necesita bloques adicionales para guardar el archivo :",archivo_a_guardar->path);
 		return 0;
@@ -376,68 +384,11 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 		string_append(&actualizarBloques,ultimoBloqueChar);
 	}
     string_append(&actualizarBloques,"]");
-    config_set_value(archivo_MetaData, "Bloques",actualizarBloques);
-    char *tamanio=string_itoa(strlen(archivo_a_guardar->strig_archivo));
-    config_set_value(archivo_MetaData, "Tamanio",tamanio);
+    config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
 	config_destroy(archivo_MetaData);
 
 }
 
-int crear_carpetas() {
-
-	if (mkdir_p(config_MDJ.mount_point) != 0) {
-		return -1;
-	}
-
-    char * inner_folders = (char *) malloc(1 + strlen(config_MDJ.mount_point)+ strlen("/Archivos") );
-    strcpy(inner_folders, config_MDJ.mount_point);
-    strcat(inner_folders, "/Archivos");
-
-	if (mkdir_p(inner_folders) != 0) {
-		return -1;
-	}
-	free(inner_folders);
-	return 0;
-}
-
-int mkdir_p(const char *path)
-{
-    /* Adapted from http://stackoverflow.com/a/2336245/119527 */
-    const size_t len = strlen(path);
-    char _path[256];
-    char *p;
-
-    errno = 0;
-
-    /* Copy string so its mutable */
-    if (len > sizeof(_path)-1) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    strcpy(_path, path);
-
-    /* Iterate the string */
-    for (p = _path + 1; *p; p++) {
-        if (*p == '/') {
-            /* Temporarily truncate */
-            *p = '\0';
-
-            if (mkdir(_path, S_IRWXU) != 0) {
-                if (errno != EEXIST)
-                    return -1;
-            }
-
-            *p = '/';
-        }
-    }
-
-    if (mkdir(_path, S_IRWXU) != 0) {
-        if (errno != EEXIST)
-            return -1;
-    }
-
-    return 0;
-}
 
 void consola_MDJ(){
 	log_info(log_MDJ,"Consola en linea");
@@ -758,7 +709,8 @@ int borrar_archivo(char *path_archivo){
                 return -1;
 
 }
-
+//hecho pero no usado apra verificar si todos los bloques
+//de un archivo estan ocupados
 int todos_bloques_libre(char *path_archivo){
 	char *path_completo = archivo_path(path_archivo);
 	t_config *archivo_MetaData=config_create(path_completo);
@@ -809,9 +761,11 @@ void guardarEnArchivo(){
 		}
 		else{
 		    	sizeDelStringArchivoAGuardar-=config_MetaData.tamanio_bloques;
+		    	sizeGuardar=config_MetaData.tamanio_bloques;
 		}
-		char *guardar = malloc(sizeGuardar +1);
-		strncpy(guardar, archivo_a_guardar->strig_archivo+offset, sizeGuardar);
+		char *guardar = malloc(sizeGuardar);
+		memcpy(guardar, archivo_a_guardar->strig_archivo+offset, sizeGuardar);
+		guardar[sizeGuardar]='\0';
 		guardarEnbloque(pathBloqueCompleto,guardar);
 		free(guardar);
 		free(pathBloqueCompleto);
@@ -819,15 +773,13 @@ void guardarEnArchivo(){
 }
 
 int guardarEnbloque(char *path,char *string){
-	  log_info(log_MDJ,"guardar en bloque:",path);
-	  int fd = open(path, O_RDWR);
-	  const char *text = string;
-	  size_t textsize = strlen(text) + 1;
-	  char *map = mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	  memcpy(map, text, strlen(text));
-	  msync(map, textsize, MS_SYNC);
-	  munmap(map, textsize);
-	  close(fd);
+	  //Borrar Contenido del archivo
+	  //Lo deja en blanco
+	  fclose(fopen(path, "w"));
+	  FILE *fp;
+      fp = fopen( path , "w" );
+	  fwrite(string , 1 , strlen(string) , fp );
+	  fclose(fp);
 	  return 0;
 }
 
@@ -924,20 +876,6 @@ void crearDirectorio(char *path){
    	    }
     }
 }
-/*
-int verificar_bloques(char *path){
-	t_config *archivo_MetaData;
-	archivo_MetaData=config_create(path);
-	t_config_MetaArchivo metadataArchivo;
-	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
-	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int cantidadBloques=sizeof(metadataArchivo.bloques)+1;
-	char * contenidoArchivo = (char *) malloc(metadataArchivo.tamanio+1);
-	int sizeArchivoBloque;
-	struct stat statbuf;
-}
-
-*/
 int cantidadDeBloques (char **bloque){
 	int i=0;
 	while (bloque[i]!=0){
@@ -1004,20 +942,17 @@ void crearDirectoriofileSystem(char *directorio){
 }
 
 void crearEstructura(){
-	char *directorio="/Directorio";
+	char *directorio="/Archivos";
 	crearDirectoriofileSystem(directorio);
-	directorio="/Bloque";
+	directorio="/Bloques";
 	crearDirectoriofileSystem(directorio);
 	if (validarArchivoConfig(path_bitmap())<0){
 			log_info(log_MDJ,"creacion del archivo bitmap");
 			creacionDeArchivoBitmap(path_bitmap(),config_MetaData.cantidad_bloques);
 	}
 }
-/*
-void actualizarBitarray(){
-	char * direccionBitmap = path_bitmap();
-}
-*/
+
+
 /*int cmd_md5(char *linea){
         char **parametros = string_split(linea, " ");
         puts(parametros[1]);
@@ -1039,5 +974,3 @@ void actualizarBitarray(){
         return 0;
 }
 */
-
-
