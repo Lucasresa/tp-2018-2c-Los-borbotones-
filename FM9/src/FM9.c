@@ -207,21 +207,23 @@ int recibirPeticionPagInv(int socket) {
 		int inicio = list_get (mifila->paginas_asociadas,0);
 		int tamanio = list_size (mifila->paginas_asociadas);
 
+		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+
 		char* linea;
-
-		int indiceReal = traducirPagina(0,direccion->offset);
-		int pagina = list_get (mifila->paginas_asociadas,indiceReal);
-
 
 		// Envío línea a línea el archivo
 
-		for (int count = inicio; count < tamanio; ++count) {
-			//El offset siempre va a ser 0 porque ya aplico mi traducción antes y no necesito que sea traducida
-			//Por la función leerMemoriaPagInv
+			for (int count = 0; count < mifila->tamanio; ++count) {
 
-			linea = leerMemoriaPagInv(direccion->pid, pagina, 0);
-			serializarYEnviarString(socket,linea);
-		}
+				int i = traducirPagina(0,count);
+
+				//Obtengo mi pagina entre las posibles asociadas a ese archivo
+
+				linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
+				serializarYEnviarString(socket,linea);
+			}
+
+
 		char finArchivo[] = "FIN_ARCHIVO";
 		serializarYEnviarString(socket,finArchivo);
 		free(direccion);
@@ -419,16 +421,18 @@ void *consolaThreadPagInv(void *vargp)
 				list_iterate(lista_tabla_pag_inv, (void*) print_segmento);
 				log_info(log_FM9, "=========================", pid);
 				log_info(log_FM9, "Memoria del process id: %i", pid);
-				/*
+/*
 				void _print_memoria_pid(fila_tabla_seg *segmento_archivo) {
 					log_info(log_FM9, "=");
-					for (int count = fila_pag_invertida->indice; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
-						log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
+					for (int count = 0; count < mifila->tamanio; ++count) {
+						int i = traducirPagina(0,count);
+						//Obtengo mi pagina entre las posibles asociadas a ese archivo
+						linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
 					}
 				}
-				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_segmento);
-				*/
+				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_pid);
 
+*/
 		} else {
 			puts("Comando no reconocido.");
 		}
@@ -477,6 +481,16 @@ void eliminarPid(int pid){
     }
     list_iterate(lista_tabla_pag_inv, (void*) buscarYreemplazarPid);
 }
+
+void eliminarArchivo(int idArchivo){
+
+	fila_tabla_archivos* listaAeliminar = list_find(tabla_archivos,idArchivo);
+
+	int indice = list_get(listaAeliminar);
+
+	list_remove(listaAeliminar,indice);
+}
+
 
 int encontrarIdDisponible(){
 	int i = 0;
