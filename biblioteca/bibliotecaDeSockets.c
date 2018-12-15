@@ -574,6 +574,7 @@ t_DTB RecibirYDeserializarDTB(int fd){
 		}
 	}
 
+	free(buffer);
 	return dtb;
 
 }

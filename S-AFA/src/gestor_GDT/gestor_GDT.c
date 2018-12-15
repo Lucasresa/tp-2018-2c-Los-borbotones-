@@ -63,6 +63,7 @@ void ejecutarComando(int nro_op, char * args){
 					string_append(&inicio_script,args);
 					t_DTB* dtb_new=malloc(sizeof(t_DTB));
 					agregarDTBDummyANew(inicio_script,dtb_new);
+					free(inicio_script);
 				}
 				break;
 			}
