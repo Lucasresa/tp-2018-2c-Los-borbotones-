@@ -75,8 +75,6 @@ int recibirPeticionSeg(int socket) {
 
 	    log_info(log_FM9, "PID cerrado");
 
-		int success=CERRAR_PID;
-		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 	case ABRIR_ARCHIVO:
@@ -188,7 +186,7 @@ int recibirPeticionSeg(int socket) {
 		char finArchivo[] = "FIN_ARCHIVO";
 		serializarYEnviarString(socket,finArchivo);
 		free(direccion);
-		log_info(log_FM9, "Fin leer archivo", linea);
+		log_info(log_FM9, "Fin leer archivo");
 		return 0;
 	}
 	}

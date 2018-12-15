@@ -58,6 +58,7 @@ int siguiente_id_segmento_SP(t_list* tabla_segmentos);
 
 int cargarEstructurasArchivo(fila_lista_procesos_sp* proceso, int tamanio_script);
 int cargarEnMemoriaSP(int pid, int id_segmento, int offset, char* linea);
+char* leerMemoriaSP(int pid, int id_segmento, int offset) ;
 
 void *consolaThreadSP(void *vargp);
 

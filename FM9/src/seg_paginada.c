@@ -64,8 +64,6 @@ int recibirPeticionSP(int socket) {
 
 	    log_info(log_FM9, "PID cerrado");
 
-		int success=CERRAR_PID;
-		serializarYEnviarEntero(socket,&success);
 		return 0;
 	}
 	case ABRIR_ARCHIVO:
@@ -101,7 +99,7 @@ int recibirPeticionSP(int socket) {
 	{
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
-		char* linea = leerMemoriaSeg(direccion->pid, direccion->base, direccion->offset);
+		char* linea = leerMemoriaSP(direccion->pid, direccion->base, direccion->offset);
 		free(direccion);
 		serializarYEnviarString(socket,linea);
 		return 0;
@@ -142,26 +140,54 @@ int recibirPeticionSP(int socket) {
 		log_info(log_FM9, "Recibo instrucción para leer archivo (flush) del pid %i, segmento %i", direccion->pid, direccion->base);
 
 		// Obtengo la direccion real
-		fila_tabla_seg* segmento_archivo = buscarSegmento(direccion->pid, direccion->base);
+		fila_lista_procesos_sp* proceso = buscarProcesoSP(direccion->pid);
+		fila_tabla_segmentos_sp* segmento = buscarSegmentoSP(proceso->tabla_de_segmentos, direccion->base);
 
-		log_info(log_FM9, "Segmento %i tiene base real %i", direccion->base, segmento_archivo->base_segmento);
-
-		char* linea;
+		// Imprimo el contenido de la memoria
+		int counter = 0;
+		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+		int limite_segmento = segmento->tamanio;
 
 		// Envío línea a línea el archivo
-		for (int count = 0; count < segmento_archivo->limite_segmento; ++count) {
-			linea = leerMemoriaSeg(direccion->pid, direccion->base, count);
-			serializarYEnviarString(socket,linea);
-			log_info(log_FM9, "Envio línea: %s", linea);
+		void print_pagina_contenido(fila_tabla_paginas_sp *p) {
+			for (int i = 0; i < cant_lineas_pag; ++i) {
+				if (counter<limite_segmento) {
+					log_info(log_FM9, "Leo posición %i: %s", p->base_fisica+i, memoria[p->base_fisica+i]);
+					serializarYEnviarString(socket,memoria[p->base_fisica+i]);
+				} else {
+					return;
+				}
+
+				counter++;
+			}
 		}
+		list_iterate(segmento->tabla_de_paginas, (void*) print_pagina_contenido);
+
 		char finArchivo[] = "FIN_ARCHIVO";
 		serializarYEnviarString(socket,finArchivo);
 		free(direccion);
-		log_info(log_FM9, "Fin leer archivo", linea);
+		log_info(log_FM9, "Fin leer archivo");
 		return 0;
 	}
 	}
 	return 0;
+}
+
+char* leerMemoriaSP(int pid, int id_segmento, int offset) {
+	fila_lista_procesos_sp* proceso = buscarProcesoSP(pid);
+	fila_tabla_segmentos_sp* segmento = buscarSegmentoSP(proceso->tabla_de_segmentos, id_segmento);
+
+	// Calculo la base física a la que tengo que acceder
+	int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+	int num_pagina = offset/cant_lineas_pag;
+
+	fila_tabla_paginas_sp* pagina = buscarPagina(segmento->tabla_de_paginas, num_pagina);
+
+	// Calculo el offset de la página al que tengo que acceder
+	offset = offset - num_pagina*cant_lineas_pag;
+
+	log_info(log_FM9, "Leo posición %i: %s", pagina->base_fisica+offset, memoria[pagina->base_fisica+offset]);
+	return memoria[pagina->base_fisica+offset];
 }
 
 struct fila_memoria_libre_sp *crear_fila_memoria_libre_sp(int indice, int flag_presencia) {
