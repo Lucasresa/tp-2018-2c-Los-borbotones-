@@ -96,6 +96,7 @@ t_log* log_SAFA;
 t_list* CPU_libres;
 
 t_dictionary* claves;
+t_list* show_claves;
 
 pthread_mutex_t mx_PCP;
 pthread_mutex_t mx_PLP;

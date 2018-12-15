@@ -80,7 +80,7 @@ void* funcionHandshake(int socket, void* argumentos) {
 }
 
 void* recibirPeticion(int socket, void* argumentos) {
-	int* header,success;
+	int* header,success,protocolo;
 	int error_holder = 0;
 
 	header = recibirYDeserializarEntero(socket);
@@ -125,6 +125,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			success=ERROR_ARCHIVO_INEXISTENTE;
 
 			log_info(log_DAM,"Se envio un error a SAFA para que aborte el DTB dummy");
+
 		}
 		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&success);
@@ -149,10 +150,24 @@ void* recibirPeticion(int socket, void* argumentos) {
 				success = FINAL_CREAR;
 			}else{
 				log_error(log_DAM,"No hay espacio suficiente en MDJ para crear el archivo");
+
+				log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9_fd,&protocolo);
+				serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 				success= ERROR_MDJ_SIN_ESPACIO;
 			}
 		}else{
 			log_error(log_DAM,"El archivo ya existe en MDJ, Avisando a SAFA...");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_EXISTENTE;
 		}
 		pthread_mutex_lock(&mutex_SAFA);
@@ -197,6 +212,12 @@ void* recibirPeticion(int socket, void* argumentos) {
 		}else{
 			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
 
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_INEXISTENTE;
 
 			pthread_mutex_lock(&mutex_SAFA);
@@ -225,6 +246,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		}else{
 			log_error(log_DAM,"El archivo NO existe en MDJ, Avisando a SAFA...");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&dtb_id);
+
 			success=ERROR_ARCHIVO_INEXISTENTE;
 		}
 
@@ -316,6 +344,13 @@ void* recibirPeticion(int socket, void* argumentos) {
 		}
 		else{
 			log_error(log_DAM,"Validacion fallida, el archivo ya no existe en MDJ");
+
+			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,&protocolo);
+			serializarYEnviarEntero(FM9_fd,&direccion_archivo->pid);
+
 			respuesta_safa=ERROR_ARCHIVO_INEXISTENTE;
 		}
 		pthread_mutex_lock(&mutex_SAFA);

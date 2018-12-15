@@ -200,6 +200,13 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			}else{
 				log_error(log_CPU,"El archivo sobre el que se desea operar no se encuentra abierto");
 
+
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
+
 				interrupcion=1;
 
 				response=ERROR_ARCHIVO_INEXISTENTE;
@@ -222,7 +229,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			serializarYEnviarString(SAFA,linea_parseada.argumentos.wait.recurso);
 			int* resultado_wait=recibirYDeserializarEntero(SAFA);
 			if(*resultado_wait!=WAIT_EXITOSO){
-				log_info(log_CPU,"El recurso esta bloqueado");
+				log_warning(log_CPU,"El recurso esta bloqueado");
 				interrupcion=1;
 			}else{
 				log_info(log_CPU,"El recurso se bloqueo/creo con exito");
@@ -274,6 +281,12 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				log_error(log_CPU,"El dtb no contiene el archivo %s abierto",linea_parseada.argumentos.flush.path);
 
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
+
 				notificarSAFA(SAFA,ERROR_ARCHIVO_INEXISTENTE,dtb);
 
 			}
@@ -303,11 +316,23 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				}else{
 					log_error(log_CPU,"Ocurrio un error al cerrar el archivo, error segmento/memoria");
 
+					log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+					protocolo=CERRAR_PID;
+					serializarYEnviarEntero(FM9,&protocolo);
+					serializarYEnviarEntero(FM9,&dtb.id);
+
 					interrupcion=1;
 				}
 				free(file);
 			}else{
 				log_error(log_CPU,"El dtb intento cerrar un archivo que no tiene abierto");
+
+				log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+				protocolo=CERRAR_PID;
+				serializarYEnviarEntero(FM9,&protocolo);
+				serializarYEnviarEntero(FM9,&dtb.id);
 
 				response=ERROR_ARCHIVO_INEXISTENTE;
 
@@ -358,6 +383,13 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			break;
 		case FIN:
 			log_info(log_CPU,"Se termino de ejecutar el script");
+
+			log_info(log_CPU,"Avisando a memoria para que libere las estructuras");
+
+			protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9,&protocolo);
+			serializarYEnviarEntero(FM9,&dtb.id);
+
 			notificarSAFA(SAFA,FINALIZAR_PROCESO,dtb);
 			interrupcion=1;
 			break;
