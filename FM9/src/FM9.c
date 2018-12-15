@@ -204,7 +204,7 @@ int recibirPeticionPagInv(int socket) {
 		// Obtengo la direccion real
 		fila_tabla_archivos* mifila = list_get(tabla_archivos, idArchivo);
 
-		int inicio = list_get (mifila->paginas_asociadas,0);
+		int inicio = (int)list_get (mifila->paginas_asociadas,0);
 		int tamanio = list_size (mifila->paginas_asociadas);
 
 		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
@@ -219,7 +219,7 @@ int recibirPeticionPagInv(int socket) {
 
 				//Obtengo mi pagina entre las posibles asociadas a ese archivo
 
-				linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
+				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
 				serializarYEnviarString(socket,linea);
 			}
 
@@ -236,7 +236,7 @@ int recibirPeticionPagInv(int socket) {
 }
 
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
-
+/*
 	int pid = datos_script->pid;
 
 	float tamanio_script = datos_script->size_script;
@@ -248,54 +248,55 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 	int i = 0;
 
 	if (hayMemoriaDisponible(frames_redondeados)){
+		for( i = 0; i < frames_redondeados; i = i + 1 ) {
+			//Encontramos un marco disponible
+			fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
+			if (unaFilaDisponible == NULL ){
+				// loggear que hubo un error
+				log_error(log_FM9, "No hay fila vacia.");
+				// Avisar al DAM del error
+				return -1;
+			}
+
+			//El PID ya me viene como parametro
+			unaFilaDisponible->pid = pid;
+			//Encuentro la minima pagina que puedo asignar
+			int paginaAutilizar = minPagina(pid);
+			unaFilaDisponible->pagina = minPagina(pid);
+			//Seteamos el flag a 1 para que sepa que está ocupado
+			unaFilaDisponible->flag = 1;
 
 
-	for( i = 0; i < frames_redondeados; i = i + 1 ) {
-		//Encontramos un marco disponible
-		fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
-		if (unaFilaDisponible == NULL ){
-			// loggear que hubo un error
-			log_error(log_FM9, "No hay fila vacia.");
-			// Avisar al DAM del error
-			return -1;
+			//RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
+			fila_tabla_archivos *fila;
+			//T Encuentro un ID de pagina disponible
+			int idArchivo = encontrarIdDisponible();
+			fila->archivo = idArchivo;
+			// Averiguo el tamaño
+			fila->tamanio = (int) tamanio_script;
+			// Agrego a mi lista de paginas asociadas tantas paginas
+			for (int j = 0; j > frames_redondeados; j = j+1){
+				list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
+			}
+
+			list_add(lista_tabla_pag_inv,fila);
+
+			/*
+			if (i==0) {
+				primera_pagina = unaFilaDisponible->pagina;
+			}
+			log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
+
+
+		return idArchivo;
 		}
+		free(datos_script);
 
-		//El PID ya me viene como parametro
-		unaFilaDisponible->pid = pid;
-		//Encuentro la minima pagina que puedo asignar
-		int paginaAutilizar = minPagina(pid);
-		unaFilaDisponible->pagina = minPagina(pid);
-		//Seteamos el flag a 1 para que sepa que está ocupado
-		unaFilaDisponible->flag = 1;
-
-
-		//RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
-		fila_tabla_archivos *fila;
-		//T Encuentro un ID de pagina disponible
-		int idArchivo = encontrarIdDisponible();
-		fila->archivo = idArchivo;
-		// Averiguo el tamaño
-		fila->tamanio = (int) tamanio_script;
-		// Agrego a mi lista de paginas asociadas tantas paginas
-		for (int j = 0; j > frames_redondeados; j = j+1){
-			list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
-		}
-
-		list_add(lista_tabla_pag_inv,fila);
-
-		/*
-		if (i==0) {
-			primera_pagina = unaFilaDisponible->pagina;
-		}
-		log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
-	*/
-
-	return idArchivo;
-	free(datos_script);
-	}
 	} else {
 		return -1;
 	  }
+*/
+	return -1;
 }
 
 
@@ -483,12 +484,13 @@ void eliminarPid(int pid){
 }
 
 void eliminarArchivo(int idArchivo){
-
+/*
 	fila_tabla_archivos* listaAeliminar = list_find(tabla_archivos,idArchivo);
 
 	int indice = list_get(listaAeliminar);
 
 	list_remove(listaAeliminar,indice);
+*/
 }
 
 
@@ -511,15 +513,15 @@ int encontrarIdDisponible(){
 
 int hayMemoriaDisponible(int marcosNecesarios){
 	int marcosLibres = 0;
-	int cuantasLibres(fila_pag_invertida *p) {
+	void cuantasLibres(fila_pag_invertida *p) {
 		if (p->flag == 0){
 			marcosLibres++;
 		}
+	}
+	list_iterate(lista_tabla_pag_inv, (void*) cuantasLibres);
+	return marcosNecesarios <= marcosLibres;
 
-		list_iterate(lista_tabla_pag_inv, (void*) cuantasLibres);
-		return marcosNecesarios <= marcosLibres;
 
-		}
 }
 
 

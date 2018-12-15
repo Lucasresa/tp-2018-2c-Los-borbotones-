@@ -80,6 +80,8 @@ fila_pag_invertida* encontrarFilaVacia();
 int encontrarIdDisponible();
 
 char* leerMemoriaPagInv(int pid, int pagina, int offset);
+int hayMemoriaDisponible(int marcosNecesarios);
+void eliminarArchivo(int idArchivo);
 
 void imprimirTabla();
 
