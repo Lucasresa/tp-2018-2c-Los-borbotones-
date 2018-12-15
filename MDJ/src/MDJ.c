@@ -289,7 +289,7 @@ int guardarDatos(peticion_guardar *guardado) {
     	archivo_a_guardar->ocupado_archivo_a_guardar=1;
     	t_config *archivo_MetaData;
     	archivo_MetaData=config_create(complete_path);
-    	archivo_a_guardar->bloques=config_set_value(archivo_MetaData,"BLOQUES");
+    	archivo_a_guardar->bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
     	config_destroy(archivo_MetaData);
     }
     else{
@@ -301,10 +301,11 @@ int guardarDatos(peticion_guardar *guardado) {
     		  		serializarYEnviarEntero(DAM_fd,&respuesta);
     		  		//Actualizar Tamaño
     		  		t_config *archivo_MetaData;
-    		  		archivo_MetaData=config_create(archivo_a_guardar->path);
+    		  		archivo_MetaData=config_create(complete_path);
     		  		char *actualizarTamanio;
     		  		actualizarTamanio= string_itoa(strlen(archivo_a_guardar->strig_archivo));
     		  		config_set_value(archivo_MetaData, "TAMANIO",actualizarTamanio);
+    		  		config_save(archivo_MetaData);
     		  		config_destroy(archivo_MetaData);
     		  		return 0;
     		  	}
@@ -385,6 +386,7 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 	}
     string_append(&actualizarBloques,"]");
     config_set_value(archivo_MetaData, "BLOQUES",actualizarBloques);
+    config_save(archivo_MetaData);
 	config_destroy(archivo_MetaData);
 
 }
