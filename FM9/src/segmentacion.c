@@ -62,7 +62,7 @@ int recibirPeticionSeg(int socket) {
 		log_info(log_FM9, "Recibo instrucción para cerrar PID");
 		int pid = *recibirYDeserializarEntero(socket);
 
-		// Busco la tabla de segmentos del proceso
+		// Busco y borro la tabla de segmentos del proceso
 		t_list* tabla_segmentos = buscarYBorrarTablaSeg(pid);
 
 		// Recorro la tabla de segmentos, liberando la memoria
@@ -240,7 +240,7 @@ int cargarEnMemoriaSeg(int pid, int id_segmento, int offset, char* linea) {
 	t_list *tabla_segmentos = buscarTablaSeg(pid);
 
 	// Obtengo la direccion real/fisica base
-	fila_tabla_seg *segmento = list_get(tabla_segmentos, id_segmento);
+	fila_tabla_seg *segmento = buscarSegmentoEnTabla(tabla_segmentos, id_segmento);
 	int base_segmento = segmento->base_segmento;
 
 	if (segmento->limite_segmento < offset) {
@@ -265,6 +265,15 @@ t_list* buscarTablaSeg(int pid) {
 	}
 	tabla_segmentos = list_get(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
+}
+
+fila_tabla_seg* buscarSegmentoEnTabla(t_list* tabla_de_segmentos, int id_segmento) {
+	// Obtengo la tabla de segmentos para ese ID
+	int es_segmento_buscado(fila_tabla_seg *p) {
+		return (p->id_segmento == id_segmento);
+	}
+	fila_tabla_seg* segmento_buscado = list_find(tabla_de_segmentos, (void*) es_segmento_buscado);
+	return segmento_buscado;
 }
 
 t_list* buscarYBorrarTablaSeg(int pid) {
@@ -355,7 +364,7 @@ void *consolaThreadSeg(void *vargp)
 				continue;
 			} else {
 				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
-				log_info(log_FM9, "N° Segmento, Base, Límite", pid);
+				log_info(log_FM9, "N° Segmento, Linea Base, Límite", pid);
 				log_info(log_FM9, "=========================", pid);
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
 				void print_segmento(fila_tabla_seg *p) {
@@ -373,7 +382,7 @@ void *consolaThreadSeg(void *vargp)
 				list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);
 			}
 		} else {
-			puts("Comando no reconozido.");
+			puts("Comando no reconocido.");
 		}
 	}
 }

@@ -41,7 +41,7 @@ int main(){
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
-		exit(1);
+		//exit(1);
 	}
 	else{
 		log_info(log_DAM,"Conexion con MDJ establecida");
@@ -58,7 +58,7 @@ int main(){
 	//El DAM se conecta con SAFA
 	if(conectar(&SAFA_fd,config_DAM.puerto_safa,config_DAM.ip_safa)!=0){
 		log_error(log_DAM,"Error al conectarse con SAFA");
-		exit(1);
+		//exit(1);
 	} else {
 		log_info(log_DAM, "Conexión con SAFA establecido");
 		pthread_t hilo_SAFA;
@@ -66,6 +66,8 @@ int main(){
 		log_info(log_DAM,"Hilo para escuchar mensajes de SAFA creado");
 		pthread_detach(hilo_SAFA);
 	}
+
+	testeoFM9();
 
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
@@ -404,6 +406,7 @@ char* obtenerArchivoMDJ(char *path) {
 }
 
 int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
+	log_info(log_DAM,"Informo al FM9 que inicie memoria para archivo.");
 	//int contador_offset;
 	iniciar_scriptorio_memoria* datos_script = malloc(sizeof(iniciar_scriptorio_memoria));
 
@@ -415,9 +418,10 @@ int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
         ptr++;
     }
 	datos_script->size_script = count;
+	log_info(log_DAM,"Informo al FM9 que inicie memoria para archivo.");
 	serializarYEnviar(FM9_fd,ABRIR_ARCHIVO,datos_script);
 	free(datos_script);
-
+	log_info(log_DAM,"Espero respuesta del FM9...");
 	int header = *recibirYDeserializarEntero(FM9_fd);
 	if (header == ERROR_FM9_SIN_ESPACIO) {
 		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
@@ -466,7 +470,7 @@ int cargarScriptFM9(int pid, char* buffer, int* error_holder) {
 	datos_script->size_script = count;
 	serializarYEnviar(FM9_fd,INICIAR_MEMORIA_PID,datos_script);
 	free(datos_script);
-
+	log_info(log_DAM,"Informo al FM9 que inicie memoria.");
 	int header = *recibirYDeserializarEntero(FM9_fd);
 	if (header == ERROR_FM9_SIN_ESPACIO) {
 		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
@@ -492,6 +496,7 @@ int cargarScriptFM9(int pid, char* buffer, int* error_holder) {
 			return -1;
 		}
     }
+    log_info(log_DAM,"Cargué todas las líneas del script en el FM9.");
 
     return 1;
 }
@@ -518,18 +523,21 @@ int recibirHeader(int socket, int headerEsperado) {
 
 void testeoFM9() {
 	int error_holder;
+	error_holder = 0;
 	char bufferTesteo[200] = "crear /equipos/equipo1.txt 5\nabrir /equipos/equipo\n";
 	cargarScriptFM9(0, bufferTesteo, &error_holder);
 	if (error_holder != 0) {
+		log_info(log_DAM,"Hubo error en el error handler.");
 		return;
 	}
 
 	char bufferTesteoDos[60] = "asd\ndsa\nddd\nfff\nggg\n";
+	log_info(log_DAM,"Llamo a cargar archivo.");
 	cargarArchivoFM9(0, bufferTesteoDos, &error_holder);
 	if (error_holder != 0) {
 		return;
 	}
-
+/*
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
 	cargarScriptFM9(1, bufferTesteoTres, &error_holder);
 	if (error_holder != 0) {
@@ -540,7 +548,7 @@ void testeoFM9() {
 	cargarArchivoFM9(1, bufferTesteoCuatro, &error_holder);
 	if (error_holder != 0) {
 		return;
-	}
+	}*/
 }
 
 int validarArchivoMDJ(int MDJ, char* path){
