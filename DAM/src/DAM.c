@@ -231,7 +231,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 		pthread_mutex_lock(&mutex_SAFA);
 		serializarYEnviarEntero(SAFA_fd,&success);
 		serializarYEnviarEntero(SAFA_fd,&dtb_id);
-		pthread_mutex_lock(&mutex_SAFA);
+		pthread_mutex_unlock(&mutex_SAFA);
 
 		log_info(log_DAM,"Se le informo a SAFA el resultado de la operacion");
 		free(borrar_archivo->path);
@@ -250,9 +250,10 @@ void* recibirPeticion(int socket, void* argumentos) {
 
 		serializarYEnviar(FM9_fd,LEER_ARCHIVO,direccion_archivo);
 
-	    size_t message_len = 1;
+	    size_t message_len = (size_t)sizeof (char);
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
+	    strcpy(file,"");
 	    log_info(log_DAM,"Obteniendo datos para el flush de fm9:",archivo);
 		while(true) {
 			// Recibo una línea
@@ -261,50 +262,69 @@ void* recibirPeticion(int socket, void* argumentos) {
 				break;
 			} else {
 				// Concateno la línea del fm9 con las líneas anteriores...
-				message_len += strlen(buffer);
+				log_info(log_DAM,"Concateno string %s",buffer);
+				message_len += strlen(buffer)+1; // El +1 es para el \n
+				log_info(log_DAM,"Asique paso a reservar un tamaño de %zu",message_len);
 				file = (char*) realloc(file, message_len);
 				strncat(file, buffer, message_len);
+				message_len++;
+				strncat(file, "\n", message_len);
+				log_info(log_DAM,"Mi string actual es %s",file);
 			}
 		}
 
-		// TODO: Enviar el string buffer al MDJ
-		char *mandarString;
-		int sizeEnviar;
-		int offset=0;
-		int desplazamiento_archivo;
-		while (message_len!=0){
-			if(message_len > config_DAM.transfer_size){
-				sizeEnviar=config_DAM.transfer_size;
-				message_len -= config_DAM.transfer_size;
+		//Enviar el string buffer al MDJ
+		int respuesta_safa;
+		if(validarArchivoMDJ(MDJ_fd,archivo)>0){
+			log_info(log_DAM,"Validacion exitosa, el archivo existe en MDJ");
+
+			char *mandarString;
+			int sizeEnviar;
+			int offset=0;
+			int desplazamiento_archivo;
+			while (message_len!=0){
+				if(message_len > config_DAM.transfer_size){
+					sizeEnviar=config_DAM.transfer_size;
+					message_len -= config_DAM.transfer_size;
+				}
+				else{
+					sizeEnviar=message_len;
+					message_len=0;
+				}
+				mandarString=(char*)malloc(sizeEnviar+1);
+				desplazamiento_archivo=offset*config_DAM.transfer_size;
+				memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
+				mandarString[sizeEnviar] = '\0';
+				printf("Enviando: %s\n",mandarString);
+				peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
+				serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
+				log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
+				offset++;
+			}
+			//terminacion de guardado
+			peticion_guardar guardado = {.path=archivo,.offset=0,.size=0,.buffer=""};
+			serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
+			log_info(log_DAM,"finalizacion de guardar en MDJ");
+			free(file);
+			//Esto se podria poner en el switch de dam para q no espere el guardado de mdj
+			int respuesta = *recibirYDeserializarEntero(MDJ_fd);
+			if(respuesta==GUARDAR_OK){
+				log_info(log_DAM,"La operacion Flush finalizo con exito");
+				respuesta_safa=FINAL_FLUSH;
 			}
 			else{
-				sizeEnviar=message_len;
-				message_len=0;
+				log_error(log_DAM,"No hay espacio suficiente en MDJ para persistir");
+				respuesta_safa=ERROR_MDJ_SIN_ESPACIO;
 			}
-			mandarString=(char*)malloc(sizeEnviar+1);
-			desplazamiento_archivo=offset*config_DAM.transfer_size;
-			memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
-			mandarString[sizeEnviar] = '\0';
-			printf("Enviando: %s\n",mandarString);
-			peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
-			serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
-			log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
-			offset++;
-		}
-
-		//terminacion de guardado
-		peticion_guardar guardado = {.path=archivo,.offset=0,.size=0,.buffer=""};
-		serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
-		log_info(log_DAM,"finalizacion de guardar en MDJ");
-		free(file);
-		//Esto se podria poner en el switch de dam para q no espere el guardado de mdj
-		int respuesta = recibirYDeserializarEntero(socket);
-		if(respuesta==GUARDAR_OK){
-			//informar al safa
 		}
 		else{
-			//informar al safa
+			log_error(log_DAM,"Validacion fallida, el archivo ya no existe en MDJ");
+			respuesta_safa=ERROR_ARCHIVO_INEXISTENTE;
 		}
+		pthread_mutex_lock(&mutex_SAFA);
+		serializarYEnviarEntero(SAFA_fd,&respuesta_safa);
+		serializarYEnviarEntero(SAFA_fd,&direccion_archivo->pid);
+		pthread_mutex_unlock(&mutex_SAFA);
 
 		break;
 	}

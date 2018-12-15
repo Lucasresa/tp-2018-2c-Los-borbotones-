@@ -52,8 +52,6 @@ int main(){
 
 	log_info(log_CPU,"Conexion exitosa con FM9");
 
-	int test;
-
 	while(1){
 		log_info(log_CPU,"Recibo rafaga");
 		if(recv(SAFA_fd,&rafaga_recibida,sizeof(int),0)<=0){
@@ -181,7 +179,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				escritura->id_segmento=archivo->acceso;
 				escritura->linea=string_duplicate(linea_parseada.argumentos.asignar.valor);
-				escritura->offset=linea_parseada.argumentos.asignar.linea;
+				escritura->offset=linea_parseada.argumentos.asignar.linea-1;
 				escritura->pid=dtb.id;
 
 				log_info(log_CPU,"Se envio la informacion necesaria a FM9 para la asignacion");
@@ -216,6 +214,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 			break;
 		case WAIT:
+		{
 			log_info(log_CPU,"Se ejecuto la operacion WAIT");
 
 			actualizarDTB(&dtb);
@@ -223,11 +222,16 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			serializarYEnviarString(SAFA,linea_parseada.argumentos.wait.recurso);
 			int* resultado_wait=recibirYDeserializarEntero(SAFA);
 			if(*resultado_wait!=WAIT_EXITOSO){
+				log_info(log_CPU,"El recurso esta bloqueado");
 				interrupcion=1;
+			}else{
+				log_info(log_CPU,"El recurso se bloqueo/creo con exito");
 			}
 			free(resultado_wait);
 			break;
+		}
 		case SIGNAL:
+		{
 			log_info(log_CPU,"Se ejecuto la operacion SIGNAL");
 
 			actualizarDTB(&dtb);
@@ -237,8 +241,10 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			if(*resultado_signal!=SIGNAL_EXITOSO){
 				interrupcion=1;
 			}
+			log_info(log_CPU,"Signal realizado con exito");
 			free(resultado_signal);
 			break;
+		}
 		case FLUSH:
 			//CPU envia una peticion de FLUSH a DAM (envio el protocolo - path - id_dtb)
 
@@ -363,7 +369,8 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 				interrupcion=1;
 			}
 		}
-		destroyParse(linea_parseada);
+		if(linea_parseada.keyword!=FIN)
+			destroyParse(linea_parseada);
 
 		log_warning(log_CPU, "Instruccion ejecutada, quantum restante = %d",dtb.quantum_sobrante);
 
