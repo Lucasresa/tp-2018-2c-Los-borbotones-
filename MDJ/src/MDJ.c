@@ -152,7 +152,7 @@ void determinarOperacion(int operacion,int fd) {
 		peticion_crear* crear = recibirYDeserializar(fd,operacion);
 		int creacion = CREAR_OK;
 		log_info(log_MDJ,"Se recibio una peticion de creacion de archivo:");
-		log_info(log_MDJ,"peticion de creacion de archivo:",crear->path);
+		log_info(log_MDJ,"peticion de creacion de archivo:%s",crear->path);
 		if (hayEspacio(crear)!=0){
 								log_info(log_MDJ,"No se puede crear archivo: por q no hay espacio",crear->path);
 								log_error(log_MDJ,"No se puede crear por q no hay espacio/ bloques libres:",crear->path);
@@ -182,7 +182,7 @@ void determinarOperacion(int operacion,int fd) {
 	{
 		log_info(log_MDJ,"Recibido Peticion de guardado de DAM:");
 		peticion_guardar* guardado = recibirYDeserializar(fd,operacion);
-		log_info(log_MDJ,"Peticion de guardado de DAM para:",guardado->path);
+		log_info(log_MDJ,"Peticion de guardado de DAM para:%s",guardado->path);
 		guardarDatos(guardado);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -191,7 +191,7 @@ void determinarOperacion(int operacion,int fd) {
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
 		borrar_archivo(borrar->path);
-	    log_info(log_MDJ,"Archivo borrado y bloques liberado para::",borrar->path);
+	    log_info(log_MDJ,"Archivo borrado y bloques liberado para:%s",borrar->path);
 	    usleep(config_MDJ.time_delay*1000);
 	    break;
 	}
@@ -284,7 +284,8 @@ int guardarDatos(peticion_guardar *guardado) {
     strcat(complete_path, guardado->path);
 
     if (archivo_a_guardar->ocupado_archivo_a_guardar==0){
-    	memcpy(archivo_a_guardar->strig_archivo,guardado->buffer,strlen(guardado->buffer));
+    	archivo_a_guardar->strig_archivo=(char *)malloc(strlen(guardado->buffer));
+    	archivo_a_guardar->strig_archivo=string_duplicate(guardado->buffer);
     	archivo_a_guardar->path=string_duplicate(complete_path);
     	archivo_a_guardar->ocupado_archivo_a_guardar=1;
     	t_config *archivo_MetaData;
@@ -796,7 +797,7 @@ void guardarEnArchivo(){
 	t_config_MetaArchivo metadataArchivo;
 	metadataArchivo.tamanio=config_get_int_value(archivo_MetaData,"TAMANIO");
 	metadataArchivo.bloques=config_get_array_value(archivo_MetaData,"BLOQUES");
-	int bloquesCantidad=cantidadDeBloques (metadataArchivo.bloques);
+	int bloquesCantidad=cantidadDeBloques(metadataArchivo.bloques);
 	int sizeDelStringArchivoAGuardar = strlen(archivo_a_guardar->strig_archivo);
 	int sizeGuardar;
 	for(int i=0;i<bloquesCantidad;i++){
