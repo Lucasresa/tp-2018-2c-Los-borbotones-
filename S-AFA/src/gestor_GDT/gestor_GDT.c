@@ -672,7 +672,7 @@ void ejecutarPLP(){
 			if(init_dummy->f_inicializacion!=0){
 				multiprogramacion_actual = multiprogramacion_actual - 1;
 				log_info(log_SAFA,"Multiprogramacion actual= %d",multiprogramacion_actual);
-				log_info(log_SAFA,"Se ejecutara el PCP para enviar el proceso %d a ready",init_dummy->id);
+				log_info(log_SAFA,"Se ejecutara el PCP para intentar ejecutar el proceso %d",init_dummy->id);
 			}
 			else{
 				log_info(log_SAFA,"El Dtb dummy %d se agrego a la cola de ready",init_dummy->id);
