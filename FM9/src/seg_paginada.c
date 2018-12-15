@@ -123,10 +123,31 @@ int recibirPeticionSP(int socket) {
 	case CERRAR_ARCHIVO:
 	{
 		log_info(log_FM9, "Recibo instrucción para cerrar archivo");
-		//direccion_logica* direccion;
-		//direccion = recibirYDeserializar(socket,header);
-		//int id_segmento = direccion->base;
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		int id_segmento = direccion->base;
 		int success;
+
+		// Busco el segmento del proceso:
+		fila_lista_procesos_sp* proceso = buscarProcesoSP(direccion->pid);
+
+		// Remuevo el segmento indicado:
+		fila_tabla_seg* segmento_borrado = list_remove_by_condition(proceso->tabla_de_segmentos, id_segmento);
+		int es_id_buscado(fila_tabla_segmentos_sp *p) {
+			return (p->id_segmento == id_segmento);
+		}
+		fila_tabla_segmentos_pid *relacion_pid_tabla = list_remove_by_condition(tabla_segmentos_pid, (void*) es_id_buscado);
+
+		if (segmento_borrado == NULL) {
+			success=ERROR_SEG_MEM;
+		} else {
+			success=FINAL_CERRAR;
+		}
+
+		// Registro el nuevo espacio libre en memoria
+		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(segmento_borrado->base_segmento, segmento_borrado->limite_segmento));
+		free(direccion);
+		log_info(log_FM9, "Archivo cerrado");
 
 		serializarYEnviarEntero(socket,&success);
 		return 0;
@@ -329,7 +350,12 @@ int cargarEstructurasArchivo(fila_lista_procesos_sp* proceso, int tamanio_script
 			log_error(log_FM9, "FATAL: No se encontró frame vacío a pesar de verificaciones previas de que sí había.");
 		}
 
-		//Lo asignamos a la tabla de páginas
+		// Limpiamos el contenido del marco
+		for (int i = 0; i < cant_lineas_pag; ++i) {
+			strcpy(memoria[unFrameDisponible->indice*(config_FM9.tam_pagina/config_FM9.max_linea)+i],"");
+		}
+
+		// Lo asignamos a la tabla de páginas
 		list_add(segmento_script->tabla_de_paginas, crear_fila_tabla_paginas_sp(i, (int)unFrameDisponible->indice*cant_lineas_pag));
 
 		log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", i, proceso->pid, unFrameDisponible->indice);

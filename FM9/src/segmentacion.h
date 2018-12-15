@@ -61,4 +61,6 @@ int siguiente_id_segmento(t_list* tabla_segmentos);
 fila_tabla_seg* buscarSegmento(int pid, int id_segmento);
 fila_tabla_seg* buscarSegmentoEnTabla(t_list* tabla_de_segmentos, int id_segmento);
 
+void printPID(int pid);
+
 #endif /* SEGMENTACION_H_ */

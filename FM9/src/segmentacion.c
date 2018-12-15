@@ -43,6 +43,8 @@ int recibirPeticionSeg(int socket) {
 			relacion_pid_tabla->id_tabla_segmentos=id_tabla_segmentos;
 			list_add(tabla_segmentos_pid,relacion_pid_tabla);
 
+			log_info(log_FM9, "Tabla de segmentos para el PID %i creada", datos_script->pid);
+
 			// Obtengo la tabla de segmentos recién creada
 			t_list *tabla_segmentos = list_get(lista_tablas_segmentos, id_tabla_segmentos);
 
@@ -67,13 +69,15 @@ int recibirPeticionSeg(int socket) {
 
 		// Recorro la tabla de segmentos, liberando la memoria
 	    void _iterate_elements(fila_tabla_seg *p) {
+	    	log_info(log_FM9, "Borrando segmento con base en %i",p->base_segmento);
 	    	list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(p->base_segmento, p->limite_segmento));
-	    	free(p);
+	    	//free(p);
 	    }
 	    list_iterate(tabla_segmentos, (void*) _iterate_elements);
-	    list_destroy(tabla_segmentos);
+	    //list_destroy(tabla_segmentos);
 
 	    log_info(log_FM9, "PID cerrado");
+	    printPID(1);
 
 		return 0;
 	}
@@ -217,8 +221,6 @@ struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int tamanio) {
 
 char* leerMemoriaSeg(int pid, int id_segmento, int offset) {
 
-	t_list *tabla_segmentos = buscarTablaSeg(pid);
-
 	// Obtengo la direccion real/fisica base
 	fila_tabla_seg* segmento = buscarSegmento(pid, id_segmento);
 	int base_segmento = segmento->base_segmento;
@@ -279,8 +281,8 @@ t_list* buscarYBorrarTablaSeg(int pid) {
 	int es_pid_buscado(fila_tabla_segmentos_pid *p) {
 		return (p->id_proceso == pid);
 	}
+	t_list* tabla_segmentos = buscarTablaSeg(pid);
 	fila_tabla_segmentos_pid *relacion_pid_tabla = list_remove_by_condition(tabla_segmentos_pid, (void*) es_pid_buscado);
-	t_list* tabla_segmentos = list_remove(lista_tablas_segmentos, relacion_pid_tabla->id_tabla_segmentos);
 	return tabla_segmentos;
 }
 
@@ -382,5 +384,31 @@ void *consolaThreadSeg(void *vargp)
 		} else {
 			puts("Comando no reconocido.");
 		}
+	}
+}
+
+void printPID(int pid) {
+	// Busco la tabla de segmentos del proceso
+	t_list* tabla_segmentos = buscarTablaSeg(pid);
+	if (tabla_segmentos == NULL) {
+		log_info(log_FM9, "PID %i no está cargado en memoria", pid);
+	} else {
+		log_info(log_FM9, "Estructuras del process id: %i\n", pid);
+		log_info(log_FM9, "N° Segmento, Linea Base, Límite", pid);
+		log_info(log_FM9, "=========================", pid);
+		// Recorro la tabla de segmentos, imprimiendo cada segmento
+		void print_segmento(fila_tabla_seg *p) {
+			log_info(log_FM9, "%i, %i, %i", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
+		}
+		list_iterate(tabla_segmentos, (void*) print_segmento);
+		log_info(log_FM9, "=========================", pid);
+		log_info(log_FM9, "Memoria del process id: %i", pid);
+		void _print_memoria_segmento(fila_tabla_seg *segmento_archivo) {
+			log_info(log_FM9, "=");
+			for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
+				log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
+			}
+		}
+		list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);
 	}
 }
