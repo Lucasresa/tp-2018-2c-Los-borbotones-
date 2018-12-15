@@ -111,7 +111,9 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	int protocolo, posicion_file;
+	int protocolo, posicion_file, tamanio_string;
+
+	char* linea_fm9;
 
 	if(dtb.quantum_sobrante!=0){
 		rafaga_actual=dtb.quantum_sobrante;
@@ -128,7 +130,12 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		serializarYEnviar(FM9,PEDIR_LINEA,direccion);
 
-		char* linea_fm9 = recibirYDeserializarString(FM9);
+		linea_fm9 = recibirYDeserializarString(FM9);
+
+		if(linea_fm9==NULL){
+			log_error(log_CPU,"Se perdio la conexion con FM9, finalizando CPU");
+			exit(0);
+		}
 
 		t_operacion linea_parseada=parseLine(linea_fm9);
 
@@ -422,6 +429,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 	log_warning(log_CPU,"Se produjo una interrupcion durante la ejecucion del dtb %d",dtb.id);
 
+	free(linea_fm9);
 	free(direccion);
 }
 
