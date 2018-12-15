@@ -67,7 +67,7 @@ void ejecutarComando(int nro_op, char * args){
 				if(args==NULL){
 				pthread_mutex_lock(&File_config);
 				int total_procesos=getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+getCantidadProcesosInicializados(cola_ready)+
-								getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR);
+								getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR),i;
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),list_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
@@ -80,7 +80,17 @@ void ejecutarComando(int nro_op, char * args){
 				printf("Grado de Multiprogramacion General: %d\n",config_SAFA.multiprog);
 				printf("Grado de Multiprogramacion Actual: %d\n",multiprogramacion_actual);
 				printf("Retardo de planificacion: %d\n",config_SAFA.retardo);
-				printf("Quantum actual: %d\nSi es 0 significa que el sistema usa FIFO\n",config_SAFA.quantum);
+				if(config_SAFA.algoritmo!=FIFO)
+					printf("Quantum actual: %d\n",config_SAFA.quantum);
+				pthread_mutex_lock(&mx_claves);
+				if(list_size(show_claves)>0){
+					printf("Claves existentes:\n");
+					for(i=0;i<list_size(show_claves);i++){
+						char* clave = list_get(show_claves,i);
+						printf("Clave: %s\n",clave);
+					}
+				}
+				pthread_mutex_unlock(&mx_claves);
 				pthread_mutex_unlock(&File_config);
 				}else{
 					t_DTB* dtb_status;

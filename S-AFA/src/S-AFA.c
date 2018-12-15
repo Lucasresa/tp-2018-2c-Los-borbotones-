@@ -11,6 +11,7 @@ int main(){
 	CPU_libres=list_create();
 
 	claves=dictionary_create();
+	show_claves=list_create();
 
 	//Creo las colas del S-AFA
 
@@ -446,6 +447,11 @@ void atenderCPU(int*fd){
 				clave_nueva->valor=1;
 				clave_nueva->cola_bloqueados=list_create();
 
+				char* clave_list = string_duplicate(clave);
+				pthread_mutex_lock(&mx_claves);
+				list_add(show_claves,clave_list);
+				pthread_mutex_lock(&mx_claves);
+
 				respuesta=wait_sem(clave_nueva,dtb_modificado.id,clave);
 			}
 			serializarYEnviarEntero(fd_CPU,&respuesta);
@@ -472,8 +478,10 @@ void atenderCPU(int*fd){
 				t_semaforo* clave_nueva = malloc(sizeof(t_semaforo));
 				clave_nueva->valor=1;
 				clave_nueva->cola_bloqueados=list_create();
+				char* clave_list = string_duplicate(clave);
 				pthread_mutex_lock(&mx_claves);
 				dictionary_put(claves,clave,clave_nueva);
+				list_add(show_claves,clave_list);
 				pthread_mutex_unlock(&mx_claves);
 			}
 			respuesta=SIGNAL_EXITOSO;
