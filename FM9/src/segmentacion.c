@@ -360,23 +360,23 @@ void *consolaThreadSeg(void *vargp)
 			// Busco la tabla de segmentos del proceso
 			t_list* tabla_segmentos = buscarTablaSeg(pid);
 			if (tabla_segmentos == NULL) {
-				log_info(log_FM9, "PID %i no está cargado en memoria", pid);
+				printf("PID %i no está cargado en memoria\n", pid);
 				continue;
 			} else {
-				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
-				log_info(log_FM9, "N° Segmento, Linea Base, Límite", pid);
-				log_info(log_FM9, "=========================", pid);
+				printf("Estructuras del process id: %i\n", pid);
+				printf("N° Segmento, Linea Base, Límite\n");
+				printf("=========================\n");
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
 				void print_segmento(fila_tabla_seg *p) {
-					log_info(log_FM9, "%i, %i, %i", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
+					printf("%i, %i, %i\n", p->id_segmento, p->base_segmento, p->limite_segmento*config_FM9.max_linea);
 				}
 				list_iterate(tabla_segmentos, (void*) print_segmento);
-				log_info(log_FM9, "=========================", pid);
-				log_info(log_FM9, "Memoria del process id: %i", pid);
+				printf("=========================\n");
+				printf("Memoria del process id: %i\n", pid);
 				void _print_memoria_segmento(fila_tabla_seg *segmento_archivo) {
-					log_info(log_FM9, "=");
+					printf("=");
 					for (int count = segmento_archivo->base_segmento; count < (segmento_archivo->base_segmento+segmento_archivo->limite_segmento); ++count) {
-						log_info(log_FM9, "Posición %i: %s", count, memoria[count]);
+						printf("Posición %i: %s\n", count, memoria[count]);
 					}
 				}
 				list_iterate(tabla_segmentos, (void*) _print_memoria_segmento);

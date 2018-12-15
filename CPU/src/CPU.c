@@ -4,7 +4,7 @@ int main(){
 
 	//Creo un log para el CPU
 
-	log_CPU = log_create("CPU.log","CPU",true,LOG_LEVEL_INFO);
+	log_CPU = log_create("CPU.log","CPU",false,LOG_LEVEL_INFO);
 
 	file_CPU=config_create("src/CONFIG_CPU.cfg");
 

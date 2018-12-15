@@ -24,7 +24,7 @@
 
 int main(){
 	//Creo un Log para MDJ (FileSystem)
-    log_MDJ = log_create("MDF.log","MDJ",true,LOG_LEVEL_INFO);
+    log_MDJ = log_create("MDF.log","MDJ",false,LOG_LEVEL_INFO);
 
 	//Levanto archivo de configuracion del MDJ (FileSystem)
 
@@ -133,7 +133,7 @@ void determinarOperacion(int operacion,int fd) {
 	case VALIDAR_ARCHIVO:
 	{
 		peticion_validar* validacion = recibirYDeserializar(fd,operacion);
-		printf("Peticion de validar recibida con el path: %s\n",validacion->path);
+		//printf("Peticion de validar recibida con el path: %s\n",validacion->path);
 		int validar=VALIDAR_OK;
 		char *pathCompleto = archivo_path(validacion->path);
 		if (validarArchivoConfig(pathCompleto)<0){
@@ -172,7 +172,7 @@ void determinarOperacion(int operacion,int fd) {
 	case OBTENER_DATOS:
 	{
 		peticion_obtener* obtener = recibirYDeserializar(fd,operacion);
-		printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",obtener->path,obtener->offset,obtener->size);
+		//printf("Peticion de obtener..\n\tpath: %s\toffset: %d\tsize: %d\n",obtener->path,obtener->offset,obtener->size);
 		crearStringDeArchivoConBloques(obtener);
 		usleep(config_MDJ.time_delay*1000);
 		break;
@@ -569,7 +569,7 @@ int string_archivo(char *pathfile,char **contenido_archivo){
 }
 
 void crearStringDeArchivoConBloques(peticion_obtener *obtener){
-	printf("%d\tsize",obtener->size);
+	//printf("%d\tsize",obtener->size);
 	char *archivoPathCompleto = archivo_path(obtener->path);
 	t_config *archivo_MetaData;
 	archivo_MetaData=config_create(archivoPathCompleto);
@@ -597,19 +597,19 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 
 		int f = open(pathBloqueCompleto, O_RDONLY);
 		if (f < 0){
-			printf("no se encontro el archivo %s.\n",pathBloqueCompleto );
+			//printf("no se encontro el archivo %s.\n",pathBloqueCompleto );
 		}
 
 		if(i==metadataArchivo.tamanio){
 
 			if (fstat (f,&statbuf) < 0){
-				printf ("fstat error");
+				//printf ("fstat error");
 			}
 			sizeArchivoBloque=statbuf.st_size - 1;
 		}
 		if ((src = mmap (0, sizeArchivoBloque, PROT_READ, MAP_SHARED, f, 0))== (caddr_t) -1)
 		{
-			printf ("mmap error for input");
+			//printf ("mmap error for input");
 		}
 		if(i==0){
 			strcpy(contenidoArchivo,src);
@@ -629,7 +629,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		sub=(char*)malloc(obtener->size+1);
 		memcpy(sub, contenidoArchivo+desplazamiento_archivo, obtener->size);
 		sub[obtener->size] = '\0';
-		printf("Enviando: %s\n",sub);
+		//printf("Enviando: %s\n",sub);
 		serializarYEnviarString(DAM_fd, sub);
 		free(sub);
 	}
@@ -641,7 +641,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		//=substring(contenidoArchivo,desplazamiento_archivo, copiarHasta+1);
 		memcpy(sub3, contenidoArchivo+desplazamiento_archivo,copiarHasta);
 		sub3[copiarHasta] = '\0';
-		printf("Enviando: %s\n",sub3);
+		//printf("Enviando: %s\n",sub3);
 		serializarYEnviarString(DAM_fd, sub3);
 		usleep(config_MDJ.time_delay*1000);
 		free(sub3);
@@ -736,13 +736,13 @@ int todos_bloques_libre(char *path_archivo){
 		}
 		int numeroBloque;
 		sscanf(metadataArchivo.bloques[i], "%d", &numeroBloque);
-		printf("\nThe value of x : %d", numeroBloque);
+		//printf("\nThe value of x : %d", numeroBloque);
 		if (bitarray_test_bit(bitarray, numeroBloque)==1){
-			printf("bloque ocupado: %d",numeroBloque);
+			//printf("bloque ocupado: %d",numeroBloque);
 			return -1;
 		}
 		else {
-			printf("bloque libre: %d",numeroBloque);
+			//printf("bloque libre: %d",numeroBloque);
 		}
 
 	}
@@ -803,7 +803,7 @@ char *substring(char *string, int position, int length)
 
    if (pointer == NULL)
    {
-      printf("Unable to allocate memory.\n");
+      //printf("Unable to allocate memory.\n");
       exit(1);
    }
 
@@ -835,21 +835,21 @@ void crearBitmap(){
 	struct stat mystat;
 	//puts(bitmap);
 	if (fstat(bitmap, &mystat) < 0) {
-	    printf("Error al establecer fstat\n");
+	    //printf("Error al establecer fstat\n");
 	    close(bitmap);
 	}
     char *bmap ;
 	bmap = mmap(NULL, mystat.st_size, PROT_WRITE | PROT_READ, MAP_SHARED, bitmap, 0);
 
 	if (bmap == MAP_FAILED) {
-			printf("Error al mapear a memoria: %s\n", strerror(errno));
+			//printf("Error al mapear a memoria: %s\n", strerror(errno));
 
 	}
 
 	bitarray = bitarray_create_with_mode(bmap, config_MetaData.cantidad_bloques/8, MSB_FIRST);
 	size_t	cantidadDebits= bitarray_get_max_bit (bitarray);
 	for (int i=0;i<cantidadDebits;i++){
-		printf("posicion %d valor %d:\n",i,bitarray_test_bit(bitarray,i));
+		//printf("posicion %d valor %d:\n",i,bitarray_test_bit(bitarray,i));
 	}
 
 
@@ -860,9 +860,9 @@ void crearDirectorio(char *path){
 	char **arr = NULL;
 	arr = string_split(path, "/");
 	int c=sizeof(arr)+1;
-	printf("cantidad de parametros:%d\n", c);
+	//printf("cantidad de parametros:%d\n", c);
     if (c==1){
-    	printf( "no hay directorio para crear %s\n",arr[0] );
+    	//printf( "no hay directorio para crear %s\n",arr[0] );
     }
     else{
     	for (i = 0; i < c; i++){
@@ -872,16 +872,16 @@ void crearDirectorio(char *path){
     	    	    if (arr[i+1]==NULL){
     	    	    	break;
     	    	    }
-    	    	    printf( "el directorio no esta creado %s\n",arr[i] );
+    	    	    //printf( "el directorio no esta creado %s\n",arr[i] );
     	    		if (mkdir(full_directorio, S_IRWXU) != 0) {
-    	    	        if (errno != EEXIST)
-    	    	        	printf( "no se pudo crear el directorio %s\n",full_directorio);
+    	    	        //if (errno != EEXIST)
+    	    	        	//printf( "no se pudo crear el directorio %s\n",full_directorio);
     	    	    }
     	    	}
-    	    	else if( info.st_mode & S_IFDIR )
-    	    	    printf( "%s is a directory\n", arr[i] );
-    	    	else
-    	    	    printf( "%s es un archivo \n", arr[i] );
+    	    	//else if( info.st_mode & S_IFDIR )
+    	    	    //printf( "%s is a directory\n", arr[i] );
+    	    	//else
+    	    	    //printf( "%s es un archivo \n", arr[i] );
    	    }
     }
 }
@@ -945,8 +945,8 @@ void crearDirectoriofileSystem(char *directorio){
 	strcpy(direccionDirectorio,config_MDJ.mount_point);
 	string_append(&direccionDirectorio,directorio);
 	if (mkdir(direccionDirectorio, S_IRWXU) != 0) {
-	    if (errno != EEXIST)
-	   	        	printf( "No se creo el directorio por q ya existe%s\n",direccionDirectorio);
+	    //if (errno != EEXIST)
+	   	        	//printf( "No se creo el directorio por q ya existe%s\n",direccionDirectorio);
 	}
 }
 

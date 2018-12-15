@@ -2,7 +2,7 @@
 
 int main(){
 
-	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
+	log_DAM = log_create("DAM.log","DAM",false,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_DAM.cfg";
@@ -335,7 +335,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 				desplazamiento_archivo=offset*config_DAM.transfer_size;
 				memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
 				mandarString[sizeEnviar] = '\0';
-				printf("Enviando a MDJ size: %i, linea: %s\n",sizeEnviar, mandarString);
+				//printf("Enviando a MDJ size: %i, linea: %s\n",sizeEnviar, mandarString);
 				peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
 				serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
 				offset++;
@@ -396,7 +396,7 @@ char* obtenerArchivoMDJ(char *path) {
 		char *buffer = malloc(sizeof(char) * (config_DAM.transfer_size));
 		while(1) {
 			buffer = recibirYDeserializarString(MDJ_fd);
-			printf("Recibi: %s\n",buffer);
+			//printf("Recibi: %s\n",buffer);
 			break;
 		}
 		if(offset_enviar==0){
@@ -413,7 +413,7 @@ char* obtenerArchivoMDJ(char *path) {
 
 		free(buffer);
 	}
-	puts(enviar);
+	//puts(enviar);
 	return enviar;
 }
 

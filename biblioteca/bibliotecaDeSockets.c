@@ -144,7 +144,6 @@ void serializarYEnviar(int socket, int tipoDePaquete, void* package){
 		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->pid);
 		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->id_segmento);
 		serializarYEnviarEntero(socket,&((cargar_en_memoria*)package)->offset);
-		printf("serializando y enviando %s\n",((cargar_en_memoria*)package)->linea);
 		serializarYEnviarString(socket,((cargar_en_memoria*)package)->linea);
 		return;
 	case INICIAR_MEMORIA_PID:

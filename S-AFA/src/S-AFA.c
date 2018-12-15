@@ -6,7 +6,7 @@ int main(){
 
 	int flag_consola=0;
 
-	log_SAFA=log_create("log_SAFA.log","SAFA",true,LOG_LEVEL_INFO);
+	log_SAFA=log_create("log_SAFA.log","SAFA",false,LOG_LEVEL_INFO);
 
 	CPU_libres=list_create();
 

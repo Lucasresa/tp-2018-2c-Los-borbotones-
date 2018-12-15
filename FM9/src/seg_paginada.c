@@ -433,25 +433,25 @@ void *consolaThreadSP(void *vargp)
 			// Busco la tabla de segmentos del proceso
 			fila_lista_procesos_sp* proceso = buscarProcesoSP(pid);
 			if (proceso == NULL) {
-				log_info(log_FM9, "PID %i no está cargado en memoria", pid);
+				printf("PID %i no está cargado en memoria\n", pid);
 				continue;
 			} else {
-				log_info(log_FM9, "Estructuras del process id: %i\n", pid);
+				printf("Estructuras del process id: %i\n\n", pid);
 				// Recorro la tabla de segmentos, imprimiendo cada segmento
 				void print_pagina(fila_tabla_paginas_sp *p) {
-					log_info(log_FM9, "%i, %i", p->pagina, p->base_fisica);
+					printf("%i, %i\n", p->pagina, p->base_fisica);
 				}
 				void print_segmento(fila_tabla_segmentos_sp *p) {
-					log_info(log_FM9, "N° Segmento: %i, Límite: %i", p->id_segmento, p->tamanio*config_FM9.max_linea);
-					log_info(log_FM9, "Tabla de páginas del segmento:", pid);
-					log_info(log_FM9, "=========================", pid);
-					log_info(log_FM9, "N° pagina, Linea Base", pid);
-					log_info(log_FM9, "=========================", pid);
+					printf("N° Segmento: %i, Límite: %i\n", p->id_segmento, p->tamanio*config_FM9.max_linea);
+					printf("Tabla de páginas del segmento:\n");
+					printf("=========================\n");
+					printf("N° pagina, Linea Base\n");
+					printf("=========================\n");
 					list_iterate(p->tabla_de_paginas, (void*) print_pagina);
-					log_info(log_FM9, "=========================", pid);
+					printf("=========================\n");
 				}
 				list_iterate(proceso->tabla_de_segmentos, (void*) print_segmento);
-				log_info(log_FM9, "CONTENIDO MEMORIA:");
+				printf("CONTENIDO MEMORIA:\n");
 
 				// Imprimo el contenido de la memoria
 				int counter = 0;
@@ -460,7 +460,7 @@ void *consolaThreadSP(void *vargp)
 				void print_pagina_contenido(fila_tabla_paginas_sp *p) {
 					for (int i = 0; i < cant_lineas_pag; ++i) {
 						if (counter<limite_segmento) {
-							log_info(log_FM9, "Posición %i: %s", p->base_fisica+i, memoria[p->base_fisica+i]);
+							printf("Posición %i: %s\n", p->base_fisica+i, memoria[p->base_fisica+i]);
 
 						} else {
 							return;
@@ -470,8 +470,8 @@ void *consolaThreadSP(void *vargp)
 					}
 				}
 				void _print_memoria_segmento(fila_tabla_segmentos_sp *segmento) {
-					log_info(log_FM9, "=");
-					log_info(log_FM9, "Segmento: %i, lineas: %i", segmento->id_segmento, segmento->tamanio);
+					printf("=\n");
+					printf("Segmento: %i, lineas: %i\n", segmento->id_segmento, segmento->tamanio);
 					counter = 0;
 					limite_segmento = segmento->tamanio;
 					list_iterate(segmento->tabla_de_paginas, (void*) print_pagina_contenido);

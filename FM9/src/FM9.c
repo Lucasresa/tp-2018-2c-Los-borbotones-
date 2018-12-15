@@ -2,7 +2,7 @@
 
 int main(){
 
-	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
+	log_FM9 = log_create("FM9.log","FM9",false,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_FM9.cfg";
