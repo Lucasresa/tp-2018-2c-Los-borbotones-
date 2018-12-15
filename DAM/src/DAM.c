@@ -88,8 +88,10 @@ void* recibirPeticion(int socket, void* argumentos) {
 	header = recibirYDeserializarEntero(socket);
 
 	if(header==NULL){
-		log_info(log_DAM,"Se perdio la conexion con el socket %d",socket);
+		log_error(log_DAM,"Se perdio la conexion con el CPU %d",socket);
 		close(socket);
+		FD_CLR(socket, &set_fd);
+		return 0;
 	}
 
 

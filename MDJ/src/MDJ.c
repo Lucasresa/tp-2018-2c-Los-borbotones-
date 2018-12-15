@@ -72,12 +72,12 @@ int main(){
 
 	cerrado_cosola=0;
 	cerrado_conexion=0;
-	while(1){
-		if(cerrarMDJ==1)
-			break;
-	}
+//	while(1){
+//		if(cerrarMDJ==1)
+//			break;
+//	}
 	free(archivo_a_guardar);
-	pthread_detach(hilo_consola);
+	pthread_join(hilo_consola,NULL);
 	pthread_detach(hilo_conexion);
 
 }
