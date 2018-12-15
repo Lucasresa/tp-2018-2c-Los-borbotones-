@@ -52,8 +52,6 @@ int main(){
 
 	log_info(log_CPU,"Conexion exitosa con FM9");
 
-	int test;
-
 	while(1){
 		log_info(log_CPU,"Recibo rafaga");
 		if(recv(SAFA_fd,&rafaga_recibida,sizeof(int),0)<=0){
@@ -181,7 +179,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 				escritura->id_segmento=archivo->acceso;
 				escritura->linea=string_duplicate(linea_parseada.argumentos.asignar.valor);
-				escritura->offset=linea_parseada.argumentos.asignar.linea;
+				escritura->offset=linea_parseada.argumentos.asignar.linea-1;
 				escritura->pid=dtb.id;
 
 				log_info(log_CPU,"Se envio la informacion necesaria a FM9 para la asignacion");
