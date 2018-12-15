@@ -135,4 +135,5 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 int creacionDeArchivoBitmap(char *path,int cantidad);
 void crearEstructura();
 void crearDirectoriofileSystem(char *directorio);
+void liberar_actualizar();
 #endif /* MDJ_H_ */
