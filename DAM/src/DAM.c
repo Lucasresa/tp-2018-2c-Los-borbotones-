@@ -254,7 +254,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 	    char* buffer;
 	    char *file = (char*) malloc(message_len);
 	    strcpy(file,"");
-	    log_info(log_DAM,"Obteniendo datos para el flush de fm9:",archivo);
+	    log_info(log_DAM,"Obteniendo datos para el flush");
 		while(true) {
 			// Recibo una línea
 			buffer = recibirYDeserializarString(FM9_fd);
@@ -262,18 +262,16 @@ void* recibirPeticion(int socket, void* argumentos) {
 				break;
 			} else {
 				// Concateno la línea del fm9 con las líneas anteriores...
-				log_info(log_DAM,"Concateno string %s",buffer);
 				message_len += strlen(buffer)+1; // El +1 es para el \n
-				log_info(log_DAM,"Asique paso a reservar un tamaño de %zu",message_len);
 				file = (char*) realloc(file, message_len);
 				strncat(file, buffer, message_len);
 				message_len++;
 				strncat(file, "\n", message_len);
-				log_info(log_DAM,"Mi string actual es %s",file);
+				log_info(log_DAM,"String a guardar en mdj: %s",file);
 			}
 		}
 
-		//Enviar el string buffer al MDJ
+		//Enviar el string file al MDJ
 		int respuesta_safa;
 		if(validarArchivoMDJ(MDJ_fd,archivo)>0){
 			log_info(log_DAM,"Validacion exitosa, el archivo existe en MDJ");
@@ -295,10 +293,9 @@ void* recibirPeticion(int socket, void* argumentos) {
 				desplazamiento_archivo=offset*config_DAM.transfer_size;
 				memcpy(mandarString, file+desplazamiento_archivo, sizeEnviar);
 				mandarString[sizeEnviar] = '\0';
-				printf("Enviando: %s\n",mandarString);
+				printf("Enviando a MDJ size: %i, linea: %s\n",sizeEnviar, mandarString);
 				peticion_guardar guardado = {.path=archivo,.offset=offset,.size=config_DAM.transfer_size,.buffer=mandarString};
 				serializarYEnviar(MDJ_fd,GUARDAR_DATOS,&guardado);
-				log_info(log_DAM,"Se envio una peticion de guardado al MDJ");
 				offset++;
 			}
 			//terminacion de guardado
