@@ -275,7 +275,6 @@ t_DTB* buscarDTBEnCola(t_list* cola, int id, int operacion){
 		if(dtb->id==id){
 			list_clean(cola_copy);
 			list_destroy(cola_copy);
-			log_info(log_SAFA,"Se encontro el dtb con esa id");
 			if(operacion==FINALIZAR){
 				pthread_mutex_lock(&mx_colas);
 				list_remove(cola,i);
@@ -415,19 +414,19 @@ float getTiempoDeRespuestaPromedioSistema(){
 void actualizarMetricasDTBNew(){
 
 	int i, total_new=list_size(cola_new);
-	int id_dtb;
+	t_DTB* dtb;
 
 	t_metricas* metrica;
 
 	for(i=0;i<total_new;i++){
-		id_dtb=((t_DTB*)list_get(cola_new,i))->id;
+		pthread_mutex_lock(&mx_colas);
+		dtb=list_get(cola_new,i);
+		pthread_mutex_unlock(&mx_colas);
 
-		log_info(log_SAFA,"Actualizando metrica de espera en NEW para DTB %d",id_dtb);
-
-		metrica=buscarMetricasDTB(id_dtb);
-
-		metrica->sent_NEW++;
-
+		if(dtb->f_inicializacion==1){
+			metrica=buscarMetricasDTB(dtb->id);
+			metrica->sent_NEW++;
+		}
 	}
 
 }
@@ -515,10 +514,6 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dtb->archivos=list_create();
 	cont_id++;
 
-	pthread_mutex_lock(&mx_colas);
-	list_add(cola_new,dtb);
-	pthread_mutex_unlock(&mx_colas);
-
 	//Cargo el semaforo perteneciente al dtb
 	pthread_mutex_t* sem=malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(sem,NULL);
@@ -528,12 +523,20 @@ void agregarDTBDummyANew(char*path,t_DTB*dtb){
 	dictionary_put(semaforos_dtb,string_itoa(dtb->id),sem);
 	pthread_mutex_unlock(&mx_semaforos);
 
-	log_info(log_SAFA,"Agregado el DTB_dummy %d a la cola de new",dtb->id);
+	log_info(log_SAFA,"Agregado el DTB_dummy %d a Ready",dtb->id);
 
-	//Le digo al PLP que se ejecute y que decida si hay que enviar algun proceso a Ready
-	pthread_mutex_lock(&mx_PLP);
-	ejecutarPLP();
-	pthread_mutex_unlock(&mx_PLP);
+	pthread_mutex_lock(&mx_colas);
+	if(config_SAFA.algoritmo==IOBF)
+		list_add(cola_ready_IOBF,dtb);
+	else
+		list_add(cola_ready,dtb);
+	pthread_mutex_unlock(&mx_colas);
+
+
+	//Le digo al PCP que se ejecute y que decida si Puede inicializar el dummy
+	pthread_mutex_lock(&mx_PCP);
+	ejecutarPCP(EJECUTAR_PROCESO,NULL);
+	pthread_mutex_unlock(&mx_PCP);
 }
 
 
@@ -657,7 +660,7 @@ void ejecutarPLP(){
 			}
 		}
 	}else if(list_size(cola_new)==0){
-		log_warning(log_SAFA,"La cola de new esta vacia");
+		log_warning(log_SAFA,"La cola de new esta vacia, no hay proceso para pasar a ready");
 	}else{
 		t_DTB* init_dummy;
 
@@ -707,7 +710,7 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 	case EJECUTAR_PROCESO:
 		//Si no hay CPUs libres entonces no hace nada
 		if(list_size(CPU_libres)==0){
-				log_warning(log_SAFA,"Todas las CPU estan ejecutando");
+				log_warning(log_SAFA,"No hay CPUs Libres");
 		}
 		else{
 			switch(config_SAFA.algoritmo){
@@ -823,8 +826,6 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 		dictionary_put(cola_exec,string_itoa(id_dtb),proceso);
 		pthread_mutex_unlock(&mx_colas);
 
-		log_info(log_SAFA,"Enviando info del quantum al CPU %d...",CPU_vacio);
-
 		send(CPU_vacio,&config_SAFA.quantum,sizeof(int),0);
 
 		serializarYEnviarDTB(CPU_vacio,buffer,*proceso);
@@ -836,7 +837,7 @@ void ejecutarProceso(t_DTB* proceso,int CPU_vacio){
 void algoritmo_FIFO_RR(t_DTB* dtb){
 	//Verifico que haya procesos en la cola de Ready normal
 	if(list_size(cola_ready)==0){
-		log_warning(log_SAFA,"Cola de ready vacia, el CPU no puede ejecutar nada");
+		log_warning(log_SAFA,"Cola de Ready vacia, el CPU no puede ejecutar nada");
 	}else{
 		pthread_mutex_lock(&mx_colas);
 		dtb=list_remove(cola_ready,0);

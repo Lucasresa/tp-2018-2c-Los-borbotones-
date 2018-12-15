@@ -609,8 +609,8 @@ void escucharSAFA(int* fd){
 
 			log_info(log_DAM,"Avisando a memoria para que libere las estructuras del dtb");
 
-			protocolo=CERRAR_PID;
-			serializarYEnviarEntero(FM9_fd,&protocolo);
+			*protocolo=CERRAR_PID;
+			serializarYEnviarEntero(FM9_fd,protocolo);
 			serializarYEnviarEntero(FM9_fd,&id_dtb);
 
 			//Avisar a FM9 que tiene que liberar el espacio ocupado por el proceso
