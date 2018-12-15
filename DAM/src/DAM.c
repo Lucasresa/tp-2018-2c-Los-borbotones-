@@ -41,7 +41,7 @@ int main(){
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
-		//exit(1);
+		exit(1);
 	}
 	else{
 		log_info(log_DAM,"Conexion con MDJ establecida");
@@ -58,7 +58,7 @@ int main(){
 	//El DAM se conecta con SAFA
 	if(conectar(&SAFA_fd,config_DAM.puerto_safa,config_DAM.ip_safa)!=0){
 		log_error(log_DAM,"Error al conectarse con SAFA");
-		//exit(1);
+		exit(1);
 	} else {
 		log_info(log_DAM, "Conexión con SAFA establecido");
 		pthread_t hilo_SAFA;
@@ -67,7 +67,7 @@ int main(){
 		pthread_detach(hilo_SAFA);
 	}
 
-	testeoFM9();
+	//testeoFM9();
 
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
