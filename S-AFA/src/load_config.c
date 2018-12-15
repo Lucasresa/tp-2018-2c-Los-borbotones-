@@ -22,6 +22,7 @@ void iniciar_semaforos(){
 	pthread_mutex_init(&mx_metricas,NULL);
 	pthread_mutex_init(&File_config,NULL);
 	pthread_mutex_init(&mx_semaforos,NULL);
+	pthread_mutex_init(&sinc_CPUs,NULL);
 }
 
 void load_config(void){

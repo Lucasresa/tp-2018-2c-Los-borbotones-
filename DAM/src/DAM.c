@@ -113,6 +113,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			if (error_holder != 0) {
 				pthread_mutex_lock(&mutex_SAFA);
 				serializarYEnviarEntero(SAFA_fd,&error_holder);
+				serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);
 				pthread_mutex_unlock(&mutex_SAFA);
 				return (void*)-1;
 			}
@@ -198,6 +199,7 @@ void* recibirPeticion(int socket, void* argumentos) {
 			if (error_holder != 0) {
 				pthread_mutex_lock(&mutex_SAFA);
 				serializarYEnviarEntero(SAFA_fd,&error_holder);
+				serializarYEnviarEntero(SAFA_fd,&dtb_id);
 				pthread_mutex_unlock(&mutex_SAFA);
 				return (void*)-1;
 			}
@@ -426,7 +428,7 @@ int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
 	log_info(log_DAM,"Espero respuesta del FM9...");
 	int header = *recibirYDeserializarEntero(FM9_fd);
 	if (header == ERROR_FM9_SIN_ESPACIO) {
-		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+		log_error(log_DAM,"FM9 informó no tener suficiente espacio.");
 		*error_holder = ERROR_FM9_SIN_ESPACIO;
 		return -1;
 	}
@@ -448,7 +450,7 @@ int cargarArchivoFM9(int pid, char* buffer, int* error_holder) {
         linea = strtok(NULL, "\n");
     	int header = *recibirYDeserializarEntero(FM9_fd);
     	if (header == ERROR_FM9_SIN_ESPACIO) {
-    		log_info(log_DAM,"FM9 informó no tener suficiente espacio.");
+    		log_error(log_DAM,"FM9 informó no tener suficiente espacio.");
     		*error_holder = ERROR_FM9_SIN_ESPACIO;
     		return -1;
     	}

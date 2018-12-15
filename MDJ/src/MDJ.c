@@ -186,7 +186,7 @@ void determinarOperacion(int operacion,int fd) {
 		usleep(config_MDJ.time_delay*1000);
 		break;
 	}
-	case BORRAR_DATOS:
+	case BORRAR_ARCHIVO:
 	{   peticion_borrar* borrar = recibirYDeserializar(fd,operacion);
 		log_info(log_MDJ,"Peticion de Borrado de DAM para:",borrar->path);
 		borrar_archivo(borrar->path);
@@ -307,10 +307,12 @@ int guardarDatos(peticion_guardar *guardado) {
     		  		config_set_value(archivo_MetaData, "TAMANIO",actualizarTamanio);
     		  		config_save(archivo_MetaData);
     		  		config_destroy(archivo_MetaData);
+    		  		liberar_actualizar();
     		  		return 0;
     		  	}
     		  	respuesta=GUARDAR_FALLO;
     		  	serializarYEnviarEntero(DAM_fd,&respuesta);
+    		  	liberar_actualizar();
     	    	return -1;
     	   }
     	  else{
@@ -322,6 +324,10 @@ int guardarDatos(peticion_guardar *guardado) {
     return 0;
 }
 
+void liberar_actualizar(){
+	free(archivo_a_guardar->strig_archivo);
+	archivo_a_guardar->ocupado_archivo_a_guardar=0;
+}
 int hayEspacioParaGuardar(){
 	int cantidadDeBloquesDelArchivo = cantidadDeBloques (archivo_a_guardar->bloques);
 	int bloquesLibresCantidad =  cantidadDeBloquesLibres();
@@ -610,6 +616,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		}
 		else
 		string_append(&contenidoArchivo,src);
+		munmap(src,sizeArchivoBloque);
 		free(pathBloqueCompleto);
 		close(f);
 
