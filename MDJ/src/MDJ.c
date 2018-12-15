@@ -616,7 +616,7 @@ void crearStringDeArchivoConBloques(peticion_obtener *obtener){
 		}
 		else
 		string_append(&contenidoArchivo,src);
-		munmap(src);
+		munmap(src,sizeArchivoBloque);
 		free(pathBloqueCompleto);
 		close(f);
 
