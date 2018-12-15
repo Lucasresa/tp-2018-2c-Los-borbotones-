@@ -111,10 +111,6 @@ void* recibirPeticion(int socket, void* argumentos) {
 			log_info(log_DAM,"Cargo archivo al FM9");
 			cargarScriptFM9(dummy->id_dtb, buffer, &error_holder);
 			if (error_holder != 0) {
-				int message = CERRAR_PID;
-				log_info(log_DAM,"Envío al FM9 petición de cerrar PID %i.", dummy->id_dtb);
-				serializarYEnviarEntero(FM9_fd,&message);
-				serializarYEnviarEntero(FM9_fd,&dummy->id_dtb);
 				pthread_mutex_lock(&mutex_SAFA);
 				serializarYEnviarEntero(SAFA_fd,&error_holder);
 				serializarYEnviarEntero(SAFA_fd,&dummy->id_dtb);

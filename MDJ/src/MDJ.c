@@ -401,7 +401,7 @@ void asignarleBloquesNuevosA(t_config_archivo_a_guardar *archivo_a_guardar,int b
 void consola_MDJ(){
 	log_info(log_MDJ,"Consola en linea");
 	char * linea;
-	dir_actual="/";
+	dir_actual=string_duplicate(config_MDJ.mount_point);
 	printf("\n");
 	chdir(dir_actual);
 	//string_append(&dir_actual,"$");
@@ -473,7 +473,7 @@ void cmd_cat(char *linea){
 	else{
 		char *content;
 		if ((string_archivo(parametros[1],&content))>0){
-			//puts(content);
+			puts(content);
 			free(content);
 		}
 	}
