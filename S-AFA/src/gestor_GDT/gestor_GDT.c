@@ -357,9 +357,7 @@ void actualizarTiempoDeRespuestaDTB(){
 	for(i=0;i<dtb_totales;i++){
 		metrica=list_get(info_metricas,i);
 
-		pthread_mutex_lock(&mx_colas);
 		estado = buscarDTB(&dtb,metrica->id_dtb,STATUS);
-		pthread_mutex_unlock(&mx_colas);
 
 		if(!string_equals_ignore_case(estado,"new")&&!string_equals_ignore_case(estado,"finalizado")){
 			metrica->tiempo_respuesta++;
@@ -423,9 +421,7 @@ void actualizarMetricasDTBNew(){
 	t_metricas* metrica;
 
 	for(i=0;i<total_new;i++){
-		pthread_mutex_lock(&mx_colas);
 		dtb=list_get(cola_new,i);
-		pthread_mutex_unlock(&mx_colas);
 
 		if(dtb->f_inicializacion==1){
 			metrica=buscarMetricasDTB(dtb->id);
@@ -549,10 +545,10 @@ void ejecutarPLP(){
 	//Si el grado de multiprogramacion lo permite, entonces le aviso al PCP para que desbloquee el dummy
 	if(multiprogramacion_actual==0){
 		log_warning(log_SAFA,"El grado de multiprogramacion no permite agregar mas procesos a ready");
-
+		pthread_mutex_lock(&File_config);
+		pthread_mutex_lock(&mx_colas);
 		int total_procesos_memoria = getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+getCantidadProcesosInicializados(cola_ready)+
 				getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR);
-
 		if(total_procesos_memoria>config_SAFA.multiprog){
 
 			//Tengo que pasar los procesos que esten de mas en Ready a la cola de NEW
@@ -662,6 +658,9 @@ void ejecutarPLP(){
 				}
 				break;
 			}
+			pthread_mutex_unlock(&mx_colas);
+			pthread_mutex_unlock(&File_config);
+
 		}
 	}else if(list_size(cola_new)==0){
 		log_warning(log_SAFA,"La cola de new esta vacia, no hay proceso para pasar a ready");
@@ -670,6 +669,7 @@ void ejecutarPLP(){
 
 		for(;list_size(cola_new)!=0&&multiprogramacion_actual!=0;){
 
+			pthread_mutex_lock(&File_config);
 			pthread_mutex_lock(&mx_colas);
 			init_dummy=list_remove(cola_new,0);
 
@@ -689,6 +689,7 @@ void ejecutarPLP(){
 				list_add(cola_ready,init_dummy);
 
 			pthread_mutex_unlock(&mx_colas);
+			pthread_mutex_unlock(&File_config);
 
 			pthread_mutex_lock(&mx_PCP);
 			ejecutarPCP(EJECUTAR_PROCESO,NULL);
@@ -709,14 +710,16 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 
 	pthread_mutex_lock(&File_config);
-	pthread_mutex_lock(&mx_metricas);
 	switch(operacion){
 	case EJECUTAR_PROCESO:
 		//Si no hay CPUs libres entonces no hace nada
+		pthread_mutex_lock(&mx_CPUs);
 		if(list_size(CPU_libres)==0){
+			pthread_mutex_unlock(&mx_CPUs);
 				log_warning(log_SAFA,"No hay CPUs Libres");
 		}
 		else{
+			pthread_mutex_unlock(&mx_CPUs);
 			switch(config_SAFA.algoritmo){
 				case VRR:
 					algoritmo_VRR(dtb);
@@ -753,7 +756,9 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		metrica_dtb->sent_NEW=0;
 		metrica_dtb->tiempo_respuesta=0;
 		//Agrego esa informacion a esta lista auxiliar
+		pthread_mutex_lock(&mx_metricas);
 		list_add(info_metricas,metrica_dtb);
+		pthread_mutex_unlock(&mx_metricas);
 
 		list_add(cola_new,dtb);
 		pthread_mutex_unlock(&mx_colas);
@@ -800,7 +805,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 		log_info(log_SAFA,"El DTB %d se quedo sin quantum",dtb->id);
 
 		dtb->quantum_sobrante=0;
-
 		pthread_mutex_lock(&mx_colas);
 		list_add(cola_ready,dtb);
 		pthread_mutex_unlock(&mx_colas);
@@ -813,8 +817,6 @@ void ejecutarPCP(int operacion, t_DTB* dtb){
 
 		break;
 	}
-
-	pthread_mutex_unlock(&mx_metricas);
 	pthread_mutex_unlock(&File_config);
 	usleep(config_SAFA.retardo*1000);
 

@@ -12,4 +12,6 @@ void atenderCPU(int*);
 int wait_sem(t_semaforo*, int, char*);
 int signal_sem(t_semaforo*,char*);
 
+int dtb_esperando=0;
+
 #endif /* S_AFA_H_ */

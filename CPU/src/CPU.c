@@ -107,11 +107,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 	 * Por cada linea que se ejecuta debo decrementar la rafaga_actual, cuando esta llegue a 0 hay que informar a SAFA
 	*/
 
-	int interrupcion,uso_DAM=0,isComent;
+	int interrupcion,uso_DAM=0,isComent,is_wait;
 
 	direccion_logica* direccion=malloc(sizeof(direccion_logica));
 
-	int protocolo, posicion_file, tamanio_string;
+	int protocolo, posicion_file;
 
 	char* linea_fm9;
 
@@ -121,7 +121,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 
 	do{
-
+		is_wait=0;
 		interrupcion=0;
 		isComent=0;
 		direccion->pid=dtb.id;
@@ -241,10 +241,12 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 			int* resultado_wait=recibirYDeserializarEntero(SAFA);
 			if(*resultado_wait!=WAIT_EXITOSO){
 				log_warning(log_CPU,"El recurso esta bloqueado");
+				notificarSAFA(SAFA,BLOQUEAR_PROCESO,dtb);
 				interrupcion=1;
 			}else{
 				log_info(log_CPU,"El recurso se bloqueo/creo con exito");
 			}
+			is_wait=1;
 			free(resultado_wait);
 			break;
 		}
@@ -411,6 +413,11 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		if(!isComent){
 		if(rafaga_recibida!=0){
+
+			if((!uso_DAM&&!interrupcion)||is_wait)
+				notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
+			}
+
 			if(rafaga_actual==0 && interrupcion==0){
 				log_warning(log_CPU,"El DTB %d se quedo sin quantum",dtb.id);
 				notificarSAFA(SAFA,FIN_QUANTUM,dtb);
@@ -422,9 +429,6 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 
 		log_warning(log_CPU, "Instruccion ejecutada, quantum restante = %d",dtb.quantum_sobrante);
 
-		if(!uso_DAM&&!interrupcion)
-			notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
-		}
 		usleep(config_CPU.retardo*1000);
 	}while(!interrupcion);
 

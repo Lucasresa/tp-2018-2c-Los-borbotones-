@@ -31,14 +31,6 @@ int main(){
 
 	multiprogramacion_actual=config_SAFA.multiprog;
 
-	//Hilo para actualizar achivo de configuracion del S-AFA
-
-	pthread_t hilo_inotify;
-
-	pthread_create(&hilo_inotify,NULL,(void*)actualizar_file_config,NULL);
-
-	pthread_detach(hilo_inotify);
-
 	//-------------------------------------------------------------------------------------------------------
 
 	//Aca habria que hacer la parte de la conexion con los demas procesos usando sockets. (Usando la shared library de sockets
@@ -98,7 +90,7 @@ int main(){
 
 	//-------------------------------------------------------------------------------------------------------
 
-	//Tiro un hilo para ejecutar la consola
+	//Tiro un hilo para ejecutar la consola y el inotify
 
 		if(flag_consola==0){
 			flag_consola=1;
@@ -110,6 +102,14 @@ int main(){
 			pthread_create(&hiloConsola,NULL,(void*)consola_SAFA,NULL);
 
 			pthread_detach(hiloConsola);
+
+			//Hilo para actualizar achivo de configuracion del S-AFA
+
+			pthread_t hilo_inotify;
+
+			pthread_create(&hilo_inotify,NULL,(void*)actualizar_file_config,NULL);
+
+			pthread_detach(hilo_inotify);
 
 		}
 	}
@@ -183,6 +183,7 @@ void atenderDAM(int*fd){
 			pthread_mutex_lock(&mx_PLP);
 			ejecutarPLP();
 			pthread_mutex_unlock(&mx_PLP);
+
 			break;
 		case FINAL_ABRIR:
 		{
@@ -358,8 +359,7 @@ void atenderCPU(int*fd){
 		if(recv(fd_CPU,&protocolo,sizeof(int),0)<=0){
 
 			log_error(log_SAFA,"Se desconecto el CPU %d",fd_CPU);
-			pthread_mutex_lock(&sinc_CPUs);
-
+			pthread_mutex_lock(&lock_CPUs);
 			//Si el CPU estaba ejecutando un proceso, este se envia a exit y se ejecutara el PLP para que replanifique
 			if(dictionary_has_key(cola_exec,string_itoa(dtb_cpu))){
 				pthread_mutex_lock(&mx_colas);
@@ -381,15 +381,12 @@ void atenderCPU(int*fd){
 				eliminarSocketCPU(fd_CPU);
 				pthread_mutex_lock(&mx_CPUs);
 			}
-			pthread_mutex_unlock(&sinc_CPUs);
-
+			pthread_mutex_unlock(&lock_CPUs);
 			pthread_exit(NULL);
 		}
 	//Me fijo que peticion esta haciendo la CPU dependiendo del protocolo que envio
 		t_DTB* dtb;
 		t_DTB dtb_modificado;
-
-		pthread_mutex_lock(&sinc_CPUs);
 
 		if(protocolo!=ID_DTB&&protocolo!=SENTENCIA_DAM){
 			dtb_modificado=RecibirYDeserializarDTB(fd_CPU);
@@ -402,33 +399,20 @@ void atenderCPU(int*fd){
 		char* clave;
 		int respuesta;
 		//Si recibe un wait de algun recurso
-		if(protocolo==WAIT_RECURSO){
+		switch(protocolo){
+		case WAIT_RECURSO:
 			clave=recibirYDeserializarString(fd_CPU);
 			log_info(log_SAFA,"El dtb %d quiere bloquear la clave %s",dtb_cpu,clave);
+			pthread_mutex_lock(&mx_claves);
 			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
-				pthread_mutex_lock(&mx_claves);
+
 				t_semaforo* sem_clave=dictionary_remove(claves,clave);
-				pthread_mutex_unlock(&mx_claves);
 
 				respuesta=wait_sem(sem_clave,dtb_modificado.id,clave);
+				pthread_mutex_unlock(&mx_claves);
 
 				if(respuesta==-1){
 					log_error(log_SAFA,"Clave no disponible, otro dtb la esta bloqueando");
-					pthread_mutex_lock(&mx_colas);
-					dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
-					pthread_mutex_unlock(&mx_colas);
-
-					pthread_mutex_lock(&mx_PCP);
-					ejecutarPCP(BLOQUEAR_PROCESO,dtb);
-					pthread_mutex_unlock(&mx_PCP);
-					//El CPU queda libre para ejecutar otro proceso
-					pthread_mutex_lock(&mx_CPUs);
-					list_add(CPU_libres,(void*)fd_CPU);
-					pthread_mutex_unlock(&mx_CPUs);
-					//Vuelvo a ejecutar el planificador pero esta vez para que, de ser posible, asigne otro proceso al CPU
-					pthread_mutex_lock(&mx_PCP);
-					ejecutarPCP(EJECUTAR_PROCESO,NULL);
-					pthread_mutex_unlock(&mx_PCP);
 				}else{
 					log_info(log_SAFA,"Clave bloqueada con exito");
 				}
@@ -441,25 +425,25 @@ void atenderCPU(int*fd){
 				clave_nueva->cola_bloqueados=list_create();
 
 				char* clave_list = string_duplicate(clave);
-				pthread_mutex_lock(&mx_claves);
 				list_add(show_claves,clave_list);
 				pthread_mutex_unlock(&mx_claves);
 
 				respuesta=wait_sem(clave_nueva,dtb_modificado.id,clave);
 			}
 			serializarYEnviarEntero(fd_CPU,&respuesta);
+			break;
 		//Si recibe un signal de algun recurso
-		}else if(protocolo==SIGNAL_RECURSO){
+		case SIGNAL_RECURSO:
 			clave=recibirYDeserializarString(fd_CPU);
 
 			log_info(log_SAFA,"El dtb %d quiere liberar la clave %s",dtb_cpu,clave);
 
+			pthread_mutex_lock(&mx_claves);
 			if(dictionary_has_key(claves,clave)){ //Si existe la clave en el sistema
 				t_semaforo* sem_clave=dictionary_remove(claves,clave);
 
-				log_info(log_SAFA,"Clave %s - Procesos bloqueados %d - id dtb bloqueado %d",clave,sem_clave->valor,(int)list_get(sem_clave->cola_bloqueados,0));
-
 				respuesta=signal_sem(sem_clave,clave);
+				pthread_mutex_unlock(&mx_claves);
 
 				log_info(log_SAFA,"La clave existe, continuo con el SIGNAL");
 
@@ -477,55 +461,56 @@ void atenderCPU(int*fd){
 				clave_nueva->valor=1;
 				clave_nueva->cola_bloqueados=list_create();
 				char* clave_list = string_duplicate(clave);
-				pthread_mutex_lock(&mx_claves);
 				dictionary_put(claves,clave,clave_nueva);
 				list_add(show_claves,clave_list);
 				pthread_mutex_unlock(&mx_claves);
 			}
 			respuesta=SIGNAL_EXITOSO;
 			serializarYEnviarEntero(fd_CPU,&respuesta);
-
-		}else if(protocolo==ID_DTB){
+			break;
+		case ID_DTB:
 			dtb_cpu=*recibirYDeserializarEntero(fd_CPU);
-		}else if(protocolo==SENTENCIA_EJECUTADA){
+			break;
+		case SENTENCIA_EJECUTADA:
 
+			pthread_mutex_lock(&lock_CPUs);
 			pthread_mutex_lock(&mx_metricas);
+			pthread_mutex_lock(&mx_colas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
-			pthread_mutex_unlock(&mx_metricas);
 
-			pthread_mutex_lock(&mx_metricas);
 			actualizarTiempoDeRespuestaDTB();
-			pthread_mutex_unlock(&mx_metricas);
 
-			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricasDTBNew();
+			pthread_mutex_unlock(&mx_colas);
 			pthread_mutex_unlock(&mx_metricas);
+			pthread_mutex_unlock(&lock_CPUs);
+			break;
+		case SENTENCIA_DAM:
 
-		}else if(protocolo==SENTENCIA_DAM){
-
+			pthread_mutex_lock(&lock_CPUs);
 			pthread_mutex_lock(&mx_metricas);
+			pthread_mutex_lock(&mx_colas);
 			actualizarMetricaDTB(dtb_cpu,protocolo);
-			pthread_mutex_unlock(&mx_metricas);
 
-			pthread_mutex_lock(&mx_metricas);
 			actualizarTiempoDeRespuestaDTB();
-			pthread_mutex_unlock(&mx_metricas);
 
-			pthread_mutex_lock(&mx_metricas);
 			actualizarMetricasDTBNew();
+			pthread_mutex_unlock(&mx_colas);
 			pthread_mutex_unlock(&mx_metricas);
+			pthread_mutex_unlock(&lock_CPUs);
+			break;
+		case FINAL_CERRAR:
 
-		}else if(protocolo==FINAL_CERRAR){
-
-			log_info(log_SAFA,"El dtb %d acaba de cerrar uno de sus archivo",dtb_cpu);
+			log_info(log_SAFA,"El dtb %d acaba de cerrar uno de sus archivos",dtb_cpu);
 
 			list_clean(dtb->archivos);
 			list_add_all(dtb->archivos,dtb_modificado.archivos);
 
-		}
-		else if(protocolo==ERROR_SEG_MEM){
+			break;
+		case ERROR_SEG_MEM:
 
 			log_error(log_SAFA,"El dtb intento acceder a una posicion invalida de memoria");
+
 			pthread_mutex_lock(&mx_colas);
 			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 			pthread_mutex_unlock(&mx_colas);
@@ -534,7 +519,8 @@ void atenderCPU(int*fd){
 			ejecutarPCP(FINALIZAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
 
-		}else if(protocolo==ERROR_ARCHIVO_INEXISTENTE){
+			break;
+		case ERROR_ARCHIVO_INEXISTENTE:
 
 			log_error(log_SAFA,"El dtb intento operar sobre un archivo que no estaba abierto");
 			pthread_mutex_lock(&mx_colas);
@@ -545,12 +531,18 @@ void atenderCPU(int*fd){
 			ejecutarPCP(FINALIZAR_PROCESO,dtb);
 			pthread_mutex_unlock(&mx_PCP);
 
-		}
-		else{
+			break;
+		default:
 
+			pthread_mutex_lock(&lock_CPUs);
 			pthread_mutex_lock(&mx_colas);
 			dtb=dictionary_remove(cola_exec,string_itoa(dtb_modificado.id));
 			pthread_mutex_unlock(&mx_colas);
+
+			//El CPU queda libre para ejecutar otro proceso
+			pthread_mutex_lock(&mx_CPUs);
+			list_add(CPU_libres,(void*)fd_CPU);
+			pthread_mutex_unlock(&mx_CPUs);
 
 			//Ejecuto el planificador para que decida que hacer con el dtb dependiendo del protocolo recibido
 			pthread_mutex_lock(&mx_PCP);
@@ -566,25 +558,24 @@ void atenderCPU(int*fd){
 
 			}
 
-			if(protocolo==FINALIZAR_PROCESO&&dtb->f_inicializacion==1){
+			if(protocolo==FINALIZAR_PROCESO){
 				log_info(log_SAFA,"El dtb termino de ejecutar su script");
-				pthread_mutex_lock(&mx_PLP);
-				ejecutarPLP();
-				pthread_mutex_unlock(&mx_PLP);
+				if(list_size(cola_new)!=0){
+					pthread_mutex_lock(&mx_PLP);
+					ejecutarPLP();
+					pthread_mutex_unlock(&mx_PLP);
+				}
 			}
 
-			//El CPU queda libre para ejecutar otro proceso
-			pthread_mutex_lock(&mx_CPUs);
-			list_add(CPU_libres,(void*)fd_CPU);
-			pthread_mutex_unlock(&mx_CPUs);
-
 			//Vuelvo a ejecutar el planificador pero esta vez para que, de ser posible, asigne otro proceso al CPU
-			pthread_mutex_lock(&mx_PCP);
-			ejecutarPCP(EJECUTAR_PROCESO,NULL);
-			pthread_mutex_unlock(&mx_PCP);
-		}
-		pthread_mutex_unlock(&sinc_CPUs);
-	}
+			if(list_size(cola_ready)||list_size(cola_ready_IOBF)||list_size(cola_ready_VRR)){
+				pthread_mutex_lock(&mx_PCP);
+				ejecutarPCP(EJECUTAR_PROCESO,NULL);
+				pthread_mutex_unlock(&mx_PCP);
+			}
+			pthread_mutex_unlock(&lock_CPUs);
+		}//Fin switch
+	}//Fin While
 }
 
 int wait_sem(t_semaforo* semaforo, int dtb_id,char* clave){
@@ -594,17 +585,13 @@ int wait_sem(t_semaforo* semaforo, int dtb_id,char* clave){
 		//respuesta negativa al cpu
 		list_add(semaforo->cola_bloqueados,(void*)dtb_id);
 
-		pthread_mutex_lock(&mx_claves);
 		dictionary_put(claves,clave,semaforo);
-		pthread_mutex_unlock(&mx_claves);
 		return -1;
 
 	}
 	else{
 		//enviar respuesta positiva al cpu
-		pthread_mutex_lock(&mx_claves);
 		dictionary_put(claves,clave,semaforo);
-		pthread_mutex_unlock(&mx_claves);
 		return WAIT_EXITOSO;
 	}
 
@@ -613,13 +600,10 @@ int wait_sem(t_semaforo* semaforo, int dtb_id,char* clave){
 int signal_sem(t_semaforo* semaforo,char* clave){
 	int id_dtb=-1;
 	if(semaforo->valor<0){
-		log_info(log_SAFA,"Hay %d dtbs bloqueados, desbloqueo el primero",list_size(semaforo->cola_bloqueados));
 		id_dtb=(int)list_remove(semaforo->cola_bloqueados,0);
 	}
 	semaforo->valor++;
-	pthread_mutex_lock(&mx_claves);
 	dictionary_put(claves,clave,semaforo);
-	pthread_mutex_unlock(&mx_claves);
 	return id_dtb;
 }
 

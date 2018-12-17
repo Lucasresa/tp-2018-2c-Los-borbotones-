@@ -103,7 +103,7 @@ pthread_mutex_t mx_PLP;
 
 pthread_mutex_t mx_colas;
 pthread_mutex_t mx_CPUs;
-pthread_mutex_t sinc_CPUs;
+pthread_mutex_t lock_CPUs;
 
 pthread_mutex_t mx_claves;
 
