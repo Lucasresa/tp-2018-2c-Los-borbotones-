@@ -2,7 +2,7 @@
 
 int main(){
 
-	log_FM9 = log_create("FM9.log","FM9",false,LOG_LEVEL_INFO);
+	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_FM9.cfg";
@@ -27,13 +27,11 @@ int main(){
 
 
 	if (config_FM9.modo == SEG) {
+
 		// Abro la consola
 		pthread_create(&thread_id, NULL, consolaThreadSeg, NULL);
 		// Creo estructuras de segmentación
-		lista_tablas_segmentos = list_create();
-		tabla_segmentos_pid = list_create();
-		memoria_vacia_seg = list_create();
-		list_add(memoria_vacia_seg, crear_fila_mem_vacia_seg(0, config_FM9.tamanio/config_FM9.max_linea));
+		iniciarMemoriaSEG();
 	} else if (config_FM9.modo == TPI) {
 		// Creo estructuras de paginación invertida
 		crearTablaPagInv();
@@ -45,14 +43,10 @@ int main(){
 		pthread_create(&thread_id, NULL, consolaThreadSP, NULL);
 		inicializarMemoriaSP();
 	}
-
 	int listener_socket;
 	crearSocket(&listener_socket);
-
 	setearParaEscuchar(&listener_socket, config_FM9.puerto_fm9);
-
 	log_info(log_FM9, "Escuchando conexiones...");
-
 	FD_ZERO(&set_fd);
 	FD_SET(listener_socket, &set_fd);
 	while(true) {
@@ -65,7 +59,6 @@ int main(){
 		free(memoria[n]);
 	}
 	free(memoria);
-	list_destroy(lista_tablas_segmentos);
 
 }
 

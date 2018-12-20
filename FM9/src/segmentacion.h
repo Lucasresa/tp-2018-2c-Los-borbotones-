@@ -16,20 +16,13 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 
 // Creo estructuras de segmentación
-t_list *lista_tablas_segmentos;
-t_list *tabla_segmentos_pid;
-t_list *memoria_vacia_seg;
+t_list *tablas_segmentos_pid;
+t_bitarray *memoria_ocupada;
 
 //Fila de la tabla de segmentacion
-typedef struct fila_memoria_vacia_seg{
-
-	int base;
-	int cant_lineas;
-
-}fila_memoria_vacia_seg;
-
 typedef struct fila_tabla_seg{
 
 	int id_segmento;
@@ -38,12 +31,14 @@ typedef struct fila_tabla_seg{
 
 }fila_tabla_seg;
 
-typedef struct fila_tabla_segmentos_pid{
+typedef struct fila_tablas_segmentos_pid{
 
 	int id_proceso;
-	int id_tabla_segmentos;
+	t_list* tabla_segmentos;
 
-}fila_tabla_segmentos_pid;
+}fila_tablas_segmentos_pid;
+
+void iniciarMemoriaSEG();
 
 int recibirPeticionSeg(int);
 
@@ -52,14 +47,18 @@ void *consolaThreadSeg(void *vargp);
 // Utils
 int cargarEnMemoriaSeg(int, int, int, char*);
 char* leerMemoriaSeg(int, int, int);
+
 t_list* buscarTablaSeg(int pid);
-t_list* buscarYBorrarTablaSeg(int pid);
-struct fila_memoria_vacia_seg *crear_fila_mem_vacia_seg(int base, int cant_lineas);
-struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
-int segmentoFirstFit(int tamanio);
-int siguiente_id_segmento(t_list* tabla_segmentos);
 fila_tabla_seg* buscarSegmento(int pid, int id_segmento);
-fila_tabla_seg* buscarSegmentoEnTabla(t_list* tabla_de_segmentos, int id_segmento);
+
+void borrarTablaSeg(int pid);
+int borrarSegmento(int pid, int id_segmento);
+
+struct fila_tabla_seg* crear_fila_tabla_seg(int id_segmento, int limite_segmento, int base_segmento);
+struct fila_tablas_segmentos_pid* crear_fila_tablas_segmentos_pid(int id_proceso);
+
+int siguiente_id_segmento(t_list* tabla_segmentos);
+int segmentoFirstFit(int tamanio);
 
 void printPID(int pid);
 

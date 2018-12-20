@@ -2,7 +2,7 @@
 
 int main(){
 
-	log_DAM = log_create("DAM.log","DAM",false,LOG_LEVEL_INFO);
+	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_DAM.cfg";
@@ -545,7 +545,7 @@ void testeoFM9() {
 	if (error_holder != 0) {
 		return;
 	}
-/*
+
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
 	cargarScriptFM9(1, bufferTesteoTres, &error_holder);
 	if (error_holder != 0) {
@@ -556,7 +556,7 @@ void testeoFM9() {
 	cargarArchivoFM9(1, bufferTesteoCuatro, &error_holder);
 	if (error_holder != 0) {
 		return;
-	}*/
+	}
 }
 
 int validarArchivoMDJ(int MDJ, char* path){
