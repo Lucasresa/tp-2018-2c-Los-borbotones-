@@ -40,8 +40,6 @@ int recibirPeticionSeg(int socket) {
 
 
 			log_info(log_FM9, "Segmento creado para PID %i. ID: 0, Base (linea) real:%i, Limite: %i", datos_script->pid, base_vacia, datos_script->size_script);
-
-
 			mensaje=MEMORIA_INICIALIZADA;
 		}
 
@@ -443,11 +441,14 @@ void iniciarMemoriaSEG() {
 
 	// Inicio bitarray de memoria vacía
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
+	printf("cantidad de lineas: %i\n", cantidad_lineas);
 	int bitarray_size = cantidad_lineas/8;
-	char* data = malloc( sizeof(char) *  (bitarray_size + 1) );
+	char* data = malloc(sizeof(char) * (bitarray_size + 1));
 	for (int j = 0; j<bitarray_size; j++) {
 		data[j] = 0;
 	}
-	memoria_ocupada = bitarray_create_with_mode(data, sizeof(data), MSB_FIRST);
+	memoria_ocupada = bitarray_create_with_mode(data, bitarray_size, MSB_FIRST);
+
+	printf("array size: %i\n",bitarray_get_max_bit(memoria_ocupada));
 
 }
