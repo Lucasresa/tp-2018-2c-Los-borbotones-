@@ -469,6 +469,7 @@ void *consolaThreadSP(void *vargp)
 						counter++;
 					}
 				}
+
 				void _print_memoria_segmento(fila_tabla_segmentos_sp *segmento) {
 					printf("=\n");
 					printf("Segmento: %i, lineas: %i\n", segmento->id_segmento, segmento->tamanio);

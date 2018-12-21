@@ -162,13 +162,6 @@ int recibirPeticionPagInv(int socket) {
 		}
 	}
 
-	case PEDIR_LINEA:
-	{
-		direccion_logica* direccion;
-		//TODO: Cambiar PEDIR_DATOS a PEDIR_LINEA en la biblioteca?
-		//direccion = recibirYDeserializar(socket,header);
-		return 0;
-	}
 	case ESCRIBIR_LINEA:
 	{
 		cargar_en_memoria* info_a_cargar;
@@ -197,22 +190,17 @@ int recibirPeticionPagInv(int socket) {
 		// Obtengo la direccion real
 		fila_tabla_archivos* mifila = list_get(tabla_archivos, idArchivo);
 
-		int inicio = (int)list_get (mifila->paginas_asociadas,0);
-		int tamanio = list_size (mifila->paginas_asociadas);
-
-		int cant_lineas_pag = config_FM9.tam_pagina/config_FM9.max_linea;
+		int tamlist = list_size(mifila->paginas_asociadas);
 
 		char* linea;
 
 		// Envío línea a línea el archivo
 
-			for (int count = 0; count < mifila->tamanio; ++count) {
-
-				int i = traducirPagina(0,count);
+			for (int i = 0; i < tamlist; ++i) {
 
 				//Obtengo mi pagina entre las posibles asociadas a ese archivo
 
-				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
+				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), 0);
 				serializarYEnviarString(socket,linea);
 			}
 
@@ -222,14 +210,62 @@ int recibirPeticionPagInv(int socket) {
 		free(direccion);
 
 		return 0;
+	}
+
+	case CERRAR_ARCHIVO:
+	{
+		log_info(log_FM9, "Recibo instrucción para cerrar archivo");
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		int id_archivo = direccion->base;
+		int success;
+
+		// Borro el archivo
+		if (eliminarArchivo(id_archivo) == -1) {
+			success=ERROR_SEG_MEM;
+		} else {
+			success=FINAL_CERRAR;
 		}
+
+		log_info(log_FM9, "Archivo cerrado");
+
+		serializarYEnviarEntero(socket,&success);
+		return 0;
+	}
+
+	case CERRAR_PID:
+	{
+		log_info(log_FM9, "Recibo instrucción para cerrar PID");
+		int pid = *recibirYDeserializarEntero(socket);
+
+		// Busco el proceso en la tabla de paginas y lo elimino.
+		eliminarPid(pid);
+
+		//También debo eliminar sus paginas asociadas
+		eliminarTodosLosArchivos(pid);
+
+		log_info(log_FM9, "PID cerrado");
+
+		return 0;
+	}
+
+	case PEDIR_LINEA:
+	{
+		direccion_logica* direccion;
+		direccion = recibirYDeserializar(socket,header);
+		char* linea = leerMemoriaPagInv(direccion->pid, direccion->base, direccion->offset);
+		free(direccion);
+		serializarYEnviarString(socket,linea);
+		return 0;
+	}
+
 
 	}
 	return -1;
 }
 
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
-/*
+
 	int pid = datos_script->pid;
 
 	float tamanio_script = datos_script->size_script;
@@ -261,8 +297,9 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 
 
 			//RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
-			fila_tabla_archivos *fila;
-			//T Encuentro un ID de pagina disponible
+			struct fila_tabla_archivos *fila;
+			fila = (struct fila_tabla_archivos *) malloc(sizeof(struct fila_tabla_archivos));
+			// Encuentro un ID de pagina disponible
 			int idArchivo = encontrarIdDisponible();
 			fila->archivo = idArchivo;
 			// Averiguo el tamaño
@@ -271,13 +308,11 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 			for (int j = 0; j > frames_redondeados; j = j+1){
 				list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
 			}
+			//Asocio el proceso creado con el archivo
+			fila->proceso = pid;
 
 			list_add(lista_tabla_pag_inv,fila);
 
-			/*
-			if (i==0) {
-				primera_pagina = unaFilaDisponible->pagina;
-			}
 			log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
 
 
@@ -288,7 +323,7 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 	} else {
 		return -1;
 	  }
-*/
+
 	return -1;
 }
 
@@ -391,7 +426,7 @@ void *consolaThreadPagInv(void *vargp)
 		char *command = strtok(line, " ");
 
 		//Verifica que se pase por parametro el id de un proceso
-		if (strcmp(command, "tabla")==0) {
+		if (strcmp(command, "dump")==0) {
 			char *buffer = strtok(0, " ");
 			if (buffer==NULL) {
 				puts("Por favor inserte un id");
@@ -406,24 +441,30 @@ void *consolaThreadPagInv(void *vargp)
 
 			// Imprimo la tabla de paginas
 				log_info(log_FM9, "Tabla de paginas");
-				log_info(log_FM9, "Marco, Pagina, PID");
+				log_info(log_FM9, "Marco  Pagina  PID");
 				log_info(log_FM9, "=========================");
-				// Recorro la tabla de segmentos, imprimiendo cada segmento
-				void print_segmento(fila_pag_invertida *p) {
+				// Recorro la tabla de paginas, imprimiendo cada segmento
+				/*
+				void print_tabla(fila_pag_invertida *p) {
 					log_info(log_FM9, "    %i    %i     %i   ", p->indice, p->pagina, p->pid);
 				}
-				list_iterate(lista_tabla_pag_inv, (void*) print_segmento);
+				list_iterate(lista_tabla_pag_inv, (void*) print_tabla);
+				*/
+				imprimirTabla();
 				log_info(log_FM9, "=========================", pid);
 				log_info(log_FM9, "Memoria del process id: %i", pid);
 /*
 				void _print_memoria_pid(fila_tabla_seg *segmento_archivo) {
 					log_info(log_FM9, "=");
+
+
 					for (int count = 0; count < mifila->tamanio; ++count) {
 						int i = traducirPagina(0,count);
 						//Obtengo mi pagina entre las posibles asociadas a ese archivo
 						linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
 					}
 				}
+
 				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_pid);
 
 */
@@ -459,7 +500,7 @@ void imprimirTabla() {
     }
     for (i=0 ; i > config_FM9.tamanio/config_FM9.tam_pagina ; i++) {
         fila_pag_invertida* filaAImprimir = list_find(lista_tabla_pag_inv, (void*) indiceBuscado);
-        log_info(log_FM9, "%i, %i, %i", filaAImprimir->indice, filaAImprimir->pagina, filaAImprimir->pid);;
+        log_info(log_FM9, "%i, %i, %i", filaAImprimir->indice, filaAImprimir->pagina, filaAImprimir->pid);
     }
 }
 
@@ -474,16 +515,6 @@ void eliminarPid(int pid){
         }
     }
     list_iterate(lista_tabla_pag_inv, (void*) buscarYreemplazarPid);
-}
-
-void eliminarArchivo(int idArchivo){
-/*
-	fila_tabla_archivos* listaAeliminar = list_find(tabla_archivos,idArchivo);
-
-	int indice = list_get(listaAeliminar);
-
-	list_remove(listaAeliminar,indice);
-*/
 }
 
 
@@ -514,7 +545,70 @@ int hayMemoriaDisponible(int marcosNecesarios){
 	list_iterate(lista_tabla_pag_inv, (void*) cuantasLibres);
 	return marcosNecesarios <= marcosLibres;
 
+}
+
+//Busca un proceso y elimina su archivo asociado.
+
+int eliminarArchivo(int idArchivo){
+
+// Que archivo tiene asociado esa ID?
+    int buscarArchivo(fila_tabla_archivos *p) {
+        return (p->archivo == idArchivo);
+    }
+
+    fila_tabla_archivos* filaAeliminar = list_remove_by_condition(tabla_archivos, (void*) buscarArchivo);
+
+    if (filaAeliminar == NULL){
+    	return -1;
+    }
+    else{
+    	return 0;
+    }
+
+    eliminarMemoria(filaAeliminar);
+
+    free(filaAeliminar);
 
 }
 
 
+int eliminarTodosLosArchivos(int pid){
+
+	void eliminarMemoria(fila_tabla_archivos *filaAeliminar) {
+		if (filaAeliminar->proceso == pid){
+			eliminarMemoria(filaAeliminar);
+		}
+	}
+
+	int eliminarDeTabla(fila_tabla_archivos *filaAeliminar) {
+		 return filaAeliminar->proceso == pid;
+	}
+
+    list_iterate(tabla_archivos, (void*) eliminarMemoria);
+
+    list_iterate(tabla_archivos, (void*) eliminarDeTabla);
+
+    return 0;
+
+}
+
+void eliminarMemoria(fila_tabla_archivos* filaAeliminar){
+
+int tampag = config_FM9.tam_pagina;
+
+int tamlist = list_size(filaAeliminar->paginas_asociadas);
+
+
+// Recorro todas las paginas asociadas a ese archivo, liberando la memoria
+
+	for (int j = 0; j< tamlist; j++){
+		for (int i = 0; i<tampag; i++) {
+
+			int valor =  list_get(filaAeliminar-> paginas_asociadas, j);
+
+			strcpy(memoria[(valor * tampag)+i],"");
+
+		}
+	}
+
+}

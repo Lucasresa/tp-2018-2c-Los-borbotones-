@@ -47,6 +47,7 @@ typedef struct fila_tabla_archivos{
 	int archivo;
 	int tamanio;
 	t_list* paginas_asociadas;
+	int proceso;
 
 }fila_tabla_archivos;
 
@@ -81,7 +82,11 @@ int encontrarIdDisponible();
 
 char* leerMemoriaPagInv(int pid, int pagina, int offset);
 int hayMemoriaDisponible(int marcosNecesarios);
-void eliminarArchivo(int idArchivo);
+int eliminarArchivo(int idArchivo);
+int eliminarTodosLosArchivos(int pid);
+void eliminarPid(int pid);
+
+void eliminarMemoria(fila_tabla_archivos* filaAeliminar);
 
 void imprimirTabla();
 
