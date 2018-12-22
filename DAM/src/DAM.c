@@ -38,7 +38,7 @@ int main(){
 	FD_ZERO(&set_fd);
 	FD_SET(listener_socket, &set_fd);
 
-/*
+
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
@@ -47,7 +47,7 @@ int main(){
 	else{
 		log_info(log_DAM,"Conexion con MDJ establecida");
 	}
-	*/
+
 
 	//El DAM se conecta con FM9_fd
 	if(conectar(&FM9_fd,config_DAM.puerto_fm9,config_DAM.ip_fm9)!=0){
@@ -57,7 +57,7 @@ int main(){
 		log_info(log_DAM, "Conexión con FM9 establecido");
 	}
 
-/*
+
 	//El DAM se conecta con SAFA
 	if(conectar(&SAFA_fd,config_DAM.puerto_safa,config_DAM.ip_safa)!=0){
 		log_error(log_DAM,"Error al conectarse con SAFA");
@@ -69,9 +69,9 @@ int main(){
 		log_info(log_DAM,"Hilo para escuchar mensajes de SAFA creado");
 		pthread_detach(hilo_SAFA);
 	}
-*/
 
-	testeoFM9();
+
+	//testeoFM9();
 
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
