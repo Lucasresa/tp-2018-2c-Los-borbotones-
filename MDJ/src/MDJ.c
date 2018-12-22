@@ -997,20 +997,23 @@ int cmd_md5(char *linea){
         if(parametros[1] == NULL){
                         printf("El Comando md5 debe recibir un parametro.\n");
                         return -1;
-        }
-        char *contenido;
-        int size;
-        string_archivo(parametros[1] ,&contenido);
-        MD5_CTX md5;
-        size=strlen(contenido);
-        void * md5_resultado = malloc(size);
-        contenido[size]='\0';
-        MD5_Init(&md5);
-        MD5_Update(&md5,contenido , size+1);
-        MD5_Final(md5_resultado, &md5);
-        free(contenido);
-        puts(md5_resultado);
-        free(md5_resultado);
+        }/*
+        char *content;
+        string_archivo(parametros[1],&content);
+        content[strlen(content)] ='\0';
+        void * digest = malloc(MD5_DIGEST_LENGTH);
+        MD5_CTX context;
+        MD5_Init(&context);
+        MD5_Update(&context, content, strlen(content) + 1);
+        MD5_Final(digest, &context);
+        puts(digest);
+        free(content);
+         */
+        char *command= malloc(strlen("md5sum "));
+        strcpy( command, "md5sum " );
+        string_append(&command, parametros[1]);
+        system(command);
+        free(command);
         return 0;
 }
 
