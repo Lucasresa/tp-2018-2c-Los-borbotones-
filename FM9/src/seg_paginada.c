@@ -69,7 +69,7 @@ int recibirPeticionSP(int socket) {
 	    list_destroy(proceso_buscado->tabla_de_segmentos);
 	    free(proceso_buscado);
 
-	    log_info(log_FM9, "PID cerrado");
+	    log_info(log_FM9, "PID %i cerrado", pid);
 
 		return 0;
 	}

@@ -55,7 +55,7 @@ int recibirPeticionSeg(int socket) {
 		// Busco y borro la tabla de segmentos del proceso y libero su memoria
 		borrarTablaSeg(pid);
 
-	    log_info(log_FM9, "PID cerrado");
+	    log_info(log_FM9, "PID %i cerrado", pid);
 
 		return 0;
 	}
@@ -441,14 +441,11 @@ void iniciarMemoriaSEG() {
 
 	// Inicio bitarray de memoria vacía
 	int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
-	printf("cantidad de lineas: %i\n", cantidad_lineas);
 	int bitarray_size = cantidad_lineas/8;
 	char* data = malloc(sizeof(char) * (bitarray_size + 1));
 	for (int j = 0; j<bitarray_size; j++) {
 		data[j] = 0;
 	}
 	memoria_ocupada = bitarray_create_with_mode(data, bitarray_size, MSB_FIRST);
-
-	printf("array size: %i\n",bitarray_get_max_bit(memoria_ocupada));
 
 }

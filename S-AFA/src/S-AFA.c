@@ -473,6 +473,8 @@ void atenderCPU(int*fd){
 			break;
 		case SENTENCIA_EJECUTADA:
 
+			log_info(log_SAFA,"El DTB %d ejecuto una sentencia",dtb_cpu);
+
 			pthread_mutex_lock(&lock_CPUs);
 			pthread_mutex_lock(&mx_metricas);
 			pthread_mutex_lock(&mx_colas);
@@ -486,6 +488,8 @@ void atenderCPU(int*fd){
 			pthread_mutex_unlock(&lock_CPUs);
 			break;
 		case SENTENCIA_DAM:
+
+			log_info(log_SAFA,"El DTB %d ejecuto una Entrada/Salida",dtb_cpu);
 
 			pthread_mutex_lock(&lock_CPUs);
 			pthread_mutex_lock(&mx_metricas);
