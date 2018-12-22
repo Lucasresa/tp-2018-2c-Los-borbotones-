@@ -666,7 +666,7 @@ void eliminarPaginas(int idArchivo){
         return p->archivo == idArchivo;
     }
 
-    fila_tabla_archivos* mifila = list_find(lista_tabla_pag_inv, (void*) buscarArchivo);
+    fila_tabla_archivos* mifila = list_find(tabla_archivos, (void*) buscarArchivo);
 
     int tamanioPag = (int) list_size(mifila->paginas_asociadas);
     int pidAsoc = mifila->proceso;
