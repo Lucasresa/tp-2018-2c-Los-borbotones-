@@ -297,6 +297,7 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 		fila = (struct fila_tabla_archivos *) malloc(sizeof(struct fila_tabla_archivos));
 		// Encuentro un ID de pagina disponible
 		int idArchivo = encontrarIdDisponible();
+		log_info(log_FM9, "Creo archivo con id %i", idArchivo);
 		fila->archivo = idArchivo;
 		// Averiguo el tamaño
 		fila->tamanio = (int) tamanio_script;
@@ -695,16 +696,19 @@ void imprimirMemoria(fila_tabla_archivos* fila){
 	int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
 
 	int procesoAsoc = fila->proceso;
-
+	int counter = 0;
 	// Recorro todas las paginas asociadas a ese archivo
-
 	for (int j = 0; j< tamlist; j++){
 		for (int i = 0; i<tampag; i++) {
+			if (counter==fila->tamanio) {
+				return;
+			}
 
 			int pagina =  (int) list_get(fila-> paginas_asociadas, j);
 			int marco = encontrarMarco(procesoAsoc,pagina);
 
 			printf("Posición %i: %s\n", (marco * tampag)+i, memoria[(marco * tampag)+i]);
+			counter++;
 		}
 	}
 }
