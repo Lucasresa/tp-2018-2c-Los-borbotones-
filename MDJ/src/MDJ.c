@@ -402,10 +402,13 @@ void consola_MDJ(){
 	log_info(log_MDJ,"Consola en linea");
 	char * linea;
 	dir_actual=string_duplicate(config_MDJ.mount_point);
+	dir_mount=malloc(1);
+	strcpy(dir_mount,"/");
 	printf("\n");
 	chdir(dir_actual);
 	//string_append(&dir_actual,"$");
 	cmd_pwd();
+	strcat(dir_mount,"$");
 	strcat(dir_actual,"$");
 	while(1) {
 		linea = readline(dir_actual);
@@ -458,9 +461,9 @@ void consola_MDJ(){
 		}
 
 	}
-	free(dir_actual);
-	free(linea);
-	free(string_actual);
+	//free(dir_actual);
+	//free(linea);
+	//free(string_actual);
 	cerrado_cosola=1;
 }
 
@@ -490,9 +493,14 @@ void cmd_cd(char *linea){
 				//dir_actual = parametros[1];
 			}
 			else{
-				chdir(parametros[1]);
+				//chdir(parametros[1]);
 				cmd_pwd();
+				if (strncmp(parametros[1],"..",2)){
+			//		strcat(dir_mount,parametros[1]);
+				}
 			}
+		//strcat(dir_mount,"$");
+		strcat(dir_actual,"$");
 	 }
 }
 void cmd_ls(char *linea){
@@ -500,23 +508,23 @@ void cmd_ls(char *linea){
 	//puts(parametros[1]);
 	if(parametros[1] == NULL){
 		cmd_pwd();
-		strcat(dir_actual,"$");
+		//strcat(dir_actual,"$");
 		parametros[1]=dir_actual;
 	}
-	else {
-		 DIR *dp;
-		 struct dirent *ep;
-		 dp = opendir (parametros[1]);
-		 if (dp != NULL){
-		      while ((ep = readdir (dp))!= NULL){
-			        printf("%s\n",ep->d_name);
-		      }
-		      (void) closedir (dp);
-		 }
-		 else{
-			  perror ("Couldn't open the directory");
-		 }
+    DIR *dp;
+	struct dirent *ep;
+	dp = opendir (parametros[1]);
+	if (dp != NULL){
+	     while ((ep = readdir (dp))!= NULL){
+		        printf("%s\n",ep->d_name);
+	     }
+	(void) closedir (dp);
 	}
+	else{
+			  perror ("Couldn't open the directory");
+	}
+	strcat(dir_actual,"$");
+
 }
 void cmd_pwd(){
 	char cwd[PATH_MAX];

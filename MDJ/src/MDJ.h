@@ -118,6 +118,7 @@ t_config_MDJ config_MDJ;
 t_config_MetaData  config_MetaData;
 
 t_bitarray *bitarray;
+char *dir_mount;
 int crear_carpetas();
 int mkdir_p(const char *path);
 int guardarDatos(peticion_guardar *guardado) ;
