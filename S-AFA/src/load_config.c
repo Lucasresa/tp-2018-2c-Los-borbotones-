@@ -88,13 +88,13 @@ void actualizar_file_config()
 	int offset = 0;
 
 	while (offset < length) {
+		pthread_mutex_lock(&File_config);
 
 		struct inotify_event *event = (struct inotify_event *) &buffer[offset];
 
 		// Dentro de "mask" tenemos el evento que ocurrio y sobre donde ocurrio
 		if (event->mask & IN_MODIFY) {
 				//Actualizo el archivo de configuracion
-				pthread_mutex_lock(&File_config);
 
 				int anterior=config_SAFA.algoritmo, grado_anterior=config_SAFA.multiprog, diferencia;
 
