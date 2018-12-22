@@ -2,7 +2,7 @@
 
 int main(){
 
-	log_DAM = log_create("DAM.log","DAM",true,LOG_LEVEL_INFO);
+	log_DAM = log_create("DAM.log","DAM",false,LOG_LEVEL_INFO);
 
     char *archivo;
 	archivo="src/CONFIG_DAM.cfg";
