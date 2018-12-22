@@ -88,6 +88,8 @@ int eliminarArchivo(int idArchivo);
 int eliminarTodosLosArchivos(int pid);
 void eliminarPid(int pid);
 
+int encontrarMarco(int pid,int pagina);
+
 void encontrarYEliminarPagina(int pagina,int pid);
 
 void eliminarPaginas(int idArchivo);

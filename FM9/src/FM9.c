@@ -401,6 +401,7 @@ void crearTablaPagInv(){
 	int tamanio_memoria = config_FM9.tamanio;
 	int tamanio_pagina = config_FM9.tam_pagina;
 	int i;
+	int j;
 
 	lista_tabla_pag_inv = list_create();
 
@@ -412,8 +413,8 @@ void crearTablaPagInv(){
 	}
 
 	// Limpio la memoria que acabo de reservar para que no contenga basura
-	for (int j = 0;j>cantidad_marcos;j++){
-		strcpy(memoria[cantidad_marcos],"");
+	for (j = 0 ;j>cantidad_marcos;j++){
+		strcpy(memoria[j],"");
 	}
 }
 
@@ -476,7 +477,10 @@ void *consolaThreadPagInv(void *vargp)
 				// Recorro la tabla de paginas y la imprimo
 
 				void print_tabla(fila_pag_invertida *p) {
-					log_info(log_FM9, "    %i    %i     %i   ", p->indice, p->pagina, p->pid);
+					if(p->pid == pid){
+						log_info(log_FM9, "    %i    %i     %i   ", p->indice, p->pagina, p->pid);
+					}
+
 				}
 				list_iterate(lista_tabla_pag_inv, (void*) print_tabla);
 
