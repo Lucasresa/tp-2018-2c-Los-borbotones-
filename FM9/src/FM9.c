@@ -481,7 +481,7 @@ void *consolaThreadPagInv(void *vargp)
 				void _print_memoria_pid(fila_tabla_archivos *unaFila) {
 					log_info(log_FM9, "=");
 					if(unaFila->proceso == pid){
-
+						imprimirMemoria(unaFila);
 					}
 
 					/*
