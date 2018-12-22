@@ -430,6 +430,9 @@ void consola_MDJ(){
 		if (!strncmp(linea, "ls ", 2)){
 			cmd_ls(linea);
 		}
+		if (!strncmp(linea, "md5 ", 2)){
+					cmd_md5(linea);
+		}
 		if (!strncmp(linea, "bloque", 6)){
 			//char * path = "/scripts/checkpoint.escriptorio";
 			//path: /equipos/equipo1.txt	offset: 0	size: 16
@@ -948,14 +951,32 @@ int creacionDeArchivoBitmap(char *path,int cantidad){
 
 }
 
+
 void crearDirectoriofileSystem(char *directorio){
 	char *direccionDirectorio=(char *) malloc(1 + strlen(config_MDJ.mount_point) + strlen(directorio));
 	strcpy(direccionDirectorio,config_MDJ.mount_point);
 	string_append(&direccionDirectorio,directorio);
 	if (mkdir(direccionDirectorio, S_IRWXU) != 0) {
-	    //if (errno != EEXIST)
-	   	        	//printf( "No se creo el directorio por q ya existe%s\n",direccionDirectorio);
+	    if (errno != EEXIST)
+	   	        	printf( "No se creo el directorio por q ya existe%s\n",direccionDirectorio);
+
 	}
+	else{
+		if(!strncmp(directorio,"/Bloques",8)){
+			    		int cantidad = config_MetaData.cantidad_bloques;
+			    		char *bloquechar;
+			    		char *bloquePath;
+			    		for(int i=0;i<cantidad+1;i++){
+			    			bloquechar=string_itoa(i);
+			    			bloquePath= bloque_path(bloquechar);
+			    			puts(bloquePath);
+			    			fclose(fopen(bloquePath, "w"));
+			    			free(bloquePath);
+			    		}
+		}
+	}
+
+	free(direccionDirectorio);
 }
 
 void crearEstructura(){
@@ -970,7 +991,7 @@ void crearEstructura(){
 }
 
 
-/*int cmd_md5(char *linea){
+int cmd_md5(char *linea){
         char **parametros = string_split(linea, " ");
         puts(parametros[1]);
         if(parametros[1] == NULL){
@@ -979,15 +1000,17 @@ void crearEstructura(){
         }
         char *contenido;
         int size;
-        string_file(parametros[1] ,&contenido);
+        string_archivo(parametros[1] ,&contenido);
         MD5_CTX md5;
-        size=sizeof(contenido);
-        void * md5_resultado = malloc(size+1);
+        size=strlen(contenido);
+        void * md5_resultado = malloc(size);
+        contenido[size]='\0';
         MD5_Init(&md5);
         MD5_Update(&md5,contenido , size+1);
         MD5_Final(md5_resultado, &md5);
         free(contenido);
         puts(md5_resultado);
+        free(md5_resultado);
         return 0;
 }
-*/
+
