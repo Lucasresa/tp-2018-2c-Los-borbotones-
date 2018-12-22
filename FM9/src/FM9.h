@@ -77,7 +77,9 @@ int traducirPagina(int pagina,int offset);
 int minPagina(int pid);
 int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag);
 int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script);
+
 fila_pag_invertida* encontrarFilaVacia();
+fila_tabla_archivos* encontrarArchivoPorId(int idArchivo);
 int encontrarIdDisponible();
 
 char* leerMemoriaPagInv(int pid, int pagina, int offset);
@@ -86,10 +88,16 @@ int eliminarArchivo(int idArchivo);
 int eliminarTodosLosArchivos(int pid);
 void eliminarPid(int pid);
 
+void encontrarYEliminarPagina(int pagina,int pid);
+
+void eliminarPaginas(int idArchivo);
+
 void eliminarMemoria(fila_tabla_archivos* filaAeliminar);
 
 void imprimirTabla();
 
 void *consolaThreadPagInv(void *vargp);
+
+void imprimirMemoria(fila_tabla_archivos* fila);
 
 #endif /* FM9_H_ */

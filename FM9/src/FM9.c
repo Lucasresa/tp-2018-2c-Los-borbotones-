@@ -134,6 +134,7 @@ int recibirPeticionPagInv(int socket) {
 	}
 	case INICIAR_MEMORIA_PID:
 	{
+		//El dam quiere que inicialize un proceso nuevo
 		int message;
 		iniciar_scriptorio_memoria* datos_script = recibirYDeserializar(socket,header);
 		int pagina_base = cargarEstructuraArchivo(datos_script);
@@ -147,6 +148,7 @@ int recibirPeticionPagInv(int socket) {
 	}
 	case ABRIR_ARCHIVO:
 	{
+		//El dam quiere que cree un archivo nuevo
 		int message;
 		iniciar_scriptorio_memoria* datos_archivo = recibirYDeserializar(socket,header);
 		int resultado = cargarEstructuraArchivo(datos_archivo);
@@ -164,6 +166,7 @@ int recibirPeticionPagInv(int socket) {
 
 	case ESCRIBIR_LINEA:
 	{
+		//El dam me pide que escriba una linea, me pasa un proceso, una pagina y un desplazamiento en donde quiere que lo escriba
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
 
@@ -181,6 +184,7 @@ int recibirPeticionPagInv(int socket) {
 
 	case LEER_ARCHIVO:
 	{
+		//El dam me pide que lea un archivo entero. Me pasa mi id de archivo
 		// Recibo PID e indice
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
@@ -196,13 +200,13 @@ int recibirPeticionPagInv(int socket) {
 
 		// Envío línea a línea el archivo
 
-			for (int i = 0; i < tamlist; ++i) {
+		for (int i = 0; i < tamlist; ++i) {
 
-				//Obtengo mi pagina entre las posibles asociadas a ese archivo
+			//Obtengo mi pagina entre las posibles asociadas a ese archivo
 
-				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), 0);
-				serializarYEnviarString(socket,linea);
-			}
+			linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), 0);
+			serializarYEnviarString(socket,linea);
+		}
 
 
 		char finArchivo[] = "FIN_ARCHIVO";
@@ -214,6 +218,7 @@ int recibirPeticionPagInv(int socket) {
 
 	case CERRAR_ARCHIVO:
 	{
+		//El dam me pide que cierre un archivo, me pasa el id del archivo
 		log_info(log_FM9, "Recibo instrucción para cerrar archivo");
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
@@ -221,11 +226,8 @@ int recibirPeticionPagInv(int socket) {
 		int success;
 
 		// Borro el archivo
-		if (eliminarArchivo(id_archivo) == -1) {
-			success=ERROR_SEG_MEM;
-		} else {
-			success=FINAL_CERRAR;
-		}
+		eliminarArchivo(id_archivo);
+		eliminarPaginas(id_archivo);
 
 		log_info(log_FM9, "Archivo cerrado");
 
@@ -235,6 +237,7 @@ int recibirPeticionPagInv(int socket) {
 
 	case CERRAR_PID:
 	{
+		//El dam me pide que cierre un proceso, eliminando también los archivos asociados. Me pasa el pid
 		log_info(log_FM9, "Recibo instrucción para cerrar PID");
 		int pid = *recibirYDeserializarEntero(socket);
 
@@ -251,9 +254,20 @@ int recibirPeticionPagInv(int socket) {
 
 	case PEDIR_LINEA:
 	{
+		//El dam me pasa un archivo y un desplazamiento y debo retornarle según mis paginas , el contenido buscado.
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
-		char* linea = leerMemoriaPagInv(direccion->pid, direccion->base, direccion->offset);
+		int idArchivo = direccion->base;
+
+		fila_tabla_archivos* miFila = encontrarArchivoPorId(idArchivo);
+
+		int indiceDePaginaReal = traducirPagina(0,direccion->offset);
+
+		int paginaReal = (int) list_get(miFila->paginas_asociadas,indiceDePaginaReal);
+
+		int offsetTraducido = traducirOffset(direccion->offset);
+
+		char* linea = leerMemoriaPagInv(direccion->pid, paginaReal, offsetTraducido);
 		free(direccion);
 		serializarYEnviarString(socket,linea);
 		return 0;
@@ -277,7 +291,23 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 	int i = 0;
 
 	if (hayMemoriaDisponible(frames_redondeados)){
-		for( i = 0; i < frames_redondeados; i = i + 1 ) {
+
+		//CREO UN ARCHIVO Y RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
+		struct fila_tabla_archivos *fila;
+		fila = (struct fila_tabla_archivos *) malloc(sizeof(struct fila_tabla_archivos));
+		// Encuentro un ID de pagina disponible
+		int idArchivo = encontrarIdDisponible();
+		fila->archivo = idArchivo;
+		// Averiguo el tamaño
+		fila->tamanio = (int) tamanio_script;
+		//Asocio el proceso creado con el archivo
+		fila->proceso = pid;
+		//Creo la lista donde van a estar todas las paginas asociadas
+		fila->paginas_asociadas = list_create();
+
+
+		//Creo las paginas
+		for( i = 0; i < frames_redondeados; i++ ) {
 			//Encontramos un marco disponible
 			fila_pag_invertida* unaFilaDisponible = encontrarFilaVacia();
 			if (unaFilaDisponible == NULL ){
@@ -294,31 +324,24 @@ int cargarEstructuraArchivo(iniciar_scriptorio_memoria* datos_script){
 			unaFilaDisponible->pagina = minPagina(pid);
 			//Seteamos el flag a 1 para que sepa que está ocupado
 			unaFilaDisponible->flag = 1;
+			//Asocio las paginas recien creadas
+			list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
 
+			log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
+		}
 
-			//RELLENO LA TABLA DE ARCHIVOS CON LOS DATOS DEL STRUCT:
-			struct fila_tabla_archivos *fila;
-			fila = (struct fila_tabla_archivos *) malloc(sizeof(struct fila_tabla_archivos));
-			// Encuentro un ID de pagina disponible
-			int idArchivo = encontrarIdDisponible();
-			fila->archivo = idArchivo;
-			// Averiguo el tamaño
-			fila->tamanio = (int) tamanio_script;
-			// Agrego a mi lista de paginas asociadas tantas paginas
+			/* Agrego a mi lista de paginas asociadas tantas paginas
 			for (int j = 0; j > frames_redondeados; j = j+1){
 				list_add (fila->paginas_asociadas, (void*) paginaAutilizar);
 			}
-			//Asocio el proceso creado con el archivo
-			fila->proceso = pid;
-
-			list_add(lista_tabla_pag_inv,fila);
-
-			log_info(log_FM9, "Seteo página %i para el pid %i en el marco %i", unaFilaDisponible->pagina, unaFilaDisponible->pid, unaFilaDisponible->indice);
+*/
 
 
-		return idArchivo;
-		}
-		free(datos_script);
+			list_add(tabla_archivos,fila);
+
+			return idArchivo;
+
+			free(datos_script);
 
 	} else {
 		return -1;
@@ -350,9 +373,10 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag)
 //EJEMPLO: Si mi offset es 30 y mi tamaño maximo de pagina es 15, voy a estar en la pagina 2, ya que 30/15 es 2 y 0+2 = 2
 
 int traducirPagina(int pagina,int offset){
-	if (offset > config_FM9.tam_pagina){
+	int tampagina_lineas = config_FM9.tam_pagina/config_FM9.max_linea;
+	if (offset > tampagina_lineas){
 		//la division del offset con el tamaño de la pagina me dice que tantas paginas se desplazo de la pagina 0
-		return pagina + (offset/config_FM9.tam_pagina);
+		return pagina + (offset/tampagina_lineas);
 	}
 	else{
 		return pagina;
@@ -363,8 +387,9 @@ int traducirPagina(int pagina,int offset){
 //EJEMPLO: Si mi offset es 18 y mi tamaño maximo de pagina es 15, me va a quedar que el offset es 3
 
 int traducirOffset(int offset){
-	if (offset > config_FM9.tam_pagina){
-		return offset - config_FM9.tam_pagina * (offset/config_FM9.tam_pagina);
+	int tampagina_lineas = config_FM9.tam_pagina/config_FM9.max_linea;
+	if (offset > tampagina_lineas){
+		return offset - tampagina_lineas * (offset/tampagina_lineas);
 	}
 	else{
 		return offset;
@@ -443,31 +468,32 @@ void *consolaThreadPagInv(void *vargp)
 				log_info(log_FM9, "Tabla de paginas");
 				log_info(log_FM9, "Marco  Pagina  PID");
 				log_info(log_FM9, "=========================");
-				// Recorro la tabla de paginas, imprimiendo cada segmento
-				/*
+				// Recorro la tabla de paginas y la imprimo
+
 				void print_tabla(fila_pag_invertida *p) {
 					log_info(log_FM9, "    %i    %i     %i   ", p->indice, p->pagina, p->pid);
 				}
 				list_iterate(lista_tabla_pag_inv, (void*) print_tabla);
-				*/
-				imprimirTabla();
+
 				log_info(log_FM9, "=========================", pid);
 				log_info(log_FM9, "Memoria del process id: %i", pid);
-/*
-				void _print_memoria_pid(fila_tabla_seg *segmento_archivo) {
+
+				void _print_memoria_pid(fila_tabla_archivos *unaFila) {
 					log_info(log_FM9, "=");
+					if(unaFila->proceso == pid){
 
+					}
 
+					/*
 					for (int count = 0; count < mifila->tamanio; ++count) {
 						int i = traducirPagina(0,count);
 						//Obtengo mi pagina entre las posibles asociadas a ese archivo
 						linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
-					}
+					}*/
 				}
 
 				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_pid);
 
-*/
 		} else {
 			puts("Comando no reconocido.");
 		}
@@ -594,7 +620,7 @@ int eliminarTodosLosArchivos(int pid){
 
 void eliminarMemoria(fila_tabla_archivos* filaAeliminar){
 
-int tampag = config_FM9.tam_pagina;
+int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
 
 int tamlist = list_size(filaAeliminar->paginas_asociadas);
 
@@ -604,7 +630,7 @@ int tamlist = list_size(filaAeliminar->paginas_asociadas);
 	for (int j = 0; j< tamlist; j++){
 		for (int i = 0; i<tampag; i++) {
 
-			int valor =  list_get(filaAeliminar-> paginas_asociadas, j);
+			int valor =  (int) list_get(filaAeliminar-> paginas_asociadas, j);
 
 			strcpy(memoria[(valor * tampag)+i],"");
 
@@ -612,3 +638,65 @@ int tamlist = list_size(filaAeliminar->paginas_asociadas);
 	}
 
 }
+
+fila_tabla_archivos* encontrarArchivoPorId(int idArchivo){
+
+	int busquedaArchivo(fila_tabla_archivos *p) {
+	    return (p->archivo == idArchivo);
+	}
+
+	fila_tabla_archivos* fila = list_find(tabla_archivos, (void*) busquedaArchivo);
+
+	return fila;
+}
+
+void eliminarPaginas(int idArchivo){
+// Obtengo la tabla de segmentos para ese PID
+    int buscarArchivo(fila_tabla_archivos *p) {
+        return p->archivo == idArchivo;
+    }
+
+    fila_tabla_archivos* mifila = list_find(lista_tabla_pag_inv, (void*) buscarArchivo);
+
+    int tamanioPag = (int) list_size(mifila->paginas_asociadas);
+    int pidAsoc = mifila->proceso;
+
+    for (int i = 0 ; i > tamanioPag ; i++){
+        encontrarYEliminarPagina((int) list_get((t_list*)mifila->proceso,i) ,pidAsoc);
+    }
+
+}
+
+void encontrarYEliminarPagina(int pagina,int pid){
+
+	int condicion(fila_pag_invertida *p){
+		return (p->pid == pid) && (p->pagina == pagina);
+	}
+
+	fila_pag_invertida* unaFila = list_find(lista_tabla_pag_inv,(void*) condicion);
+
+	unaFila->pid = -1;
+	unaFila->flag = 0;
+	unaFila->pagina = -1;
+
+}
+
+void imprimirMemoria(fila_tabla_archivos* fila){
+
+	int tamlist = list_size(fila->paginas_asociadas);
+	int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
+
+
+	// Recorro todas las paginas asociadas a ese archivo, liberando la memoria
+
+	for (int j = 0; j< tamlist; j++){
+		for (int i = 0; i<tampag; i++) {
+
+			int valor =  (int) list_get(fila-> paginas_asociadas, j);
+
+			printf("Posición %i: %s\n", (valor * tampag)+i, memoria[(valor * tampag)+i]);
+
+		}
+	}
+}
+
