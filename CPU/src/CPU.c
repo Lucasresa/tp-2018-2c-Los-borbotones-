@@ -414,7 +414,7 @@ void comenzarEjecucion(int SAFA, int DAM, int FM9, t_DTB dtb){
 		if(!isComent){
 		if(rafaga_recibida!=0){
 
-			if((!uso_DAM&&!interrupcion)||is_wait)
+			if((!uso_DAM&&!interrupcion))
 				notificarSAFA(SAFA,SENTENCIA_EJECUTADA,dtb);
 			}
 

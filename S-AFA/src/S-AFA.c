@@ -426,9 +426,8 @@ void atenderCPU(int*fd){
 
 				char* clave_list = string_duplicate(clave);
 				list_add(show_claves,clave_list);
-				pthread_mutex_unlock(&mx_claves);
-
 				respuesta=wait_sem(clave_nueva,dtb_modificado.id,clave);
+				pthread_mutex_unlock(&mx_claves);
 			}
 			serializarYEnviarEntero(fd_CPU,&respuesta);
 			break;
