@@ -42,7 +42,7 @@ int main(){
 	//El DAM se conecta con MDJ
 	if(conectar(&MDJ_fd,config_DAM.puerto_mdj,config_DAM.ip_mdj)!=0){
 		log_error(log_DAM,"Error al conectarse con MDJ");
-//		exit(1);
+		exit(1);
 	}
 	else{
 		log_info(log_DAM,"Conexion con MDJ establecida");
@@ -61,7 +61,7 @@ int main(){
 	//El DAM se conecta con SAFA
 	if(conectar(&SAFA_fd,config_DAM.puerto_safa,config_DAM.ip_safa)!=0){
 		log_error(log_DAM,"Error al conectarse con SAFA");
-//		exit(1);
+		exit(1);
 	} else {
 		log_info(log_DAM, "Conexión con SAFA establecido");
 		pthread_t hilo_SAFA;
@@ -71,7 +71,7 @@ int main(){
 	}
 
 
-	testeoFM9();
+	//testeoFM9();
 
 	while(true) {
 		escuchar(listener_socket, &set_fd, &funcionHandshake, NULL, &recibirPeticion, NULL );
@@ -550,6 +550,18 @@ void testeoFM9() {
 		return;
 	}
 
+	log_info(log_DAM,"Pido linea al FM9");
+	direccion_logica* direccion=malloc(sizeof(direccion_logica));
+	direccion->pid=0;
+	direccion->base=1;
+	direccion->offset=2;
+
+	serializarYEnviar(FM9_fd,PEDIR_LINEA,direccion);
+
+	char* linea_fm9 = recibirYDeserializarString(FM9_fd);
+
+	log_info(log_DAM,"recibo: %s", linea_fm9);
+
 	char bufferTesteoTres[200] = "crear /equipos/equipo2.txt 5\nabrir /equipos/equipo2.txt jeje\notra linea\n";
 	cargarArchivoFM9(0, bufferTesteoTres, &error_holder);
 	if (error_holder != 0) {
@@ -560,18 +572,14 @@ void testeoFM9() {
 	file->pid=0;
 	file->offset=0;
 	file->base=1;
-
-	//Aca va lo de enviar la direccion al FM9
-
 	serializarYEnviar(FM9_fd,CERRAR_ARCHIVO,file);
-
-	/*
+	int response=*recibirYDeserializarEntero(FM9_fd);
 
 	char bufferTesteoCuatro[60] = "\n\n\n\n\n";
-	cargarArchivoFM9(1, bufferTesteoCuatro, &error_holder);
+	cargarArchivoFM9(0, bufferTesteoCuatro, &error_holder);
 	if (error_holder != 0) {
 		return;
-	}*/
+	}
 }
 
 int validarArchivoMDJ(int MDJ, char* path){

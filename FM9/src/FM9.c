@@ -166,14 +166,22 @@ int recibirPeticionPagInv(int socket) {
 
 	case ESCRIBIR_LINEA:
 	{
+		//El dam me pasa un archivo y un desplazamiento y debo retornarle según mis paginas , el contenido buscado.
 		//El dam me pide que escriba una linea, me pasa un proceso, una pagina y un desplazamiento en donde quiere que lo escriba
 		cargar_en_memoria* info_a_cargar;
 		info_a_cargar = recibirYDeserializar(socket,header);
 
-		int pagina = info_a_cargar->id_segmento;
+		int idArchivo = info_a_cargar->id_segmento;
 
-		//Cargo en memoria con mi pagina y offset traducido
-		cargarEnMemoriaPagInv(info_a_cargar->pid, traducirPagina(pagina,info_a_cargar->offset), traducirOffset(info_a_cargar->offset), info_a_cargar->linea, 1);
+		fila_tabla_archivos* miFila = encontrarArchivoPorId(idArchivo);
+
+		int indiceDePaginaReal = traducirPagina(0,info_a_cargar->offset);
+
+		int paginaReal = (int) list_get(miFila->paginas_asociadas,indiceDePaginaReal);
+
+		int offsetTraducido = traducirOffset(info_a_cargar->offset);
+
+		cargarEnMemoriaPagInv(info_a_cargar->pid, paginaReal, offsetTraducido, info_a_cargar->linea, 1);
 
 		free(info_a_cargar);
 		int message=LINEA_CARGADA;
@@ -236,8 +244,8 @@ int recibirPeticionPagInv(int socket) {
 		int success;
 
 		// Borro el archivo
-		eliminarArchivo(id_archivo);
 		eliminarPaginas(id_archivo);
+		eliminarArchivo(id_archivo);
 
 		log_info(log_FM9, "Archivo cerrado");
 
@@ -601,10 +609,11 @@ int eliminarArchivo(int idArchivo){
     	return -1;
     }
     else{
+    	eliminarMemoria(filaAeliminar);
     	return 0;
     }
 
-    eliminarMemoria(filaAeliminar);
+
 
     free(filaAeliminar);
 
@@ -635,13 +644,13 @@ int eliminarTodosLosArchivos(int pid){
 
 void eliminarMemoria(fila_tabla_archivos* filaAeliminar){
 
-int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
+	int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
 
-int tamlist = list_size(filaAeliminar->paginas_asociadas);
+	int tamlist = list_size(filaAeliminar->paginas_asociadas);
 
-int procesoAsoc = filaAeliminar->proceso;
+	int procesoAsoc = filaAeliminar->proceso;
 
-// Recorro todas las paginas asociadas a ese archivo, liberando la memoria
+	// Recorro todas las paginas asociadas a ese archivo, liberando la memoria
 
 	for (int j = 0; j< tamlist; j++){
 		for (int i = 0; i<tampag; i++) {
