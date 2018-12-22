@@ -1,6 +1,6 @@
 #include "FM9.h"
 
-int main(){
+ int main(){
 
 	log_FM9 = log_create("FM9.log","FM9",true,LOG_LEVEL_INFO);
 
@@ -410,6 +410,11 @@ void crearTablaPagInv(){
 		mi_fila = crear_fila_tabla_pag_inv(i,-1,-1,0);
 		list_add(lista_tabla_pag_inv,mi_fila);
 	}
+
+	// Limpio la memoria que acabo de reservar para que no contenga basura
+	for (int j = 0;j>cantidad_marcos;j++){
+		strcpy(memoria[cantidad_marcos],"");
+	}
 }
 
 fila_pag_invertida* encontrarFilaVacia() {
@@ -483,16 +488,9 @@ void *consolaThreadPagInv(void *vargp)
 					if(unaFila->proceso == pid){
 						imprimirMemoria(unaFila);
 					}
-
-					/*
-					for (int count = 0; count < mifila->tamanio; ++count) {
-						int i = traducirPagina(0,count);
-						//Obtengo mi pagina entre las posibles asociadas a ese archivo
-						linea = leerMemoriaPagInv(direccion->pid, list_get (mifila->paginas_asociadas,i), count-cant_lineas_pag*i);
-					}*/
 				}
 
-				list_iterate(lista_tabla_pag_inv, (void*) _print_memoria_pid);
+				list_iterate(tabla_archivos, (void*) _print_memoria_pid);
 
 		} else {
 			puts("Comando no reconocido.");
@@ -618,21 +616,25 @@ int eliminarTodosLosArchivos(int pid){
 
 }
 
+//bien
+
 void eliminarMemoria(fila_tabla_archivos* filaAeliminar){
 
 int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
 
 int tamlist = list_size(filaAeliminar->paginas_asociadas);
 
+int procesoAsoc = filaAeliminar->proceso;
 
 // Recorro todas las paginas asociadas a ese archivo, liberando la memoria
 
 	for (int j = 0; j< tamlist; j++){
 		for (int i = 0; i<tampag; i++) {
 
-			int valor =  (int) list_get(filaAeliminar-> paginas_asociadas, j);
+			int pagina =  (int) list_get(filaAeliminar-> paginas_asociadas, j);
+			int marco = encontrarMarco(procesoAsoc,pagina);
 
-			strcpy(memoria[(valor * tampag)+i],"");
+			strcpy(memoria[(marco * tampag)+i],"");
 
 		}
 	}
@@ -650,6 +652,7 @@ fila_tabla_archivos* encontrarArchivoPorId(int idArchivo){
 	return fila;
 }
 
+
 void eliminarPaginas(int idArchivo){
 // Obtengo la tabla de segmentos para ese PID
     int buscarArchivo(fila_tabla_archivos *p) {
@@ -662,11 +665,11 @@ void eliminarPaginas(int idArchivo){
     int pidAsoc = mifila->proceso;
 
     for (int i = 0 ; i > tamanioPag ; i++){
-        encontrarYEliminarPagina((int) list_get((t_list*)mifila->proceso,i) ,pidAsoc);
+        encontrarYEliminarPagina((int) list_get((t_list*)mifila->proceso,i), pidAsoc);
     }
-
 }
 
+//BIEN
 void encontrarYEliminarPagina(int pagina,int pid){
 
 	int condicion(fila_pag_invertida *p){
@@ -681,22 +684,34 @@ void encontrarYEliminarPagina(int pagina,int pid){
 
 }
 
+//bien
 void imprimirMemoria(fila_tabla_archivos* fila){
 
 	int tamlist = list_size(fila->paginas_asociadas);
 	int tampag = config_FM9.tam_pagina/config_FM9.max_linea;
 
+	int procesoAsoc = fila->proceso;
 
-	// Recorro todas las paginas asociadas a ese archivo, liberando la memoria
+	// Recorro todas las paginas asociadas a ese archivo
 
 	for (int j = 0; j< tamlist; j++){
 		for (int i = 0; i<tampag; i++) {
 
-			int valor =  (int) list_get(fila-> paginas_asociadas, j);
+			int pagina =  (int) list_get(fila-> paginas_asociadas, j);
+			int marco = encontrarMarco(procesoAsoc,pagina);
 
-			printf("Posición %i: %s\n", (valor * tampag)+i, memoria[(valor * tampag)+i]);
-
+			printf("Posición %i: %s\n", (marco * tampag)+i, memoria[(marco * tampag)+i]);
 		}
 	}
 }
 
+int encontrarMarco(int pid,int pagina){
+
+	int condicion(fila_pag_invertida* fila){
+		return (fila->pid == pid) && (fila->pagina == pagina);
+	}
+
+	fila_pag_invertida* filaMarcoEncontrado = list_find(lista_tabla_pag_inv,(void*) condicion);
+
+	return filaMarcoEncontrado->indice;
+}
