@@ -189,6 +189,7 @@ int recibirPeticionPagInv(int socket) {
 		direccion_logica* direccion;
 		direccion = recibirYDeserializar(socket,header);
 
+
 		int idArchivo = direccion->base;
 
 		// Obtengo la direccion real
@@ -198,16 +199,18 @@ int recibirPeticionPagInv(int socket) {
 
 		char* linea;
 
+		int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
+
 		// Envío línea a línea el archivo
 
 		for (int i = 0; i < tamlist; ++i) {
+			for (int j = 0; j < cantidad_lineas; j++){
+				//Obtengo mi pagina entre las posibles asociadas a ese archivo
 
-			//Obtengo mi pagina entre las posibles asociadas a ese archivo
-
-			linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), 0);
-			serializarYEnviarString(socket,linea);
+				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), j);
+				serializarYEnviarString(socket,linea);
+			}
 		}
-
 
 		char finArchivo[] = "FIN_ARCHIVO";
 		serializarYEnviarString(socket,finArchivo);
