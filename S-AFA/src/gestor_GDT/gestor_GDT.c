@@ -69,9 +69,10 @@ void ejecutarComando(int nro_op, char * args){
 			}
 			case 2:
 				if(args==NULL){
-				pthread_mutex_lock(&File_config);
+				pthread_mutex_lock(&mx_colas);
 				int total_procesos=getCantidadProcesosInicializados(cola_block)+dictionary_size(cola_exec)+getCantidadProcesosInicializados(cola_ready)+
-								getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR),i;
+						getCantidadProcesosInicializados(cola_ready_IOBF)+getCantidadProcesosInicializados(cola_ready_VRR),i;
+				pthread_mutex_unlock(&mx_colas);
 				printf("Cantidad de procesos en las colas:\nNew: %d\nReady: %d\nExec: %d\nBlock: %d\nExit: %d\nCPU libres: %d\n",
 						list_size(cola_new),list_size(cola_ready),dictionary_size(cola_exec),list_size(cola_block),
 						list_size(cola_exit),list_size(CPU_libres));
@@ -95,7 +96,6 @@ void ejecutarComando(int nro_op, char * args){
 					}
 				}
 				pthread_mutex_unlock(&mx_claves);
-				pthread_mutex_unlock(&File_config);
 				}else{
 					t_DTB* dtb_status;
 					int dtb_id = (int)strtol(args,(char**)NULL,10),i;
@@ -658,10 +658,10 @@ void ejecutarPLP(){
 				}
 				break;
 			}
-			pthread_mutex_unlock(&mx_colas);
-			pthread_mutex_unlock(&File_config);
 
 		}
+		pthread_mutex_unlock(&mx_colas);
+		pthread_mutex_unlock(&File_config);
 	}else if(list_size(cola_new)==0){
 		log_warning(log_SAFA,"La cola de new esta vacia, no hay proceso para pasar a ready");
 	}else{
