@@ -383,7 +383,7 @@ int cargarEnMemoriaPagInv(int pid, int pagina, int offset, char* linea,int flag)
 	int linea_a_escribir = (config_FM9.tam_pagina/config_FM9.max_linea)*fila_tabla_pag_inv->indice+offset;
 
 	strcpy(memoria[linea_a_escribir],linea);
-	printf("Escribí en Posición %i: '%s'\n", linea_a_escribir, memoria[linea_a_escribir]);
+	log_info(log_FM9, "Escribí en Posición %i: '%s'", linea_a_escribir, memoria[linea_a_escribir]);
 	return 0;
 
 }
@@ -534,7 +534,7 @@ char* leerMemoriaPagInv(int pid, int pagina, int offset) {
 
 	int direccionFisica = marcoEncontrado->indice*cant_lineas_pag+offset;
 
-	printf("Leo memoria en posicion %i: '%s'\n", direccionFisica, memoria[direccionFisica]);
+	log_info(log_FM9, "Leo memoria en posicion %i: '%s'\n", direccionFisica, memoria[direccionFisica]);
 
 	return memoria[direccionFisica];
 }
@@ -689,7 +689,7 @@ void eliminarPaginas(int idArchivo){
     int pidAsoc = mifila->proceso;
 
     for (int i = 0 ; i > tamanioPag ; i++){
-        encontrarYEliminarPagina((int) list_get((t_list*)mifila->proceso,i), pidAsoc);
+        encontrarYEliminarPagina((int) list_get((t_list*)mifila->paginas_asociadas,i), pidAsoc);
     }
 }
 
@@ -726,7 +726,7 @@ void imprimirMemoria(fila_tabla_archivos* fila){
 			int pagina =  (int) list_get(fila-> paginas_asociadas, j);
 			int marco = encontrarMarco(procesoAsoc,pagina);
 
-			printf("Posición %i: %s\n", (marco * tampag)+i, memoria[(marco * tampag)+i]);
+			log_info(log_FM9, "Posición %i: %s\n", (marco * tampag)+i, memoria[(marco * tampag)+i]);
 			counter++;
 		}
 	}
