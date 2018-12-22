@@ -202,13 +202,20 @@ int recibirPeticionPagInv(int socket) {
 		int cantidad_lineas = config_FM9.tamanio / config_FM9.max_linea;
 
 		// Envío línea a línea el archivo
-
+		int counter = 0;
 		for (int i = 0; i < tamlist; ++i) {
+			if (counter==mifila->tamanio) {
+				break;
+			}
 			for (int j = 0; j < cantidad_lineas; j++){
+				if (counter==mifila->tamanio) {
+					break;
+				}
 				//Obtengo mi pagina entre las posibles asociadas a ese archivo
 
 				linea = leerMemoriaPagInv(direccion->pid, (int)list_get (mifila->paginas_asociadas,i), j);
 				serializarYEnviarString(socket,linea);
+				counter ++;
 			}
 		}
 
